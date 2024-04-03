@@ -193,7 +193,11 @@ class DNSProviderData(BaseModel):
         Returns:
             A DNSRecordProviderData instance.
         """
-        return cls(uuid=relation_data["uuid"], status=Status(relation_data["status"]))
+        try:
+            status = Status(relation_data["status"])
+        except ValueError:
+            status = Status.UNKNOWN
+        return cls(uuid=relation_data["uuid"], status=status)
 
 
 class DNSRecordProviderData(BaseModel):

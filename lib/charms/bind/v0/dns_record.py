@@ -90,13 +90,21 @@ class Status(str, Enum):
         APPROVED: approved
         INVALID_CREDENTIALS: invalid_credentials
         PERMISSION_DENIED: permission_denied
+        CONFLICT: conflict
+        VALIDATION: validation
         FAILURE: failure
+        UNKNOWN: unknown
+        PENDING: pending
     """
 
     APPROVED = "approved"
     INVALID_CREDENTIALS = "invalid_credentials"
     PERMISSION_DENIED = "permission_denied"
+    CONFLICT = "conflict"
+    VALIDATION = "validation"
     FAILURE = "failure"
+    UNKNOWN = "unknown"
+    PENDING = "pending"
 
 
 class RecordType(str, Enum):

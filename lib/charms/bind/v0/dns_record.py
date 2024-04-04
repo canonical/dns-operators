@@ -4,7 +4,7 @@
 """Library to manage the integration with the Bind charm.
 
 This library contains the Requires and Provides classes for handling the integration
-between an application and a charm providing the `dns_record integration.
+between an application and a charm providing the `dns_record` integration.
 
 ### Requirer Charm
 
@@ -127,7 +127,7 @@ class RecordType(str, Enum):
         SOA: SOA
         NS: NS
         DS: DS
-        DNSKEY: DNSKEY"
+        DNSKEY: DNSKEY
     """
 
     A = "A"

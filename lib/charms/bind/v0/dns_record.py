@@ -428,7 +428,7 @@ class DNSRecordRequirerData(BaseModel):
         return cls(dns_domains=dns_domains, dns_entries=dns_entries)
 
 
-class DNSRecordRequested(ops.RelationEvent):
+class DNSRecordRequestChanged(ops.RelationEvent):
     """DNS event emitted when a new request is made.
 
     Attributes:
@@ -460,10 +460,10 @@ class DNSRecordRequiresEvents(ops.CharmEvents):
     This class defines the events that a DNS record requirer can emit.
 
     Attributes:
-        dns_record_requested: the DNSRecordRequested.
+        dns_record_request_changed: the DNSRecordRequestChanged.
     """
 
-    dns_record_requested = ops.EventSource(DNSRecordRequested)
+    dns_record_request_changed = ops.EventSource(DNSRecordRequestChanged)
 
 
 class DNSRecordProcessed(ops.RelationEvent):
@@ -576,7 +576,7 @@ class DNSRecordRequires(ops.Object):
         assert event.relation.app
         relation_data = event.relation.data[event.relation.app]
         if relation_data and self._is_relation_data_valid(event.relation):
-            self.on.dns_record_requested.emit(event.relation, app=event.app, unit=event.unit)
+            self.on.dns_record_request_changed.emit(event.relation, app=event.app, unit=event.unit)
 
     def update_relation_data(
         self, relation: ops.Relation, dns_record_requirer_data: DNSRecordRequirerData

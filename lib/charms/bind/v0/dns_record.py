@@ -428,7 +428,33 @@ class DNSRecordRequirerData(BaseModel):
         return cls(dns_domains=dns_domains, dns_entries=dns_entries)
 
 
-class DNSRecordRequestChanged(ops.RelationEvent):
+class DNSRecordRequestProcessed(ops.RelationEvent):
+    """DNS event emitted when a new request is processed.
+
+    Attributes:
+        dns_record_provider_relation_data: the DNS provider relation data.
+        dns_domains: list of processed domains.
+        dns_entries: list of processed entries.
+    """
+
+    @property
+    def dns_record_provider_relation_data(self) -> DNSRecordProviderData:
+        """Get a DNSRecordProviderData for the relation data."""
+        assert self.relation.app
+        return DNSRecordProviderData.from_relation_data(self.relation.data[self.relation.app])
+
+    @property
+    def dns_domains(self) -> Optional[List[DNSProviderData]]:
+        """Fetch the DNS domains from the relation."""
+        return self.dns_record_provider_relation_data.dns_domains
+
+    @property
+    def dns_entries(self) -> Optional[List[DNSProviderData]]:
+        """Fetch the DNS entries from the relation."""
+        return self.dns_record_provider_relation_data.dns_entries
+
+
+class DNSRecordRequestReceived(ops.RelationEvent):
     """DNS event emitted when a new request is made.
 
     Attributes:
@@ -460,48 +486,9 @@ class DNSRecordRequiresEvents(ops.CharmEvents):
     This class defines the events that a DNS record requirer can emit.
 
     Attributes:
-        dns_record_request_changed: the DNSRecordRequestChanged.
+        dns_record_request_processed: the DNSRecordRequestProcessed.
     """
-
-    dns_record_request_changed = ops.EventSource(DNSRecordRequestChanged)
-
-
-class DNSRecordProcessed(ops.RelationEvent):
-    """DNS event emitted when a new request is processed.
-
-    Attributes:
-        dns_record_provider_relation_data: the DNS provider relation data.
-        dns_domains: list of processed domains.
-        dns_entries: list of processed entries.
-    """
-
-    @property
-    def dns_record_provider_relation_data(self) -> DNSRecordProviderData:
-        """Get a DNSRecordProviderData for the relation data."""
-        assert self.relation.app
-        return DNSRecordProviderData.from_relation_data(self.relation.data[self.relation.app])
-
-    @property
-    def dns_domains(self) -> Optional[List[DNSProviderData]]:
-        """Fetch the DNS domains from the relation."""
-        return self.dns_record_provider_relation_data.dns_domains
-
-    @property
-    def dns_entries(self) -> Optional[List[DNSProviderData]]:
-        """Fetch the DNS entries from the relation."""
-        return self.dns_record_provider_relation_data.dns_entries
-
-
-class DNSRecordProvidesEvents(ops.CharmEvents):
-    """DNS record provider events.
-
-    This class defines the events that a DNS record provider can emit.
-
-    Attributes:
-        dns_record_processed: the DNSRecordProcessed.
-    """
-
-    dns_record_processed = ops.EventSource(DNSRecordProcessed)
+    dns_record_request_processed = ops.EventSource(DNSRecordRequestProcessed)
 
 
 class DNSRecordRequires(ops.Object):
@@ -576,7 +563,7 @@ class DNSRecordRequires(ops.Object):
         assert event.relation.app
         relation_data = event.relation.data[event.relation.app]
         if relation_data and self._is_relation_data_valid(event.relation):
-            self.on.dns_record_request_changed.emit(event.relation, app=event.app, unit=event.unit)
+            self.on.dns_record_request_processed.emit(event.relation, app=event.app, unit=event.unit)
 
     def update_relation_data(
         self, relation: ops.Relation, dns_record_requirer_data: DNSRecordRequirerData
@@ -592,8 +579,25 @@ class DNSRecordRequires(ops.Object):
         relation.data[self.charm.model.app].update(relation_data)
 
 
+class DNSRecordProvidesEvents(ops.CharmEvents):
+    """DNS record provider events.
+
+    This class defines the events that a DNS record provider can emit.
+
+    Attributes:
+        dns_record_request_received: the DNSRecordRequestReceived.
+    """
+    dns_record_request_received = ops.EventSource(DNSRecordRequestReceived)
+
+
 class DNSRecordProvides(ops.Object):
-    """Provider side of the DNS record relation."""
+    """Provider side of the DNS record relation.
+
+    Attributes:
+        on: events the provider can emit.
+    """
+
+    on = DNSRecordProvidesEvents()
 
     def __init__(self, charm: ops.CharmBase, relation_name: str = DEFAULT_RELATION_NAME) -> None:
         """Construct.
@@ -657,7 +661,7 @@ class DNSRecordProvides(ops.Object):
         assert event.relation.app
         relation_data = event.relation.data[event.relation.app]
         if relation_data and self._is_relation_data_valid(event.relation):
-            self.on.dns_record_processed.emit(event.relation, app=event.app, unit=event.unit)
+            self.on.dns_record_request_received.emit(event.relation, app=event.app, unit=event.unit)
 
     def update_relation_data(
         self, relation: ops.Relation, dns_record_provider_data: DNSRecordProviderData

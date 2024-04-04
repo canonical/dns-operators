@@ -488,6 +488,7 @@ class DNSRecordRequiresEvents(ops.CharmEvents):
     Attributes:
         dns_record_request_processed: the DNSRecordRequestProcessed.
     """
+
     dns_record_request_processed = ops.EventSource(DNSRecordRequestProcessed)
 
 
@@ -563,7 +564,9 @@ class DNSRecordRequires(ops.Object):
         assert event.relation.app
         relation_data = event.relation.data[event.relation.app]
         if relation_data and self._is_relation_data_valid(event.relation):
-            self.on.dns_record_request_processed.emit(event.relation, app=event.app, unit=event.unit)
+            self.on.dns_record_request_processed.emit(
+                event.relation, app=event.app, unit=event.unit
+            )
 
     def update_relation_data(
         self, relation: ops.Relation, dns_record_requirer_data: DNSRecordRequirerData
@@ -587,6 +590,7 @@ class DNSRecordProvidesEvents(ops.CharmEvents):
     Attributes:
         dns_record_request_received: the DNSRecordRequestReceived.
     """
+
     dns_record_request_received = ops.EventSource(DNSRecordRequestReceived)
 
 
@@ -661,7 +665,9 @@ class DNSRecordProvides(ops.Object):
         assert event.relation.app
         relation_data = event.relation.data[event.relation.app]
         if relation_data and self._is_relation_data_valid(event.relation):
-            self.on.dns_record_request_received.emit(event.relation, app=event.app, unit=event.unit)
+            self.on.dns_record_request_received.emit(
+                event.relation, app=event.app, unit=event.unit
+            )
 
     def update_relation_data(
         self, relation: ops.Relation, dns_record_provider_data: DNSRecordProviderData

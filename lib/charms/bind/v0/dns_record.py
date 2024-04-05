@@ -74,6 +74,7 @@ import json
 import logging
 from enum import Enum
 from typing import Dict, List, Optional
+from uuid import UUID
 
 import ops
 from pydantic import BaseModel, Field, IPvAnyAddress, ValidationError
@@ -168,7 +169,7 @@ class DNSProviderData(BaseModel):
         description: status description for the domain request.
     """
 
-    uuid: str = Field(min_length=1)
+    uuid: UUID
     status: Status
     description: Optional[str] = None
 
@@ -178,7 +179,7 @@ class DNSProviderData(BaseModel):
         Returns:
             Dict containing the representation.
         """
-        result = {"uuid": self.uuid, "status": self.status.value}
+        result = {"uuid": str(self.uuid), "status": self.status.value}
         if self.description:
             result["description"] = self.description
         return result
@@ -197,7 +198,7 @@ class DNSProviderData(BaseModel):
             status = Status(relation_data["status"])
         except ValueError:
             status = Status.UNKNOWN
-        return cls(uuid=relation_data["uuid"], status=status)
+        return cls(uuid=UUID(relation_data["uuid"]), status=status)
 
 
 class DNSRecordProviderData(BaseModel):
@@ -269,7 +270,7 @@ class RequirerDomains(BaseModel):
     domain: str = Field(min_length=1)
     username: str
     password: str
-    uuid: str = Field(min_length=1)
+    uuid: UUID
 
     def to_relation_data(self) -> Dict[str, str]:
         """Convert an instance of DNSProviderData to the relation representation.
@@ -281,7 +282,7 @@ class RequirerDomains(BaseModel):
             "domain": self.domain,
             "username": self.username,
             "password": self.password,
-            "uuid": self.uuid,
+            "uuid": str(self.uuid),
         }
 
     @classmethod
@@ -298,7 +299,7 @@ class RequirerDomains(BaseModel):
             domain=relation_data["domain"],
             username=relation_data["username"],
             password=relation_data["password"],
-            uuid=relation_data["uuid"],
+            uuid=UUID(relation_data["uuid"]),
         )
 
 
@@ -321,7 +322,7 @@ class RequirerEntries(BaseModel):
     record_class: Optional[RecordClass] = None
     record_type: Optional[RecordType] = None
     record_data: IPvAnyAddress
-    uuid: str = Field(min_length=1)
+    uuid: UUID
 
     def to_relation_data(self) -> Dict[str, str]:
         """Convert an instance of DNSRecordRequirerData to the relation representation.
@@ -333,7 +334,7 @@ class RequirerEntries(BaseModel):
             "domain": self.domain,
             "host_label": self.host_label,
             "record_data": str(self.record_data),
-            "uuid": self.uuid,
+            "uuid": str(self.uuid),
         }
         if self.ttl:
             result["ttl"] = str(self.ttl)
@@ -368,7 +369,7 @@ class RequirerEntries(BaseModel):
                 else None
             ),
             record_data=IPvAnyAddress(relation_data["record_data"]),
-            uuid=relation_data["uuid"],
+            uuid=UUID(relation_data["uuid"]),
         )
 
 

@@ -518,27 +518,27 @@ class DNSRecordRequires(ops.Object):
         self.relation_name = relation_name
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
 
-    def get_relation_data(self) -> Optional[DNSRecordRequirerData]:
-        """Retrieve the relation data.
+    def get_relation_data(self) -> Optional[DNSRecordProviderData]:
+        """Retrieve the remote relation data.
 
         Returns:
-            DNSRecordRequirerData: the relation data.
+            DNSRecordProviderData: the relation data.
         """
         relation = self.model.get_relation(self.relation_name)
         return self._get_relation_data_from_relation(relation) if relation else None
 
-    def _get_relation_data_from_relation(self, relation: ops.Relation) -> DNSRecordRequirerData:
-        """Retrieve the relation data.
+    def _get_relation_data_from_relation(self, relation: ops.Relation) -> DNSRecordProviderData:
+        """Retrieve the remote relation data.
 
         Args:
             relation: the relation to retrieve the data from.
 
         Returns:
-            DNSRecordRequirerData: the relation data.
+            DNSRecordProviderData: the relation data.
         """
         assert relation.app
         relation_data = relation.data[relation.app]
-        return DNSRecordRequirerData.from_relation_data(relation_data)
+        return DNSRecordProviderData.from_relation_data(relation_data)
 
     def _is_relation_data_valid(self, relation: ops.Relation) -> bool:
         """Validate the relation data.
@@ -618,18 +618,19 @@ class DNSRecordProvides(ops.Object):
         super().__init__(charm, relation_name)
         self.charm = charm
         self.relation_name = relation_name
+        self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
 
-    def get_relation_data(self) -> Optional[DNSRecordProviderData]:
-        """Retrieve the relation data.
+    def get_relation_data(self) -> Optional[DNSRecordRequirerData]:
+        """Retrieve the remote relation data.
 
         Returns:
-            DNSRecordProviderData: the relation data.
+            DNSRecordRequirerData: the relation data.
         """
         relation = self.model.get_relation(self.relation_name)
         return self._get_relation_data_from_relation(relation) if relation else None
 
-    def _get_relation_data_from_relation(self, relation: ops.Relation) -> DNSRecordProviderData:
-        """Retrieve the relation data.
+    def _get_relation_data_from_relation(self, relation: ops.Relation) -> DNSRecordRequirerData:
+        """Retrieve the remote relation data.
 
         Args:
             relation: the relation to retrieve the data from.
@@ -639,7 +640,7 @@ class DNSRecordProvides(ops.Object):
         """
         assert relation.app
         relation_data = relation.data[relation.app]
-        return DNSRecordProviderData.from_relation_data(relation_data)
+        return DNSRecordRequirerData.from_relation_data(relation_data)
 
     def _is_relation_data_valid(self, relation: ops.Relation) -> bool:
         """Validate the relation data.

@@ -5,6 +5,7 @@
 import json
 import secrets
 import uuid
+from typing import List
 
 import ops
 from charms.bind.v0 import dns_record
@@ -166,7 +167,7 @@ class DNSRecordRequirerCharm(ops.CharmBase):
         """
         super().__init__(*args)
         self.dns_record = dns_record.DNSRecordRequires(self)
-        self.events = []
+        self.events: List[dns_record.DNSRecordRequestProcessed] = []
         self.framework.observe(self.dns_record.on.dns_record_request_processed, self._record_event)
 
     def _record_event(self, event: ops.EventBase) -> None:
@@ -189,7 +190,7 @@ class DNSRecordProviderCharm(ops.CharmBase):
         """
         super().__init__(*args)
         self.dns_record = dns_record.DNSRecordProvides(self)
-        self.events = []
+        self.events: List[dns_record.DNSRecordRequestReceived] = []
         self.framework.observe(self.dns_record.on.dns_record_request_received, self._record_event)
 
     def _record_event(self, event: ops.EventBase) -> None:
@@ -221,6 +222,24 @@ def test_dns_record_requirer_update_relation_data():
     assert json.loads(data["dns-entries"]) == json.loads(REQUIRER_RELATION_DATA["dns-entries"])
 
 
+def test_dns_record_requirer_emmits_event():
+    """
+    arrange: given a requirer charm.
+    act: update the remote relation databag with valid values.
+    assert: a DNSRecordRequestProcessed is emitted.
+    """
+    harness = Harness(DNSRecordRequirerCharm, meta=REQUIRER_METADATA)
+    harness.begin()
+    harness.set_leader(True)
+
+    harness.add_relation("dns-record", "dns-record", app_data=PROVIDER_RELATION_DATA)
+
+    events = harness.charm.events
+    assert len(events) == 1
+    assert events[0].dns_domains == DNS_RECORD_PROVIDER_DATA.dns_domains
+    assert events[0].dns_entries == DNS_RECORD_PROVIDER_DATA.dns_entries
+
+
 def test_dns_record_provider_update_relation_data():
     """
     arrange: given a provider charm.
@@ -239,6 +258,24 @@ def test_dns_record_provider_update_relation_data():
     data = relation.data[harness.model.app]
     assert json.loads(data["dns-domains"]) == json.loads(PROVIDER_RELATION_DATA["dns-domains"])
     assert json.loads(data["dns-entries"]) == json.loads(PROVIDER_RELATION_DATA["dns-entries"])
+
+
+def test_dns_record_provider_emmits_event():
+    """
+    arrange: given a provider charm.
+    act: update the remote relation databag with valid values.
+    assert: a DNSRecordRequestReceived is emitted.
+    """
+    harness = Harness(DNSRecordProviderCharm, meta=PROVIDER_METADATA)
+    harness.begin()
+    harness.set_leader(True)
+
+    harness.add_relation("dns-record", "dns-record", app_data=REQUIRER_RELATION_DATA)
+
+    events = harness.charm.events
+    assert len(events) == 1
+    assert events[0].dns_domains == DNS_RECORD_REQUIRER_DATA.dns_domains
+    assert events[0].dns_entries == DNS_RECORD_REQUIRER_DATA.dns_entries
 
 
 def test_dns_record_requirer_data_from_relation_data():

@@ -257,7 +257,7 @@ class DNSRecordProviderData(BaseModel):
         return cls(dns_domains=dns_domains, dns_entries=dns_entries)
 
 
-class RequirerDomains(BaseModel):
+class RequirerDomain(BaseModel):
     """DNS requirer domains requested.
 
     Attributes:
@@ -273,7 +273,7 @@ class RequirerDomains(BaseModel):
     uuid: UUID
 
     def to_relation_data(self) -> Dict[str, str]:
-        """Convert an instance of DNSProviderData to the relation representation.
+        """Convert an instance of RequirerDomain to the relation representation.
 
         Returns:
             Dict containing the representation.
@@ -286,14 +286,14 @@ class RequirerDomains(BaseModel):
         }
 
     @classmethod
-    def from_relation_data(cls, relation_data: Dict[str, str]) -> "RequirerDomains":
-        """Initialize a new instance of the RequirerDomains class from the relation data.
+    def from_relation_data(cls, relation_data: Dict[str, str]) -> "RequirerDomain":
+        """Initialize a new instance of the RequirerDomain class from the relation data.
 
         Args:
             relation_data: the relation data.
 
         Returns:
-            A RequirerDomains instance.
+            A RequirerDomain instance.
         """
         return cls(
             domain=relation_data["domain"],
@@ -303,7 +303,7 @@ class RequirerDomains(BaseModel):
         )
 
 
-class RequirerEntries(BaseModel):
+class RequirerEntry(BaseModel):
     """DNS requirer entries requested.
 
     Attributes:
@@ -345,14 +345,14 @@ class RequirerEntries(BaseModel):
         return result
 
     @classmethod
-    def from_relation_data(cls, relation_data: Dict[str, str]) -> "RequirerEntries":
-        """Initialize a new instance of the RequirerDomains class from the relation data.
+    def from_relation_data(cls, relation_data: Dict[str, str]) -> "RequirerEntry":
+        """Initialize a new instance of the RequirerEntry class from the relation data.
 
         Args:
             relation_data: the relation data.
 
         Returns:
-            A RequirerEntries instance.
+            A RequirerEntry instance.
         """
         return cls(
             domain=relation_data["domain"],
@@ -381,8 +381,8 @@ class DNSRecordRequirerData(BaseModel):
         dns_entries: list of entries to manage.
     """
 
-    dns_domains: Optional[List[RequirerDomains]] = None
-    dns_entries: Optional[List[RequirerEntries]] = None
+    dns_domains: Optional[List[RequirerDomain]] = None
+    dns_entries: Optional[List[RequirerEntry]] = None
 
     def to_relation_data(self) -> Dict[str, str]:
         """Convert an instance of DNSRecordRequirerData to the relation representation.
@@ -419,12 +419,12 @@ class DNSRecordRequirerData(BaseModel):
         """
         deserialised_dns_domains = json.loads(relation_data["dns-domains"])
         dns_domains = [
-            RequirerDomains.from_relation_data(dns_domain)
+            RequirerDomain.from_relation_data(dns_domain)
             for dns_domain in deserialised_dns_domains
         ]
         deserialised_dns_entries = json.loads(relation_data["dns-entries"])
         dns_entries = [
-            RequirerEntries.from_relation_data(dns_entry) for dns_entry in deserialised_dns_entries
+            RequirerEntry.from_relation_data(dns_entry) for dns_entry in deserialised_dns_entries
         ]
         return cls(dns_domains=dns_domains, dns_entries=dns_entries)
 
@@ -471,12 +471,12 @@ class DNSRecordRequestReceived(ops.RelationEvent):
         return DNSRecordRequirerData.from_relation_data(self.relation.data[self.relation.app])
 
     @property
-    def dns_domains(self) -> Optional[List[RequirerDomains]]:
+    def dns_domains(self) -> Optional[List[RequirerDomain]]:
         """Fetch the DNS domains from the relation."""
         return self.dns_record_requirer_relation_data.dns_domains
 
     @property
-    def dns_entries(self) -> Optional[List[RequirerEntries]]:
+    def dns_entries(self) -> Optional[List[RequirerEntry]]:
         """Fetch the DNS entries from the relation."""
         return self.dns_record_requirer_relation_data.dns_entries
 

@@ -220,14 +220,14 @@ class DNSRecordProviderData(BaseModel):
         """
         result = {}
         if self.dns_domains:
-            result["dns_domains"] = json.dumps(
+            result["dns-domains"] = json.dumps(
                 [
                     domain.to_relation_data()
                     for domain in self.dns_domains  # pylint: disable=not-an-iterable
                 ]
             )
         if self.dns_entries:
-            result["dns_entries"] = json.dumps(
+            result["dns-entries"] = json.dumps(
                 [
                     entry.to_relation_data()
                     for entry in self.dns_entries  # pylint: disable=not-an-iterable
@@ -245,12 +245,12 @@ class DNSRecordProviderData(BaseModel):
         Returns:
             A DNSRecordProviderData instance.
         """
-        deserialised_dns_domains = json.loads(relation_data["dns_domains"])
+        deserialised_dns_domains = json.loads(relation_data["dns-domains"])
         dns_domains = [
             DNSProviderData.from_relation_data(dns_domain)
             for dns_domain in deserialised_dns_domains
         ]
-        deserialised_dns_entries = json.loads(relation_data["dns_entries"])
+        deserialised_dns_entries = json.loads(relation_data["dns-entries"])
         dns_entries = [
             DNSProviderData.from_relation_data(dns_entry) for dns_entry in deserialised_dns_entries
         ]
@@ -332,16 +332,16 @@ class RequirerEntries(BaseModel):
         """
         result = {
             "domain": self.domain,
-            "host_label": self.host_label,
-            "record_data": str(self.record_data),
+            "host-label": self.host_label,
+            "record-data": str(self.record_data),
             "uuid": str(self.uuid),
         }
         if self.ttl:
             result["ttl"] = str(self.ttl)
         if self.record_class:
-            result["record_class"] = self.record_class.value
+            result["record-class"] = self.record_class.value
         if self.record_type:
-            result["record_type"] = self.record_type.value
+            result["record-type"] = self.record_type.value
         return result
 
     @classmethod
@@ -356,19 +356,19 @@ class RequirerEntries(BaseModel):
         """
         return cls(
             domain=relation_data["domain"],
-            host_label=relation_data["host_label"],
+            host_label=relation_data["host-label"],
             ttl=int(relation_data["ttl"]) if "ttl" in relation_data else None,
             record_class=(
-                RecordClass(relation_data["record_class"])
+                RecordClass(relation_data["record-class"])
                 if "record_class" in relation_data
                 else None
             ),
             record_type=(
-                RecordType(relation_data["record_type"])
+                RecordType(relation_data["record-type"])
                 if "record_type" in relation_data
                 else None
             ),
-            record_data=IPvAnyAddress(relation_data["record_data"]),
+            record_data=IPvAnyAddress(relation_data["record-data"]),
             uuid=UUID(relation_data["uuid"]),
         )
 
@@ -392,14 +392,14 @@ class DNSRecordRequirerData(BaseModel):
         """
         result = {}
         if self.dns_domains:
-            result["dns_domains"] = json.dumps(
+            result["dns-domains"] = json.dumps(
                 [
                     domain.to_relation_data()
                     for domain in self.dns_domains  # pylint: disable=not-an-iterable
                 ]
             )
         if self.dns_entries:
-            result["dns_entries"] = json.dumps(
+            result["dns-entries"] = json.dumps(
                 [
                     entry.to_relation_data()
                     for entry in self.dns_entries  # pylint: disable=not-an-iterable
@@ -417,12 +417,12 @@ class DNSRecordRequirerData(BaseModel):
         Returns:
             A DNSRecordRequirerData instance.
         """
-        deserialised_dns_domains = json.loads(relation_data["dns_domains"])
+        deserialised_dns_domains = json.loads(relation_data["dns-domains"])
         dns_domains = [
             RequirerDomains.from_relation_data(dns_domain)
             for dns_domain in deserialised_dns_domains
         ]
-        deserialised_dns_entries = json.loads(relation_data["dns_entries"])
+        deserialised_dns_entries = json.loads(relation_data["dns-entries"])
         dns_entries = [
             RequirerEntries.from_relation_data(dns_entry) for dns_entry in deserialised_dns_entries
         ]

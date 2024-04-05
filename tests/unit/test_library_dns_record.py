@@ -298,3 +298,19 @@ def test_dns_record_provider_data_from_relation_data():
     result = dns_record.DNSRecordProviderData.from_relation_data(PROVIDER_RELATION_DATA)
 
     assert result == DNS_RECORD_PROVIDER_DATA
+
+
+def test_dns_provider_data_from_relation_data_unknown():
+    """
+    arrange: do nothing.
+    act: deserialise dns provider data with an unrecongnised status.
+    assert: the resulting DNSProviderData is correct and status is set as UNKNOWN.
+    """
+    relation_data_unknown_status = {
+        "status": "anything",
+        "uuid": str(uuid.uuid4()),
+    }
+    provider_data = dns_record.DNSProviderData.from_relation_data(relation_data_unknown_status)
+
+    assert provider_data.status == dns_record.Status.UNKNOWN
+    assert provider_data.uuid == uuid.UUID(relation_data_unknown_status["uuid"])

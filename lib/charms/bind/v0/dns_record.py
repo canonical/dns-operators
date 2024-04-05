@@ -267,13 +267,13 @@ class RequirerDomain(BaseModel):
     Attributes:
         domain: the domain name.
         username: username for authentication.
-        password: password for authentication.
+        password_id: secret password for authentication.
         uuid: UUID for this entry.
     """
 
     domain: str = Field(min_length=1)
     username: str
-    password: str
+    password_id: str
     uuid: UUID
 
     def to_relation_data(self) -> Dict[str, str]:
@@ -285,7 +285,7 @@ class RequirerDomain(BaseModel):
         return {
             "domain": self.domain,
             "username": self.username,
-            "password": self.password,
+            "password_id": self.password_id,
             "uuid": str(self.uuid),
         }
 
@@ -302,7 +302,7 @@ class RequirerDomain(BaseModel):
         return cls(
             domain=relation_data["domain"],
             username=relation_data["username"],
-            password=relation_data["password"],
+            password_id=relation_data["password_id"],
             uuid=UUID(relation_data["uuid"]),
         )
 

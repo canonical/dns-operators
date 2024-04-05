@@ -39,13 +39,13 @@ REQUIRER_RELATION_DATA = {
                 "uuid": str(UUID1),
                 "domain": "cloud.canonical.com",
                 "username": "user1",
-                "password": PASSWORD_USER_1,
+                "password_id": PASSWORD_USER_1,
             },
             {
                 "uuid": str(UUID2),
                 "domain": "staging.ubuntu.com",
                 "username": "user2",
-                "password": PASSWORD_USER_2,
+                "password_id": PASSWORD_USER_2,
             },
         ]
     ),
@@ -74,13 +74,13 @@ DNS_RECORD_REQUIRER_DATA = dns_record.DNSRecordRequirerData(
         dns_record.RequirerDomain(
             domain="cloud.canonical.com",
             username="user1",
-            password=PASSWORD_USER_1,
+            password_id=PASSWORD_USER_1,
             uuid=UUID1,
         ),
         dns_record.RequirerDomain(
             domain="staging.ubuntu.com",
             username="user2",
-            password=PASSWORD_USER_2,
+            password_id=PASSWORD_USER_2,
             uuid=UUID2,
         ),
     ],
@@ -107,8 +107,8 @@ PROVIDER_RELATION_DATA = {
         [
             {
                 "uuid": str(UUID1),
-                "status": "failure",
-                "description": "incorrect username and password",
+                "status": "invalid_credentials",
+                "description": "invalid_credentials",
             },
             {
                 "uuid": str(UUID2),
@@ -120,8 +120,8 @@ PROVIDER_RELATION_DATA = {
         [
             {
                 "uuid": str(UUID3),
-                "status": "failure",
-                "description": "incorrect username and password",
+                "status": "invalid_credentials",
+                "description": "invalid_credentials",
             },
             {
                 "uuid": str(UUID4),
@@ -134,8 +134,8 @@ DNS_RECORD_PROVIDER_DATA = dns_record.DNSRecordProviderData(
     dns_domains=[
         dns_record.DNSProviderData(
             uuid=UUID1,
-            status=dns_record.Status.FAILURE,
-            description="incorrect username and password",
+            status=dns_record.Status.INVALID_CREDENTIALS,
+            description="invalid_credentials",
         ),
         dns_record.DNSProviderData(
             uuid=UUID2,
@@ -145,8 +145,8 @@ DNS_RECORD_PROVIDER_DATA = dns_record.DNSRecordProviderData(
     dns_entries=[
         dns_record.DNSProviderData(
             uuid=UUID3,
-            status=dns_record.Status.FAILURE,
-            description="incorrect username and password",
+            status=dns_record.Status.INVALID_CREDENTIALS,
+            description="invalid_credentials",
         ),
         dns_record.DNSProviderData(
             uuid=UUID4,

@@ -195,13 +195,13 @@ class DNSProviderData(BaseModel):
             A DNSRecordProviderData instance.
         """
         try:
-            status = Status(relation_data["status"])
+            status = Status(relation_data.get("status"))
         except ValueError:
             status = Status.UNKNOWN
         return cls(
-            uuid=UUID(relation_data["uuid"]),
+            uuid=UUID(relation_data.get("uuid")),
             status=status,
-            description=relation_data["description"] if "description" in relation_data else None,
+            description=relation_data.get("description"),
         )
 
 
@@ -249,12 +249,12 @@ class DNSRecordProviderData(BaseModel):
         Returns:
             A DNSRecordProviderData instance.
         """
-        deserialised_dns_domains = json.loads(relation_data["dns-domains"])
+        deserialised_dns_domains = json.loads(relation_data.get("dns-domains"))
         dns_domains = [
             DNSProviderData.from_relation_data(dns_domain)
             for dns_domain in deserialised_dns_domains
         ]
-        deserialised_dns_entries = json.loads(relation_data["dns-entries"])
+        deserialised_dns_entries = json.loads(relation_data.get("dns-entries"))
         dns_entries = [
             DNSProviderData.from_relation_data(dns_entry) for dns_entry in deserialised_dns_entries
         ]
@@ -300,10 +300,10 @@ class RequirerDomain(BaseModel):
             A RequirerDomain instance.
         """
         return cls(
-            domain=relation_data["domain"],
-            username=relation_data["username"],
-            password_id=relation_data["password_id"],
-            uuid=UUID(relation_data["uuid"]),
+            domain=relation_data.get("domain"),
+            username=relation_data.get("username"),
+            password_id=relation_data.get("password_id"),
+            uuid=UUID(relation_data.get("uuid")),
         )
 
 
@@ -359,21 +359,21 @@ class RequirerEntry(BaseModel):
             A RequirerEntry instance.
         """
         return cls(
-            domain=relation_data["domain"],
-            host_label=relation_data["host-label"],
-            ttl=int(relation_data["ttl"]) if "ttl" in relation_data else None,
+            domain=relation_data.get("domain"),
+            host_label=relation_data.get("host-label"),
+            ttl=int(relation_data.get("ttl")) if "ttl" in relation_data else None,
             record_class=(
-                RecordClass(relation_data["record-class"])
+                RecordClass(relation_data.get("record-class"))
                 if "record-class" in relation_data
                 else None
             ),
             record_type=(
-                RecordType(relation_data["record-type"])
+                RecordType(relation_data.get("record-type"))
                 if "record-type" in relation_data
                 else None
             ),
-            record_data=IPvAnyAddress(relation_data["record-data"]),
-            uuid=UUID(relation_data["uuid"]),
+            record_data=IPvAnyAddress(relation_data.get("record-data")),
+            uuid=UUID(relation_data.get("uuid")),
         )
 
 
@@ -421,12 +421,12 @@ class DNSRecordRequirerData(BaseModel):
         Returns:
             A DNSRecordRequirerData instance.
         """
-        deserialised_dns_domains = json.loads(relation_data["dns-domains"])
+        deserialised_dns_domains = json.loads(relation_data.get("dns-domains"))
         dns_domains = [
             RequirerDomain.from_relation_data(dns_domain)
             for dns_domain in deserialised_dns_domains
         ]
-        deserialised_dns_entries = json.loads(relation_data["dns-entries"])
+        deserialised_dns_entries = json.loads(relation_data.get("dns-entries"))
         dns_entries = [
             RequirerEntry.from_relation_data(dns_entry) for dns_entry in deserialised_dns_entries
         ]

@@ -65,7 +65,7 @@ PROVIDER_RELATION_DATA = {
         {
             "uuid": UUID1,
             "status": "failure",
-            "status_description": "incorrect username and password",
+            "description": "incorrect username and password",
         },
         {
             "uuid": UUID2,
@@ -76,7 +76,7 @@ PROVIDER_RELATION_DATA = {
         {
             "uuid": UUID3,
             "status": "failure",
-            "status_description": "incorrect username & password",
+            "description": "incorrect username & password",
         },
         {
             "uuid": UUID4,

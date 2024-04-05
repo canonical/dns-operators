@@ -165,12 +165,12 @@ class DNSProviderData(BaseModel):
     Attributes:
         uuid: UUID for the domain request.
         status: status for the domain request.
-        status_description: status description for the domain request.
+        description: status description for the domain request.
     """
 
     uuid: str = Field(min_length=1)
     status: Status
-    status_description: Optional[str] = None
+    description: Optional[str] = None
 
     def to_relation_data(self) -> Dict[str, str]:
         """Convert an instance of DNSProviderData to the relation representation.
@@ -179,8 +179,8 @@ class DNSProviderData(BaseModel):
             Dict containing the representation.
         """
         result = {"uuid": self.uuid, "status": self.status.value}
-        if self.status_description:
-            result["status_description"] = self.status_description
+        if self.description:
+            result["description"] = self.description
         return result
 
     @classmethod

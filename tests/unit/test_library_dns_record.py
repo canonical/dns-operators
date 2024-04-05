@@ -32,63 +32,127 @@ UUID2 = uuid.uuid4()
 UUID3 = uuid.uuid4()
 UUID4 = uuid.uuid4()
 REQUIRER_RELATION_DATA = {
-    "dns-domains": [
-        {
-            "uuid": str(UUID1),
-            "domain": "cloud.canonical.com",
-            "username": "user1",
-            "password": PASSWORD_USER_1,
-        },
-        {
-            "uuid": str(UUID2),
-            "domain": "staging.ubuntu.com",
-            "username": "user2",
-            "password": PASSWORD_USER_2,
-        },
-    ],
-    "dns-entries": [
-        {
-            "uuid": str(UUID3),
-            "domain": "cloud.canonical.com",
-            "host-label": "admin",
-            "ttl": "600",
-            "record-class": "IN",
-            "record-type": "A",
-            "record-data": "91.189.91.48",
-        },
-        {
-            "uuid": str(UUID4),
-            "domain": "staging.canonical.com",
-            "host-label": "www",
-            "record-data": "91.189.91.47",
-        },
-    ],
+    "dns-domains": json.dumps(
+        [
+            {
+                "uuid": str(UUID1),
+                "domain": "cloud.canonical.com",
+                "username": "user1",
+                "password": PASSWORD_USER_1,
+            },
+            {
+                "uuid": str(UUID2),
+                "domain": "staging.ubuntu.com",
+                "username": "user2",
+                "password": PASSWORD_USER_2,
+            },
+        ]
+    ),
+    "dns-entries": json.dumps(
+        [
+            {
+                "uuid": str(UUID3),
+                "domain": "cloud.canonical.com",
+                "host-label": "admin",
+                "ttl": "600",
+                "record-class": "IN",
+                "record-type": "A",
+                "record-data": "91.189.91.48",
+            },
+            {
+                "uuid": str(UUID4),
+                "domain": "staging.canonical.com",
+                "host-label": "www",
+                "record-data": "91.189.91.47",
+            },
+        ]
+    ),
 }
-
+DNS_RECORD_REQUIRER_DATA = dns_record.DNSRecordRequirerData(
+    dns_domains=[
+        dns_record.RequirerDomain(
+            domain="cloud.canonical.com",
+            username="user1",
+            password=PASSWORD_USER_1,
+            uuid=UUID1,
+        ),
+        dns_record.RequirerDomain(
+            domain="staging.ubuntu.com",
+            username="user2",
+            password=PASSWORD_USER_2,
+            uuid=UUID2,
+        ),
+    ],
+    dns_entries=[
+        dns_record.RequirerEntry(
+            uuid=UUID3,
+            domain="cloud.canonical.com",
+            host_label="admin",
+            ttl=600,
+            record_class=dns_record.RecordClass.IN,
+            record_type=dns_record.RecordType.A,
+            record_data=IPvAnyAddress("91.189.91.48"),
+        ),
+        dns_record.RequirerEntry(
+            uuid=UUID4,
+            domain="staging.canonical.com",
+            host_label="www",
+            record_data=IPvAnyAddress("91.189.91.47"),
+        ),
+    ],
+)
 PROVIDER_RELATION_DATA = {
-    "dns-domains": [
-        {
-            "uuid": str(UUID1),
-            "status": "failure",
-            "description": "incorrect username and password",
-        },
-        {
-            "uuid": str(UUID2),
-            "status": "approved",
-        },
-    ],
-    "dns-entries": [
-        {
-            "uuid": str(UUID3),
-            "status": "failure",
-            "description": "incorrect username and password",
-        },
-        {
-            "uuid": str(UUID4),
-            "status": "approved",
-        },
-    ],
+    "dns-domains": json.dumps(
+        [
+            {
+                "uuid": str(UUID1),
+                "status": "failure",
+                "description": "incorrect username and password",
+            },
+            {
+                "uuid": str(UUID2),
+                "status": "approved",
+            },
+        ]
+    ),
+    "dns-entries": json.dumps(
+        [
+            {
+                "uuid": str(UUID3),
+                "status": "failure",
+                "description": "incorrect username and password",
+            },
+            {
+                "uuid": str(UUID4),
+                "status": "approved",
+            },
+        ]
+    ),
 }
+DNS_RECORD_PROVIDER_DATA = dns_record.DNSRecordProviderData(
+    dns_domains=[
+        dns_record.DNSProviderData(
+            uuid=UUID1,
+            status=dns_record.Status.FAILURE,
+            description="incorrect username and password",
+        ),
+        dns_record.DNSProviderData(
+            uuid=UUID2,
+            status=dns_record.Status.APPROVED,
+        ),
+    ],
+    dns_entries=[
+        dns_record.DNSProviderData(
+            uuid=UUID3,
+            status=dns_record.Status.FAILURE,
+            description="incorrect username and password",
+        ),
+        dns_record.DNSProviderData(
+            uuid=UUID4,
+            status=dns_record.Status.APPROVED,
+        ),
+    ],
+)
 
 
 class DNSRecordRequirerCharm(ops.CharmBase):
@@ -149,48 +213,12 @@ def test_dns_record_requirer_update_relation_data():
 
     harness.add_relation("dns-record", "dns-record")
     relation = harness.model.get_relation("dns-record")
-
-    dns_domains = [
-        dns_record.RequirerDomain(
-            domain="cloud.canonical.com",
-            username="user1",
-            password=PASSWORD_USER_1,
-            uuid=UUID1,
-        ),
-        dns_record.RequirerDomain(
-            domain="staging.ubuntu.com",
-            username="user2",
-            password=PASSWORD_USER_2,
-            uuid=UUID2,
-        ),
-    ]
-    dns_entries = [
-        dns_record.RequirerEntry(
-            uuid=UUID3,
-            domain="cloud.canonical.com",
-            host_label="admin",
-            ttl=600,
-            record_class=dns_record.RecordClass.IN,
-            record_type=dns_record.RecordType.A,
-            record_data=IPvAnyAddress("91.189.91.48"),
-        ),
-        dns_record.RequirerEntry(
-            uuid=UUID4,
-            domain="staging.canonical.com",
-            host_label="www",
-            record_data=IPvAnyAddress("91.189.91.47"),
-        ),
-    ]
-    relation_data = dns_record.DNSRecordRequirerData(
-        dns_domains=dns_domains,
-        dns_entries=dns_entries,
-    )
-    harness.charm.dns_record.update_relation_data(relation, relation_data)
+    harness.charm.dns_record.update_relation_data(relation, DNS_RECORD_REQUIRER_DATA)
 
     assert relation
     data = relation.data[harness.model.app]
-    assert json.loads(data["dns-domains"]) == REQUIRER_RELATION_DATA["dns-domains"]
-    assert json.loads(data["dns-entries"]) == REQUIRER_RELATION_DATA["dns-entries"]
+    assert json.loads(data["dns-domains"]) == json.loads(REQUIRER_RELATION_DATA["dns-domains"])
+    assert json.loads(data["dns-entries"]) == json.loads(REQUIRER_RELATION_DATA["dns-entries"])
 
 
 def test_dns_record_provider_update_relation_data():
@@ -205,35 +233,31 @@ def test_dns_record_provider_update_relation_data():
 
     harness.add_relation("dns-record", "dns-record")
     relation = harness.model.get_relation("dns-record")
-    dns_domains = [
-        dns_record.DNSProviderData(
-            uuid=UUID1,
-            status=dns_record.Status.FAILURE,
-            description="incorrect username and password",
-        ),
-        dns_record.DNSProviderData(
-            uuid=UUID2,
-            status=dns_record.Status.APPROVED,
-        ),
-    ]
-    dns_entries = [
-        dns_record.DNSProviderData(
-            uuid=UUID3,
-            status=dns_record.Status.FAILURE,
-            description="incorrect username and password",
-        ),
-        dns_record.DNSProviderData(
-            uuid=UUID4,
-            status=dns_record.Status.APPROVED,
-        ),
-    ]
-    relation_data = dns_record.DNSRecordProviderData(
-        dns_domains=dns_domains,
-        dns_entries=dns_entries,
-    )
-    harness.charm.dns_record.update_relation_data(relation, relation_data)
+    harness.charm.dns_record.update_relation_data(relation, DNS_RECORD_PROVIDER_DATA)
 
     assert relation
     data = relation.data[harness.model.app]
-    assert json.loads(data["dns-domains"]) == PROVIDER_RELATION_DATA["dns-domains"]
-    assert json.loads(data["dns-entries"]) == PROVIDER_RELATION_DATA["dns-entries"]
+    assert json.loads(data["dns-domains"]) == json.loads(PROVIDER_RELATION_DATA["dns-domains"])
+    assert json.loads(data["dns-entries"]) == json.loads(PROVIDER_RELATION_DATA["dns-entries"])
+
+
+def test_dns_record_requirer_data_from_relation_data():
+    """
+    arrange: given a relation with requirer relation data.
+    act: unserialize the relation data.
+    assert: the resulting DNSRecordRequirerData is correct.
+    """
+    result = dns_record.DNSRecordRequirerData.from_relation_data(REQUIRER_RELATION_DATA)
+
+    assert result == DNS_RECORD_REQUIRER_DATA
+
+
+def test_dns_record_provider_data_from_relation_data():
+    """
+    arrange: given a relation with provider relation data.
+    act: unserialize the relation data.
+    assert: the resulting DNSRecordProviderData is correct.
+    """
+    result = dns_record.DNSRecordProviderData.from_relation_data(PROVIDER_RELATION_DATA)
+
+    assert result == DNS_RECORD_PROVIDER_DATA

@@ -198,7 +198,11 @@ class DNSProviderData(BaseModel):
             status = Status(relation_data["status"])
         except ValueError:
             status = Status.UNKNOWN
-        return cls(uuid=UUID(relation_data["uuid"]), status=status)
+        return cls(
+            uuid=UUID(relation_data["uuid"]),
+            status=status,
+            description=relation_data["description"] if "description" in relation_data else None,
+        )
 
 
 class DNSRecordProviderData(BaseModel):
@@ -360,12 +364,12 @@ class RequirerEntry(BaseModel):
             ttl=int(relation_data["ttl"]) if "ttl" in relation_data else None,
             record_class=(
                 RecordClass(relation_data["record-class"])
-                if "record_class" in relation_data
+                if "record-class" in relation_data
                 else None
             ),
             record_type=(
                 RecordType(relation_data["record-type"])
-                if "record_type" in relation_data
+                if "record-type" in relation_data
                 else None
             ),
             record_data=IPvAnyAddress(relation_data["record-data"]),

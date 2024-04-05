@@ -518,16 +518,16 @@ class DNSRecordRequires(ops.Object):
         self.relation_name = relation_name
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
 
-    def get_relation_data(self) -> Optional[DNSRecordProviderData]:
+    def get_remote_relation_data(self) -> Optional[DNSRecordProviderData]:
         """Retrieve the remote relation data.
 
         Returns:
             DNSRecordProviderData: the relation data.
         """
         relation = self.model.get_relation(self.relation_name)
-        return self._get_relation_data_from_relation(relation) if relation else None
+        return self._get_remote_relation_data(relation) if relation else None
 
-    def _get_relation_data_from_relation(self, relation: ops.Relation) -> DNSRecordProviderData:
+    def _get_remote_relation_data(self, relation: ops.Relation) -> DNSRecordProviderData:
         """Retrieve the remote relation data.
 
         Args:
@@ -540,7 +540,7 @@ class DNSRecordRequires(ops.Object):
         relation_data = relation.data[relation.app]
         return DNSRecordProviderData.from_relation_data(relation_data)
 
-    def _is_relation_data_valid(self, relation: ops.Relation) -> bool:
+    def _is_remote_relation_data_valid(self, relation: ops.Relation) -> bool:
         """Validate the relation data.
 
         Args:
@@ -550,7 +550,7 @@ class DNSRecordRequires(ops.Object):
             true: if the relation data is valid.
         """
         try:
-            _ = self._get_relation_data_from_relation(relation)
+            _ = self._get_remote_relation_data(relation)
             return True
         except ValidationError as ex:
             error_fields = set(
@@ -568,7 +568,7 @@ class DNSRecordRequires(ops.Object):
         """
         assert event.relation.app
         relation_data = event.relation.data[event.relation.app]
-        if relation_data and self._is_relation_data_valid(event.relation):
+        if relation_data and self._is_remote_relation_data_valid(event.relation):
             self.on.dns_record_request_processed.emit(
                 event.relation, app=event.app, unit=event.unit
             )
@@ -620,16 +620,16 @@ class DNSRecordProvides(ops.Object):
         self.relation_name = relation_name
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
 
-    def get_relation_data(self) -> Optional[DNSRecordRequirerData]:
+    def get_remote_relation_data(self) -> Optional[DNSRecordRequirerData]:
         """Retrieve the remote relation data.
 
         Returns:
             DNSRecordRequirerData: the relation data.
         """
         relation = self.model.get_relation(self.relation_name)
-        return self._get_relation_data_from_relation(relation) if relation else None
+        return self._get_remote_relation_data(relation) if relation else None
 
-    def _get_relation_data_from_relation(self, relation: ops.Relation) -> DNSRecordRequirerData:
+    def _get_remote_relation_data(self, relation: ops.Relation) -> DNSRecordRequirerData:
         """Retrieve the remote relation data.
 
         Args:
@@ -642,7 +642,7 @@ class DNSRecordProvides(ops.Object):
         relation_data = relation.data[relation.app]
         return DNSRecordRequirerData.from_relation_data(relation_data)
 
-    def _is_relation_data_valid(self, relation: ops.Relation) -> bool:
+    def _is_remote_relation_data_valid(self, relation: ops.Relation) -> bool:
         """Validate the relation data.
 
         Args:
@@ -652,7 +652,7 @@ class DNSRecordProvides(ops.Object):
             true: if the relation data is valid.
         """
         try:
-            _ = self._get_relation_data_from_relation(relation)
+            _ = self._get_remote_relation_data(relation)
             return True
         except ValidationError as ex:
             error_fields = set(
@@ -670,7 +670,7 @@ class DNSRecordProvides(ops.Object):
         """
         assert event.relation.app
         relation_data = event.relation.data[event.relation.app]
-        if relation_data and self._is_relation_data_valid(event.relation):
+        if relation_data and self._is_remote_relation_data_valid(event.relation):
             self.on.dns_record_request_received.emit(
                 event.relation, app=event.app, unit=event.unit
             )

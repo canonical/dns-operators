@@ -299,11 +299,12 @@ class RequirerDomain(BaseModel):
         Returns:
             A RequirerDomain instance.
         """
+        # A validation error will be raised if the values are None
         return cls(
-            domain=relation_data.get("domain"),
-            username=relation_data.get("username"),
-            password_id=relation_data.get("password_id"),
-            uuid=UUID(relation_data.get("uuid")),
+            domain=relation_data.get("domain"),  # type: ignore[arg-type]
+            username=relation_data.get("username"),  # type: ignore[arg-type]
+            password_id=relation_data.get("password_id"),  # type: ignore[arg-type]
+            uuid=UUID(relation_data.get("uuid")),  # type: ignore[arg-type]
         )
 
 
@@ -358,10 +359,16 @@ class RequirerEntry(BaseModel):
         Returns:
             A RequirerEntry instance.
         """
+        assert relation_data
+        # A validation error will be raised if the values are None
         return cls(
-            domain=relation_data.get("domain"),
-            host_label=relation_data.get("host-label"),
-            ttl=int(relation_data.get("ttl")) if "ttl" in relation_data else None,
+            domain=relation_data.get("domain"),  # type: ignore[arg-type]
+            host_label=relation_data.get("host-label"),  # type: ignore[arg-type]
+            ttl=(
+                int(relation_data.get("ttl"))  # type: ignore[arg-type]
+                if "ttl" in relation_data
+                else None
+            ),
             record_class=(
                 RecordClass(relation_data.get("record-class"))
                 if "record-class" in relation_data
@@ -372,8 +379,8 @@ class RequirerEntry(BaseModel):
                 if "record-type" in relation_data
                 else None
             ),
-            record_data=IPvAnyAddress(relation_data.get("record-data")),
-            uuid=UUID(relation_data.get("uuid")),
+            record_data=IPvAnyAddress(relation_data.get("record-data")),  # type: ignore[arg-type]
+            uuid=UUID(relation_data.get("uuid")),  # type: ignore[arg-type]
         )
 
 

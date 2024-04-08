@@ -240,6 +240,21 @@ def test_dns_record_requirer_emmits_event():
     assert events[0].dns_entries == DNS_RECORD_PROVIDER_DATA.dns_entries
 
 
+def test_dns_record_requirer_doesnt_emmit_event_when_relation_data_invalid():
+    """
+    arrange: given a requirer charm.
+    act: update the remote relation databag with invalid values.
+    assert: no DNSRecordRequestProcessed is emitted.
+    """
+    harness = Harness(DNSRecordRequirerCharm, meta=REQUIRER_METADATA)
+    harness.begin()
+    harness.set_leader(True)
+
+    harness.add_relation("dns-record", "dns-record", app_data={"invalid": "invalid"})
+
+    assert len(harness.charm.events) == 0
+
+
 def test_dns_record_provider_update_relation_data():
     """
     arrange: given a provider charm.
@@ -276,6 +291,21 @@ def test_dns_record_provider_emmits_event():
     assert len(events) == 1
     assert events[0].dns_domains == DNS_RECORD_REQUIRER_DATA.dns_domains
     assert events[0].dns_entries == DNS_RECORD_REQUIRER_DATA.dns_entries
+
+
+def test_dns_record_provider_doesnt_emmit_event_when_relation_data_invalid():
+    """
+    arrange: given a provider charm.
+    act: update the remote relation databag with invalid values.
+    assert: no DNSRecordRequestReceived is emitted.
+    """
+    harness = Harness(DNSRecordProviderCharm, meta=PROVIDER_METADATA)
+    harness.begin()
+    harness.set_leader(True)
+
+    harness.add_relation("dns-record", "dns-record", app_data={"invalid": "invalid"})
+
+    assert len(harness.charm.events) == 0
 
 
 def test_dns_record_requirer_data_from_relation_data():

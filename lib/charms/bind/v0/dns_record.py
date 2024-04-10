@@ -107,6 +107,15 @@ class Status(str, Enum):
     UNKNOWN = "unknown"
     PENDING = "pending"
 
+    @classmethod
+    def _missing_(cls, _: object) -> "Status":
+        """Handle the enum when the value is missing.
+
+        Returns:
+            value: Status.UNKNOWN.
+        """
+        return cls(cls.UNKNOWN)
+
 
 class RecordType(str, Enum):
     """Represent the DNS record types.
@@ -194,13 +203,9 @@ class DNSProviderData(BaseModel):
         Returns:
             A DNSRecordProviderData instance.
         """
-        try:
-            status = Status(relation_data.get("status"))
-        except ValueError:
-            status = Status.UNKNOWN
         return cls(
             uuid=UUID(relation_data.get("uuid")),
-            status=status,
+            status=Status(relation_data.get("status")),
             description=relation_data.get("description"),
         )
 
@@ -359,7 +364,10 @@ class RequirerEntry(BaseModel):
         Returns:
             A RequirerEntry instance.
         """
-        assert relation_data, "Empty relation data for DNS requirer, please check if relation_data has properly been passed to RequirerEntry."
+        assert (
+            relation_data
+        ), "Empty relation data for DNS requirer. Check if it has been passed to RequirerEntry."
+
         # A validation error will be raised if the values are None
         return cls(
             domain=relation_data.get("domain"),  # type: ignore[arg-type]

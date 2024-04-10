@@ -39,7 +39,9 @@ def _generate_random_filename(length: int = 24, extension: str = "") -> str:
         the generated name
     """
     characters = string.ascii_letters + string.digits
-    random_string = "".join(random.choice(characters) for _ in range(length))
+    # Disabling sec checking here since we're not looking
+    # to generate something cryptographically secure
+    random_string = "".join(random.choice(characters) for _ in range(length))  # nosec
     if extension:
         if "." in extension:
             pieces = extension.split(".")

@@ -452,7 +452,7 @@ class DNSRecordRequestProcessed(ops.RelationEvent):
     @property
     def dns_record_provider_relation_data(self) -> DNSRecordProviderData:
         """Get a DNSRecordProviderData for the relation data."""
-        assert self.relation.app
+        assert self.relation.app, "DNS record relation data accessed before relation setup."
         return DNSRecordProviderData.from_relation_data(self.relation.data[self.relation.app])
 
     @property

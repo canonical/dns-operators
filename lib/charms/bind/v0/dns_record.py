@@ -182,33 +182,6 @@ class DNSProviderData(BaseModel):
     status: Status
     description: Optional[str] = None
 
-    def to_relation_data(self) -> Dict[str, str]:
-        """Convert an instance of DNSProviderData to the relation representation.
-
-        Returns:
-            Dict containing the representation.
-        """
-        result = {"uuid": str(self.uuid), "status": self.status.value}
-        if self.description:
-            result["description"] = self.description
-        return result
-
-    @classmethod
-    def from_relation_data(cls, relation_data: Dict[str, str]) -> "DNSProviderData":
-        """Initialize a new instance of the DNSProviderData class from the relation data.
-
-        Args:
-            relation_data: the relation data.
-
-        Returns:
-            A DNSRecordProviderData instance.
-        """
-        return cls(
-            uuid=UUID(relation_data.get("uuid")),
-            status=Status(relation_data.get("status")),
-            description=relation_data.get("description"),
-        )
-
 
 class DNSRecordProviderData(BaseModel):
     """List of domains for the provider to manage.
@@ -227,20 +200,11 @@ class DNSRecordProviderData(BaseModel):
         Returns:
             Dict containing the representation.
         """
-        return {
-            "dns-domains": json.dumps(
-                [
-                    domain.to_relation_data()
-                    for domain in self.dns_domains  # pylint: disable=not-an-iterable
-                ]
-            ),
-            "dns-entries": json.dumps(
-                [
-                    entry.to_relation_data()
-                    for entry in self.dns_entries  # pylint: disable=not-an-iterable
-                ]
-            ),
-        }
+        dumped_model = self.model_dump(exclude_unset=True)
+        dumped_data = {}
+        for key, value in dumped_model.items():
+            dumped_data[key] = json.dumps(value, default=str)
+        return dumped_data
 
     @classmethod
     def from_relation_data(cls, relation_data: Dict[str, str]) -> "DNSRecordProviderData":
@@ -251,19 +215,18 @@ class DNSRecordProviderData(BaseModel):
 
         Returns:
             A DNSRecordProviderData instance.
+
+        Raises:
+            ValidationError if the value is not parseable.
         """
-        dns_domains_data = relation_data.get("dns-domains")
-        deserialised_dns_domains = json.loads(dns_domains_data) if dns_domains_data else []
-        dns_domains = [
-            DNSProviderData.from_relation_data(dns_domain)
-            for dns_domain in deserialised_dns_domains
-        ]
-        dns_entries_data = relation_data.get("dns-entries")
-        deserialised_dns_entries = json.loads(dns_entries_data) if dns_entries_data else []
-        dns_entries = [
-            DNSProviderData.from_relation_data(dns_entry) for dns_entry in deserialised_dns_entries
-        ]
-        return cls(dns_domains=dns_domains, dns_entries=dns_entries)
+        print(relation_data)
+        try:
+            loaded_data = {}
+            for key, value in relation_data.items():
+                loaded_data[key] = json.loads(value)
+            return cls(**loaded_data)
+        except json.JSONDecodeError as ex:
+            ValidationError.from_exception_data(ex.msg, [])
 
 
 class RequirerDomain(BaseModel):
@@ -280,37 +243,6 @@ class RequirerDomain(BaseModel):
     username: str
     password_id: str
     uuid: UUID
-
-    def to_relation_data(self) -> Dict[str, str]:
-        """Convert an instance of RequirerDomain to the relation representation.
-
-        Returns:
-            Dict containing the representation.
-        """
-        return {
-            "domain": self.domain,
-            "username": self.username,
-            "password_id": self.password_id,
-            "uuid": str(self.uuid),
-        }
-
-    @classmethod
-    def from_relation_data(cls, relation_data: Dict[str, str]) -> "RequirerDomain":
-        """Initialize a new instance of the RequirerDomain class from the relation data.
-
-        Args:
-            relation_data: the relation data.
-
-        Returns:
-            A RequirerDomain instance.
-        """
-        # A validation error will be raised if the values are None
-        return cls(
-            domain=relation_data.get("domain"),  # type: ignore[arg-type]
-            username=relation_data.get("username"),  # type: ignore[arg-type]
-            password_id=relation_data.get("password_id"),  # type: ignore[arg-type]
-            uuid=UUID(relation_data.get("uuid")),  # type: ignore[arg-type]
-        )
 
 
 class RequirerEntry(BaseModel):
@@ -334,63 +266,6 @@ class RequirerEntry(BaseModel):
     record_data: IPvAnyAddress
     uuid: UUID
 
-    def to_relation_data(self) -> Dict[str, str]:
-        """Convert an instance of DNSRecordRequirerData to the relation representation.
-
-        Returns:
-            Dict containing the representation.
-        """
-        result = {
-            "domain": self.domain,
-            "host-label": self.host_label,
-            "record-data": str(self.record_data),
-            "uuid": str(self.uuid),
-        }
-        if self.ttl:
-            result["ttl"] = str(self.ttl)
-        if self.record_class:
-            result["record-class"] = self.record_class.value
-        if self.record_type:
-            result["record-type"] = self.record_type.value
-        return result
-
-    @classmethod
-    def from_relation_data(cls, relation_data: Dict[str, str]) -> "RequirerEntry":
-        """Initialize a new instance of the RequirerEntry class from the relation data.
-
-        Args:
-            relation_data: the relation data.
-
-        Returns:
-            A RequirerEntry instance.
-        """
-        assert (
-            relation_data
-        ), "Empty relation data for DNS requirer. Check if it has been passed to RequirerEntry."
-
-        # A validation error will be raised if the values are None
-        return cls(
-            domain=relation_data.get("domain"),  # type: ignore[arg-type]
-            host_label=relation_data.get("host-label"),  # type: ignore[arg-type]
-            ttl=(
-                int(relation_data.get("ttl"))  # type: ignore[arg-type]
-                if "ttl" in relation_data
-                else None
-            ),
-            record_class=(
-                RecordClass(relation_data.get("record-class"))
-                if "record-class" in relation_data
-                else None
-            ),
-            record_type=(
-                RecordType(relation_data.get("record-type"))
-                if "record-type" in relation_data
-                else None
-            ),
-            record_data=IPvAnyAddress(relation_data.get("record-data")),  # type: ignore[arg-type]
-            uuid=UUID(relation_data.get("uuid")),  # type: ignore[arg-type]
-        )
-
 
 class DNSRecordRequirerData(BaseModel):
     """List of domains for the provider to manage.
@@ -409,20 +284,12 @@ class DNSRecordRequirerData(BaseModel):
         Returns:
             Dict containing the representation.
         """
-        return {
-            "dns-domains": json.dumps(
-                [
-                    domain.to_relation_data()
-                    for domain in self.dns_domains  # pylint: disable=not-an-iterable
-                ]
-            ),
-            "dns-entries": json.dumps(
-                [
-                    entry.to_relation_data()
-                    for entry in self.dns_entries  # pylint: disable=not-an-iterable
-                ]
-            ),
-        }
+        dumped_model = self.model_dump(exclude_unset=True)
+        dumped_data = {}
+        for key, value in dumped_model.items():
+            if value:
+                dumped_data[key] = json.dumps(value, default=str)
+        return dumped_data
 
     @classmethod
     def from_relation_data(cls, relation_data: Dict[str, str]) -> "DNSRecordRequirerData":
@@ -433,19 +300,18 @@ class DNSRecordRequirerData(BaseModel):
 
         Returns:
             A DNSRecordRequirerData instance.
+
+        Raises:
+            ValidationError if the value is not parseable.
         """
-        dns_domains_data = relation_data.get("dns-domains")
-        deserialised_dns_domains = json.loads(dns_domains_data) if dns_domains_data else []
-        dns_domains = [
-            RequirerDomain.from_relation_data(dns_domain)
-            for dns_domain in deserialised_dns_domains
-        ]
-        dns_entries_data = relation_data.get("dns-entries")
-        deserialised_dns_entries = json.loads(dns_entries_data) if dns_entries_data else []
-        dns_entries = [
-            RequirerEntry.from_relation_data(dns_entry) for dns_entry in deserialised_dns_entries
-        ]
-        return cls(dns_domains=dns_domains, dns_entries=dns_entries)
+        try:
+            loaded_data = {}
+            for key, value in relation_data.items():
+                if value:
+                    loaded_data[key] = json.loads(value)
+            return cls(**loaded_data)
+        except json.JSONDecodeError as ex:
+            raise ValidationError.from_exception_data(ex.msg, [])
 
 
 class DNSRecordRequestProcessed(ops.RelationEvent):

@@ -33,38 +33,38 @@ UUID2 = uuid.uuid4()
 UUID3 = uuid.uuid4()
 UUID4 = uuid.uuid4()
 REQUIRER_RELATION_DATA = {
-    "dns-domains": json.dumps(
+    "dns_domains": json.dumps(
         [
             {
-                "uuid": str(UUID1),
                 "domain": "cloud.canonical.com",
                 "username": "user1",
                 "password_id": PASSWORD_USER_1,
+                "uuid": str(UUID1),
             },
             {
-                "uuid": str(UUID2),
                 "domain": "staging.ubuntu.com",
                 "username": "user2",
                 "password_id": PASSWORD_USER_2,
+                "uuid": str(UUID2),
             },
         ]
     ),
-    "dns-entries": json.dumps(
+    "dns_entries": json.dumps(
         [
             {
-                "uuid": str(UUID3),
                 "domain": "cloud.canonical.com",
-                "host-label": "admin",
-                "ttl": "600",
-                "record-class": "IN",
-                "record-type": "A",
-                "record-data": "91.189.91.48",
+                "host_label": "admin",
+                "ttl": 600,
+                "record_class": "IN",
+                "record_type": "A",
+                "record_data": "91.189.91.48",
+                "uuid": str(UUID3),
             },
             {
-                "uuid": str(UUID4),
                 "domain": "staging.canonical.com",
-                "host-label": "www",
-                "record-data": "91.189.91.47",
+                "host_label": "www",
+                "record_data": "91.189.91.47",
+                "uuid": str(UUID4),
             },
         ]
     ),
@@ -103,7 +103,7 @@ DNS_RECORD_REQUIRER_DATA = dns_record.DNSRecordRequirerData(
     ],
 )
 PROVIDER_RELATION_DATA = {
-    "dns-domains": json.dumps(
+    "dns_domains": json.dumps(
         [
             {
                 "uuid": str(UUID1),
@@ -116,7 +116,7 @@ PROVIDER_RELATION_DATA = {
             },
         ]
     ),
-    "dns-entries": json.dumps(
+    "dns_entries": json.dumps(
         [
             {
                 "uuid": str(UUID3),
@@ -217,9 +217,7 @@ def test_dns_record_requirer_update_relation_data():
     harness.charm.dns_record.update_relation_data(relation, DNS_RECORD_REQUIRER_DATA)
 
     assert relation
-    data = relation.data[harness.model.app]
-    assert json.loads(data["dns-domains"]) == json.loads(REQUIRER_RELATION_DATA["dns-domains"])
-    assert json.loads(data["dns-entries"]) == json.loads(REQUIRER_RELATION_DATA["dns-entries"])
+    assert relation.data[harness.model.app] == REQUIRER_RELATION_DATA
 
 
 def test_dns_record_requirer_emmits_event():
@@ -250,7 +248,7 @@ def test_dns_record_requirer_doesnt_emmit_event_when_relation_data_invalid():
     harness.begin()
     harness.set_leader(True)
 
-    harness.add_relation("dns-record", "dns-record", app_data={"invalid": "invalid"})
+    harness.add_relation("dns-record", "dns-record", app_data={})
 
     assert len(harness.charm.events) == 0
 
@@ -270,9 +268,7 @@ def test_dns_record_provider_update_relation_data():
     harness.charm.dns_record.update_relation_data(relation, DNS_RECORD_PROVIDER_DATA)
 
     assert relation
-    data = relation.data[harness.model.app]
-    assert json.loads(data["dns-domains"]) == json.loads(PROVIDER_RELATION_DATA["dns-domains"])
-    assert json.loads(data["dns-entries"]) == json.loads(PROVIDER_RELATION_DATA["dns-entries"])
+    assert relation.data[harness.model.app] == PROVIDER_RELATION_DATA
 
 
 def test_dns_record_provider_emmits_event():
@@ -330,17 +326,12 @@ def test_dns_record_provider_data_from_relation_data():
     assert result == DNS_RECORD_PROVIDER_DATA
 
 
-def test_dns_provider_data_from_relation_data_unknown():
+def test_status_unknown():
     """
     arrange: do nothing.
-    act: deserialise dns provider data with an unrecongnised status.
-    assert: the resulting DNSProviderData is correct and status is set as UNKNOWN.
+    act: instantiate an unrecongnised status.
+    assert: the status is set as UNKNOWN.
     """
-    relation_data_unknown_status = {
-        "status": "anything",
-        "uuid": str(uuid.uuid4()),
-    }
-    provider_data = dns_record.DNSProviderData.from_relation_data(relation_data_unknown_status)
+    status = dns_record.Status("anything")
 
-    assert provider_data.status == dns_record.Status.UNKNOWN
-    assert provider_data.uuid == uuid.UUID(relation_data_unknown_status["uuid"])
+    assert status == dns_record.Status.UNKNOWN

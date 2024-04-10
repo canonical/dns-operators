@@ -70,8 +70,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
     await tests.integration.helpers.run_command_on_unit(ops_test, unit.name, restart_cmd)
 
     assert (
-        (await tests.integration.helpers.run_command_on_unit(
+        await tests.integration.helpers.run_command_on_unit(
             ops_test, f"{app.name}/{0}", "dig @127.0.0.1 dns.test TXT +short"
-        )).strip()
-        == '"this-is-a-test"'
-    )
+        )
+    ).strip() == '"this-is-a-test"'

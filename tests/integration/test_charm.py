@@ -35,7 +35,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
     """
     arrange: build, deploy the charm and change its configuration.
     act: request the test domain.
-    assert:
+    assert: the output of the dig command is the expected one
     """
     # Application actually does have units
     unit = app.units[0]  # type: ignore

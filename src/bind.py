@@ -1,6 +1,8 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+"""Bind charm business logic."""
+
 import logging
 
 from charms.operator_libs_linux.v2 import snap
@@ -14,8 +16,29 @@ logger = logging.getLogger(__name__)
 class BindService:
     """Bind service class."""
 
+    def reload(self) -> None:
+        """Reload the charmed-bind service.
+
+        Raises:
+            BlockableError: when encountering a SnapError
+        """
+        try:
+            cache = snap.SnapCache()
+            charmed_bind = cache[constants.DNS_SNAP_NAME]
+            charmed_bind.restart(reload=True)
+        except snap.SnapError as e:
+            error_msg = (
+                f"An exception occurred when reloading {constants.DNS_SNAP_NAME}. Reason: {e}"
+            )
+            logger.error(error_msg)
+            raise exceptions.BlockableError(error_msg)
+
     def start(self) -> None:
-        """Start the charmed-bind service."""
+        """Start the charmed-bind service.
+
+        Raises:
+            BlockableError: when encountering a SnapError
+        """
         try:
             cache = snap.SnapCache()
             charmed_bind = cache[constants.DNS_SNAP_NAME]
@@ -28,7 +51,11 @@ class BindService:
             raise exceptions.BlockableError(error_msg)
 
     def stop(self) -> None:
-        """Stop the charmed-bind service."""
+        """Stop the charmed-bind service.
+
+        Raises:
+            BlockableError: when encountering a SnapError
+        """
         try:
             cache = snap.SnapCache()
             charmed_bind = cache[constants.DNS_SNAP_NAME]
@@ -56,6 +83,9 @@ class BindService:
             snap_name: the snap package to install
             snap_channel: the snap package channel
             refresh: whether to refresh the snap if it's already present.
+
+        Raises:
+            BlockableError: when encountering a SnapError or a SnapNotFoundError
         """
         try:
             snap_cache = snap.SnapCache()

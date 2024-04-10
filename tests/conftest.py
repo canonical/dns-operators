@@ -10,4 +10,10 @@ def pytest_addoption(parser):
     Args:
         parser: Pytest parser.
     """
-    parser.addoption("--charm-file", action="store")
+    parser.addoption("--charm-file", action="store", default=None)
+    parser.addoption(
+        "--use-existing",
+        action="store_true",
+        default=False,
+        help="This will skip deployment of the charms. Useful for local testing.",
+    )

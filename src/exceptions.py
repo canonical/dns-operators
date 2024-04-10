@@ -5,14 +5,14 @@
 
 
 class BlockableError(Exception):
-    """Exception raised when something fails while interacting with workload.
+    """Exception raised when something fails and the charm should be put in a blocked state.
 
     Attrs:
         msg (str): Explanation of the error.
     """
 
     def __init__(self, msg: str):
-        """Initialize a new instance of the SynapseWorkloadError exception.
+        """Initialize a new instance of the BlockableError exception.
 
         Args:
             msg (str): Explanation of the error.

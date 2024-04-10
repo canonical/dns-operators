@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
@@ -34,19 +33,11 @@ class BindCharm(ops.CharmBase):
         self.bind = BindService()
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
-        """Handle changed configuration.
-
-        Args:
-            _: event triggering the handler.
-        """
+        """Handle changed configuration."""
         self.unit.status = ops.ActiveStatus()
 
-    def _on_install(self, event: ops.InstallEvent) -> None:
-        """Handle install.
-
-        Args:
-            event: Event triggering the install handler.
-        """
+    def _on_install(self, _: ops.InstallEvent) -> None:
+        """Handle install."""
         self.unit.status = ops.MaintenanceStatus("Preparing bind")
         try:
             self.bind.prepare()
@@ -55,12 +46,8 @@ class BindCharm(ops.CharmBase):
             logger.error(e.msg)
             self.unit.status = ops.BlockedStatus(e.msg)
 
-    def _on_start(self, event: ops.StartEvent) -> None:
-        """Handle start.
-
-        Args:
-            event: Event triggering the start handler.
-        """
+    def _on_start(self, _: ops.StartEvent) -> None:
+        """Handle start."""
         try:
             self.bind.start()
             self.unit.status = ops.ActiveStatus()
@@ -68,24 +55,16 @@ class BindCharm(ops.CharmBase):
             logger.error(e.msg)
             self.unit.status = ops.BlockedStatus(e.msg)
 
-    def _on_stop(self, event: ops.StopEvent) -> None:
-        """Handle stop.
-
-        Args:
-            event: Event triggering the stop handler.
-        """
+    def _on_stop(self, _: ops.StopEvent) -> None:
+        """Handle stop."""
         try:
             self.bind.stop()
         except exceptions.BlockableError as e:
             logger.error(e.msg)
             self.unit.status = ops.BlockedStatus(e.msg)
 
-    def _on_upgrade_charm(self, event: ops.UpgradeCharmEvent) -> None:
-        """Handle upgrade-charm.
-
-        Args:
-            event: Event triggering the upgrade-charm handler.
-        """
+    def _on_upgrade_charm(self, _: ops.UpgradeCharmEvent) -> None:
+        """Handle upgrade-charm."""
         self.unit.status = ops.MaintenanceStatus("Upgrading dependencies")
         try:
             self.bind.prepare()

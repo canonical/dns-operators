@@ -359,7 +359,7 @@ class RequirerEntry(BaseModel):
         Returns:
             A RequirerEntry instance.
         """
-        assert relation_data
+        assert relation_data, "Empty relation data for DNS requirer, please check if relation_data has properly been passed to RequirerEntry."
         # A validation error will be raised if the values are None
         return cls(
             domain=relation_data.get("domain"),  # type: ignore[arg-type]

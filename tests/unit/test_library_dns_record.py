@@ -42,7 +42,7 @@ REQUIRER_RELATION_DATA = {
                 "uuid": str(UUID1),
             },
             {
-                "domain": "staging.ubuntu.com",
+                "domain": "ubuntu.com",
                 "username": "user2",
                 "password_id": PASSWORD_USER_2,
                 "uuid": str(UUID2),
@@ -61,7 +61,7 @@ REQUIRER_RELATION_DATA = {
                 "uuid": str(UUID3),
             },
             {
-                "domain": "staging.canonical.com",
+                "domain": "staging.ubuntu.com",
                 "host_label": "www",
                 "record_data": "91.189.91.47",
                 "uuid": str(UUID4),
@@ -78,7 +78,7 @@ DNS_RECORD_REQUIRER_DATA = dns_record.DNSRecordRequirerData(
             uuid=UUID1,
         ),
         dns_record.RequirerDomain(
-            domain="staging.ubuntu.com",
+            domain="ubuntu.com",
             username="user2",
             password_id=PASSWORD_USER_2,
             uuid=UUID2,
@@ -96,7 +96,7 @@ DNS_RECORD_REQUIRER_DATA = dns_record.DNSRecordRequirerData(
         ),
         dns_record.RequirerEntry(
             uuid=UUID4,
-            domain="staging.canonical.com",
+            domain="staging.ubuntu.com",
             host_label="www",
             record_data=IPvAnyAddress("91.189.91.47"),
         ),
@@ -253,6 +253,21 @@ def test_dns_record_requirer_doesnt_emmit_event_when_relation_data_invalid():
     assert len(harness.charm.events) == 0
 
 
+def test_dns_record_requirer_doesnt_emmit_event_when_relation_data_unparsable():
+    """
+    arrange: given a requirer charm.
+    act: update the remote relation databag with unparsable values.
+    assert: no DNSRecordRequestProcessed is emitted.
+    """
+    harness = Harness(DNSRecordRequirerCharm, meta=REQUIRER_METADATA)
+    harness.begin()
+    harness.set_leader(True)
+
+    harness.add_relation("dns-record", "dns-record", app_data={"invalid": "unparsable"})
+
+    assert len(harness.charm.events) == 0
+
+
 def test_dns_record_provider_update_relation_data():
     """
     arrange: given a provider charm.
@@ -289,6 +304,43 @@ def test_dns_record_provider_emmits_event():
     assert events[0].dns_entries == DNS_RECORD_REQUIRER_DATA.dns_entries
 
 
+def test_dns_record_provider_doesnt_emmit_event_when_relation_data_sematically_invalid():
+    """
+    arrange: given a provider charm.
+    act: update the remote relation databag with semantically invalid values.
+    assert: no DNSRecordRequestReceived is emitted.
+    """
+    harness = Harness(DNSRecordProviderCharm, meta=PROVIDER_METADATA)
+    harness.begin()
+    harness.set_leader(True)
+
+    invalid_data = {
+        "dns_domains": REQUIRER_RELATION_DATA["dns_domains"],
+        "dns_entries": json.dumps(
+            [
+                {
+                    "domain": "cloud.canonical.com",
+                    "host_label": "admin",
+                    "ttl": 600,
+                    "record_class": "IN",
+                    "record_type": "A",
+                    "record_data": "91.189.91.48",
+                    "uuid": str(UUID3),
+                },
+                {
+                    "domain": "staging.invalid.com",
+                    "host_label": "www",
+                    "record_data": "91.189.91.47",
+                    "uuid": str(UUID4),
+                },
+            ]
+        ),
+    }
+    harness.add_relation("dns-record", "dns-record", app_data=invalid_data)
+
+    assert len(harness.charm.events) == 0
+
+
 def test_dns_record_provider_doesnt_emmit_event_when_relation_data_invalid():
     """
     arrange: given a provider charm.
@@ -299,7 +351,22 @@ def test_dns_record_provider_doesnt_emmit_event_when_relation_data_invalid():
     harness.begin()
     harness.set_leader(True)
 
-    harness.add_relation("dns-record", "dns-record", app_data={"invalid": "invalid"})
+    harness.add_relation("dns-record", "dns-record", app_data={"invalid": "{}"})
+
+    assert len(harness.charm.events) == 0
+
+
+def test_dns_record_provider_doesnt_emmit_event_when_relation_data_unparsable():
+    """
+    arrange: given a provider charm.
+    act: update the remote relation databag with unparsable values.
+    assert: no DNSRecordRequestReceived is emitted.
+    """
+    harness = Harness(DNSRecordProviderCharm, meta=PROVIDER_METADATA)
+    harness.begin()
+    harness.set_leader(True)
+
+    harness.add_relation("dns-record", "dns-record", app_data={"invalid": "unparsable"})
 
     assert len(harness.charm.events) == 0
 

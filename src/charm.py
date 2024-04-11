@@ -43,7 +43,6 @@ class BindCharm(ops.CharmBase):
             self.bind.prepare()
             self.unit.status = ops.ActiveStatus()
         except exceptions.BlockableError as e:
-            logger.error(e.msg)
             self.unit.status = ops.BlockedStatus(e.msg)
 
     def _on_start(self, _: ops.StartEvent) -> None:
@@ -52,7 +51,6 @@ class BindCharm(ops.CharmBase):
             self.bind.start()
             self.unit.status = ops.ActiveStatus()
         except exceptions.BlockableError as e:
-            logger.error(e.msg)
             self.unit.status = ops.BlockedStatus(e.msg)
 
     def _on_stop(self, _: ops.StopEvent) -> None:
@@ -60,7 +58,6 @@ class BindCharm(ops.CharmBase):
         try:
             self.bind.stop()
         except exceptions.BlockableError as e:
-            logger.error(e.msg)
             self.unit.status = ops.BlockedStatus(e.msg)
 
     def _on_upgrade_charm(self, _: ops.UpgradeCharmEvent) -> None:
@@ -70,7 +67,6 @@ class BindCharm(ops.CharmBase):
             self.bind.prepare()
             self.unit.status = ops.ActiveStatus()
         except exceptions.BlockableError as e:
-            logger.error(e.msg)
             self.unit.status = ops.BlockedStatus(e.msg)
 
 

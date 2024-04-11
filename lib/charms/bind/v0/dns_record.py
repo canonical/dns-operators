@@ -27,6 +27,9 @@ class DNSRecordRequirerCharm(ops.CharmBase):
 As shown above, the library provides a custom event to handle the scenario in
 which new DNS data has been added or updated.
 
+The DNSRecordRequires provides an `update_relation_data` method to update the relation data by
+passing a `DNSRecordRequirerData` data object, requesting new DNS records.
+
 ### Provider Charm
 
 Following the previous example, this is an example of the provider charm.

@@ -527,6 +527,35 @@ class DNSRecordProvides(ops.Object):
         relation_data = relation.data[relation.app]
         return DNSRecordRequirerData.from_relation_data(relation_data)
 
+    def _is_requirer_entry_valid(
+        self, entry: RequirerEntry, dns_domains: List[RequirerDomain]
+    ) -> bool:
+        """Validate if an entry has a corresponding domain.
+
+        Args:
+            entry: the DNS entry.
+            dns_domains: list of provided DNS domains.
+
+        Returns:
+            true: if there is a matching domain for the entry.
+        """
+        domains = [dns_domain.domain for dns_domain in dns_domains]
+        return any(map(entry.domain.endswith, domains))
+
+    def _is_dns_requirer_data_valid(self, requirer_data: DNSRecordRequirerData) -> bool:
+        """Semantically validate the requirer data.
+
+        Args:
+            requirer_data: the requirer data.
+
+        Returns:
+            true: if the data is valid.
+        """
+        for entry in requirer_data.dns_entries:
+            if not self._is_requirer_entry_valid(entry, requirer_data.dns_domains):
+                return False
+        return True
+
     def _is_remote_relation_data_valid(self, relation: ops.Relation) -> bool:
         """Validate the relation data.
 
@@ -537,8 +566,8 @@ class DNSRecordProvides(ops.Object):
             true: if the relation data is valid.
         """
         try:
-            _ = self._get_remote_relation_data(relation)
-            return True
+            requirer_data = self._get_remote_relation_data(relation)
+            return self._is_dns_requirer_data_valid(requirer_data)
         except ValidationError as ex:
             error_fields = set(
                 itertools.chain.from_iterable(error["loc"] for error in ex.errors())

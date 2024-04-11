@@ -228,7 +228,8 @@ class DNSRecordProviderData(BaseModel):
                 loaded_data[key] = json.loads(value)
             return DNSRecordProviderData.model_validate(loaded_data)
         except json.JSONDecodeError as ex:
-            ValidationError.from_exception_data(ex.msg, [])
+            # flake8-docstrings-complete doesn't interpret this properly
+            raise ValidationError.from_exception_data(ex.msg, [])  # noqa: DCO053
 
 
 class RequirerDomain(BaseModel):
@@ -313,7 +314,8 @@ class DNSRecordRequirerData(BaseModel):
                     loaded_data[key] = json.loads(value)
             return DNSRecordRequirerData.model_validate(loaded_data)
         except json.JSONDecodeError as ex:
-            raise ValidationError.from_exception_data(ex.msg, [])
+            # flake8-docstrings-complete doesn't interpret this properly
+            raise ValidationError.from_exception_data(ex.msg, [])  # noqa: DCO053
 
 
 class DNSRecordRequestProcessed(ops.RelationEvent):

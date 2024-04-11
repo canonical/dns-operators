@@ -222,12 +222,11 @@ class DNSRecordProviderData(BaseModel):
         Raises:
             ValidationError if the value is not parseable.
         """
-        print(relation_data)
         try:
             loaded_data = {}
             for key, value in relation_data.items():
                 loaded_data[key] = json.loads(value)
-            return cls(**loaded_data)
+            return DNSRecordProviderData.model_validate(loaded_data)
         except json.JSONDecodeError as ex:
             ValidationError.from_exception_data(ex.msg, [])
 
@@ -312,7 +311,7 @@ class DNSRecordRequirerData(BaseModel):
             for key, value in relation_data.items():
                 if value:
                     loaded_data[key] = json.loads(value)
-            return cls(**loaded_data)
+            return DNSRecordRequirerData.model_validate(loaded_data)
         except json.JSONDecodeError as ex:
             raise ValidationError.from_exception_data(ex.msg, [])
 

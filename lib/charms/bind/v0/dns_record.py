@@ -60,7 +60,7 @@ class DNSRecordProviderCharm(ops.CharmBase):
 """
 
 # The unique Charmhub library identifier, never change it
-LIBID = "09583c2f9c1d4c0f9a40244cfc20b0c2"
+LIBID = "908bcd1f0ad14cabbc9dca25fa0fc87c"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0

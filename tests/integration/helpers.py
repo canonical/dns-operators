@@ -51,7 +51,7 @@ def _generate_random_filename(length: int = 24, extension: str = "") -> str:
     return random_string
 
 
-async def run_command_on_unit(ops_test: OpsTest, unit_name: str, command: str) -> str:
+async def run_on_unit(ops_test: OpsTest, unit_name: str, command: str) -> str:
     """Run a command on a specific unit.
 
     Args:
@@ -75,7 +75,7 @@ async def run_command_on_unit(ops_test: OpsTest, unit_name: str, command: str) -
 
 
 # pylint: disable=too-many-arguments
-async def push_to_workload(
+async def push_to_unit(
     ops_test: OpsTest,
     unit: ops.model.Unit,
     source: str,
@@ -84,7 +84,7 @@ async def push_to_workload(
     group: str = "root",
     mode: str = "644",
 ) -> None:
-    """Push a source file to the workload.
+    """Push a source file to the chosen unit
 
     Args:
         ops_test: The ops test framework instance
@@ -103,8 +103,29 @@ async def push_to_workload(
     # unit does have scp_to
     await unit.scp_to(source=temp_path, destination=temp_filename_on_workload)  # type: ignore
     mv_cmd = f"mv /home/ubuntu/{temp_filename_on_workload} {destination}"
-    await run_command_on_unit(ops_test, unit.name, mv_cmd)
+    await run_on_unit(ops_test, unit.name, mv_cmd)
     chown_cmd = f"chown {user}:{group} {destination}"
-    await run_command_on_unit(ops_test, unit.name, chown_cmd)
+    await run_on_unit(ops_test, unit.name, chown_cmd)
     chmod_cmd = f"chmod {mode} {destination}"
-    await run_command_on_unit(ops_test, unit.name, chmod_cmd)
+    await run_on_unit(ops_test, unit.name, chmod_cmd)
+
+
+async def dispatch_to_unit(
+    ops_test: OpsTest,
+    unit: ops.model.Unit,
+    hook_name: str,
+):
+    """Dispatch a hook to the chosen unit.
+
+    Args:
+        ops_test: The ops test framework instance
+        unit: The unit to push the file to
+        hook_name: the hook name
+    """
+    await ops_test.juju(
+        "exec",
+        "--unit",
+        unit.name,
+        "--",
+        f"export JUJU_DISPATCH_PATH=hooks/{hook_name}; ./dispatch",
+    )

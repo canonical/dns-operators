@@ -13,6 +13,22 @@ import exceptions
 logger = logging.getLogger(__name__)
 
 
+class ReloadError(exceptions.BlockableError):
+    """Exception raised when unable to reload the service."""
+
+
+class StartError(exceptions.BlockableError):
+    """Exception raised when unable to start the service."""
+
+
+class StopError(exceptions.BlockableError):
+    """Exception raised when unable to stop the service."""
+
+
+class InstallError(exceptions.BlockableError):
+    """Exception raised when unable to install dependencies for the service."""
+
+
 class BindService:
     """Bind service class."""
 
@@ -20,7 +36,7 @@ class BindService:
         """Reload the charmed-bind service.
 
         Raises:
-            BlockableError: when encountering a SnapError
+            ReloadError: when encountering a SnapError
         """
         try:
             cache = snap.SnapCache()
@@ -31,13 +47,13 @@ class BindService:
                 f"An exception occurred when reloading {constants.DNS_SNAP_NAME}. Reason: {e}"
             )
             logger.error(error_msg)
-            raise exceptions.BlockableError(error_msg)
+            raise ReloadError(error_msg) from e
 
     def start(self) -> None:
         """Start the charmed-bind service.
 
         Raises:
-            BlockableError: when encountering a SnapError
+            StartError: when encountering a SnapError
         """
         try:
             cache = snap.SnapCache()
@@ -48,13 +64,13 @@ class BindService:
                 f"An exception occurred when stopping {constants.DNS_SNAP_NAME}. Reason: {e}"
             )
             logger.error(error_msg)
-            raise exceptions.BlockableError(error_msg)
+            raise StartError(error_msg) from e
 
     def stop(self) -> None:
         """Stop the charmed-bind service.
 
         Raises:
-            BlockableError: when encountering a SnapError
+            StopError: when encountering a SnapError
         """
         try:
             cache = snap.SnapCache()
@@ -65,16 +81,16 @@ class BindService:
                 f"An exception occurred when stopping {constants.DNS_SNAP_NAME}. Reason: {e}"
             )
             logger.error(error_msg)
-            raise exceptions.BlockableError(error_msg)
+            raise StopError(error_msg) from e
 
     def prepare(self) -> None:
         """Prepare the machine."""
-        self.install_snap_package(
+        self._install_snap_package(
             snap_name=constants.DNS_SNAP_NAME,
             snap_channel=constants.SNAP_PACKAGES[constants.DNS_SNAP_NAME]["channel"],
         )
 
-    def install_snap_package(
+    def _install_snap_package(
         self, snap_name: str, snap_channel: str, refresh: bool = False
     ) -> None:
         """Installs snap package.
@@ -85,7 +101,7 @@ class BindService:
             refresh: whether to refresh the snap if it's already present.
 
         Raises:
-            BlockableError: when encountering a SnapError or a SnapNotFoundError
+            InstallError: when encountering a SnapError or a SnapNotFoundError
         """
         try:
             snap_cache = snap.SnapCache()
@@ -97,4 +113,4 @@ class BindService:
         except (snap.SnapError, snap.SnapNotFoundError) as e:
             error_msg = f"An exception occurred when installing {snap_name}. Reason: {e}"
             logger.error(error_msg)
-            raise exceptions.BlockableError(error_msg)
+            raise InstallError(error_msg) from e

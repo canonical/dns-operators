@@ -1,60 +1,61 @@
 # Copyright 2024 Canonical Ltd.
 # Licensed under the Apache2.0. See LICENSE file in charm source for details.
 
-"""Library to manage the integration with the Bind charm.
+"""Library to manage the integration with the SMTP Integrator charm.
 
 This library contains the Requires and Provides classes for handling the integration
-between an application and a charm providing the `dns_record` integration.
+between an application and a charm providing the `smtp` and `smtp-legacy` integrations.
+If the requirer charm supports secrets, the preferred approach is to use the `smtp`
+relation to leverage them.
+This library also contains a `SmtpRelationData` class to wrap the SMTP data that will
+be shared via the integration.
 
 ### Requirer Charm
 
 ```python
 
-from charms.bind.v0.dns_record import DNSRecordRequires
+from charms.smtp_integrator.v0.smtp import SmtpDataAvailableEvent, SmtpRequires
 
-class DNSRecordRequirerCharm(ops.CharmBase):
+class SmtpRequirerCharm(ops.CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
-        self.dns_record = DNSRecordRequires(self)
-        self.framework.observe(self.dns_record.on.dns_record_data_available, self._handler)
+        self.smtp = smtp.SmtpRequires(self)
+        self.framework.observe(self.smtp.on.smtp_data_available, self._handler)
         ...
 
-    def _handler(self, events: DNSRecordDataAvailableEvent) -> None:
+    def _handler(self, events: SmtpDataAvailableEvent) -> None:
         ...
 
 ```
 
 As shown above, the library provides a custom event to handle the scenario in
-which new DNS data has been added or updated.
-
-The DNSRecordRequires provides an `update_relation_data` method to update the relation data by
-passing a `DNSRecordRequirerData` data object, requesting new DNS records.
+which new SMTP data has been added or updated.
 
 ### Provider Charm
 
 Following the previous example, this is an example of the provider charm.
 
 ```python
-from charms.bind.v0.dns_record import DNSRecordProvides
+from charms.smtp_integrator.v0.smtp import SmtpProvides
 
-class DNSRecordProviderCharm(ops.CharmBase):
+class SmtpProviderCharm(ops.CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
-        self.dns_record = DNSRecordProvides(self)
+        self.smtp = SmtpProvides(self)
         ...
 
 ```
-The DNSRecordProvides object wraps the list of relations into a `relations` property
+The SmtpProvides object wraps the list of relations into a `relations` property
 and provides an `update_relation_data` method to update the relation data by passing
-a `DNSRecordRelationData` data object.
+a `SmtpRelationData` data object.
 
 ```python
-class DNSRecordProviderCharm(ops.CharmBase):
+class SmtpProviderCharm(ops.CharmBase):
     ...
 
     def _on_config_changed(self, _) -> None:
-        for relation in self.model.relations[self.dns_record.relation_name]:
-            self.dns_record.update_relation_data(relation, self._get_dns_record_data())
+        for relation in self.model.relations[self.smtp.relation_name]:
+            self.smtp.update_relation_data(relation, self._get_smtp_data())
 
 ```
 """
@@ -67,329 +68,182 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 8
 
 PYDEPS = ["pydantic>=2"]
 
 # pylint: disable=wrong-import-position
 import itertools
-import json
 import logging
 from enum import Enum
-from typing import Dict, List, Optional
-from uuid import UUID
+from typing import Dict, Optional
 
 import ops
-from pydantic import BaseModel, Field, IPvAnyAddress, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_RELATION_NAME = "dns_record"
+DEFAULT_RELATION_NAME = "smtp"
+LEGACY_RELATION_NAME = "smtp-legacy"
 
 
-class Status(str, Enum):
-    """Represent the status values.
-
-    Attributes:
-        APPROVED: approved
-        INVALID_CREDENTIALS: invalid_credentials
-        PERMISSION_DENIED: permission_denied
-        CONFLICT: conflict
-        INVALID_DATA: invalid_data
-        FAILURE: failure
-        UNKNOWN: unknown
-        PENDING: pending
-    """
-
-    APPROVED = "approved"
-    INVALID_CREDENTIALS = "invalid_credentials"
-    PERMISSION_DENIED = "permission_denied"
-    CONFLICT = "conflict"
-    INVALID_DATA = "invalid_data"
-    FAILURE = "failure"
-    UNKNOWN = "unknown"
-    PENDING = "pending"
-
-    @classmethod
-    def _missing_(cls, _: object) -> "Status":
-        """Handle the enum when the value is missing.
-
-        Returns:
-            value: Status.UNKNOWN.
-        """
-        return cls(cls.UNKNOWN)
-
-
-class RecordType(str, Enum):
-    """Represent the DNS record types.
+class TransportSecurity(str, Enum):
+    """Represent the transport security values.
 
     Attributes:
-        A: A
-        AAAA: AAAA
-        CNAME: CNAME
-        MX: MX
-        DKIM: DKIM
-        SPF: SPF
-        DMARC: DMARC
-        TXT: TXT
-        CAA: CAA
-        SRV: SRV
-        SVCB: SVCB
-        HTTPS: HTTPS
-        PTR: PTR
-        SOA: SOA
-        NS: NS
-        DS: DS
-        DNSKEY: DNSKEY
+        NONE: none
+        STARTTLS: starttls
+        TLS: tls
     """
 
-    A = "A"
-    AAAA = "AAAA"
-    CNAME = "CNAME"
-    MX = "MX"
-    DKIM = "DKIM"
-    SPF = "SPF"
-    DMARC = "DMARC"
-    TXT = "TXT"
-    CAA = "CAA"
-    SRV = "SRV"
-    SVCB = "SVCB"
-    HTTPS = "HTTPS"
-    PTR = "PTR"
-    SOA = "SOA"
-    NS = "NS"
-    DS = "DS"
-    DNSKEY = "DNSKEY"
+    NONE = "none"
+    STARTTLS = "starttls"
+    TLS = "tls"
 
 
-class RecordClass(str, Enum):
-    """Represent the DNS record classes.
+class AuthType(str, Enum):
+    """Represent the auth type values.
 
     Attributes:
-        IN: IN
+        NONE: none
+        NOT_PROVIDED: not_provided
+        PLAIN: plain
     """
 
-    IN = "IN"
+    NONE = "none"
+    NOT_PROVIDED = "not_provided"
+    PLAIN = "plain"
 
 
-class DNSProviderData(BaseModel):
-    """Represent the DNS provider data.
+class SmtpRelationData(BaseModel):
+    """Represent the relation data.
 
     Attributes:
-        uuid: UUID for the domain request.
-        status: status for the domain request.
-        description: status description for the domain request.
+        host: The hostname or IP address of the outgoing SMTP relay.
+        port: The port of the outgoing SMTP relay.
+        user: The SMTP AUTH user to use for the outgoing SMTP relay.
+        password: The SMTP AUTH password to use for the outgoing SMTP relay.
+        password_id: The secret ID where the SMTP AUTH password for the SMTP relay is stored.
+        auth_type: The type used to authenticate with the SMTP relay.
+        transport_security: The security protocol to use for the outgoing SMTP relay.
+        domain: The domain used by the sent emails from SMTP relay.
     """
 
-    uuid: UUID
-    status: Status
-    description: Optional[str] = None
-
-
-class DNSRecordProviderData(BaseModel):
-    """List of domains for the provider to manage.
-
-    Attributes:
-        dns_domains: list of domains to manage.
-        dns_entries: list of entries to manage.
-    """
-
-    dns_domains: List[DNSProviderData] = Field(min_length=1)
-    dns_entries: List[DNSProviderData] = Field(min_length=1)
+    host: str = Field(..., min_length=1)
+    port: int = Field(None, ge=1, le=65536)
+    user: Optional[str] = None
+    password: Optional[str] = None
+    password_id: Optional[str] = None
+    auth_type: AuthType
+    transport_security: TransportSecurity
+    domain: Optional[str] = None
 
     def to_relation_data(self) -> Dict[str, str]:
-        """Convert an instance of DNSRecordProviderData to the relation representation.
+        """Convert an instance of SmtpRelationData to the relation representation.
 
         Returns:
             Dict containing the representation.
         """
-        dumped_model = self.model_dump(exclude_unset=True)
-        dumped_data = {}
-        for key, value in dumped_model.items():
-            dumped_data[key] = json.dumps(value, default=str)
-        return dumped_data
-
-    @classmethod
-    def from_relation_data(cls, relation_data: Dict[str, str]) -> "DNSRecordProviderData":
-        """Initialize a new instance of the DNSRecordProviderData class from the relation data.
-
-        Args:
-            relation_data: the relation data.
-
-        Returns:
-            A DNSRecordProviderData instance.
-
-        Raises:
-            ValidationError if the value is not parseable.
-        """
-        try:
-            loaded_data = {}
-            for key, value in relation_data.items():
-                loaded_data[key] = json.loads(value)
-            return DNSRecordProviderData.model_validate(loaded_data)
-        except json.JSONDecodeError as ex:
-            # flake8-docstrings-complete doesn't interpret this properly
-            raise ValidationError.from_exception_data(ex.msg, [])  # noqa: DCO053
+        result = {
+            "host": str(self.host),
+            "port": str(self.port),
+            "auth_type": self.auth_type.value,
+            "transport_security": self.transport_security.value,
+        }
+        if self.domain:
+            result["domain"] = self.domain
+        if self.user:
+            result["user"] = self.user
+        if self.password:
+            result["password"] = self.password
+        if self.password_id:
+            result["password_id"] = self.password_id
+        return result
 
 
-class RequirerDomain(BaseModel):
-    """DNS requirer domains requested.
+class SmtpDataAvailableEvent(ops.RelationEvent):
+    """Smtp event emitted when relation data has changed.
 
     Attributes:
-        domain: the domain name.
-        username: username for authentication.
-        password_id: secret password for authentication.
-        uuid: UUID for this entry.
-    """
-
-    domain: str = Field(min_length=1)
-    username: str
-    password_id: str
-    uuid: UUID
-
-
-class RequirerEntry(BaseModel):
-    """DNS requirer entries requested.
-
-    Attributes:
-        domain: the domain name.
-        host_label: host label.
-        ttl: TTL.
-        record_class: DNS record class.
-        record_type: DNS record type.
-        record_data: the record value.
-        uuid: UUID for this entry.
-    """
-
-    domain: str = Field(min_length=1)
-    host_label: str = Field(min_length=1)
-    ttl: Optional[int] = None
-    record_class: Optional[RecordClass] = None
-    record_type: Optional[RecordType] = None
-    record_data: IPvAnyAddress
-    uuid: UUID
-
-
-class DNSRecordRequirerData(BaseModel):
-    """List of domains for the provider to manage.
-
-    Attributes:
-        dns_domains: list of domains to manage.
-        dns_entries: list of entries to manage.
-    """
-
-    dns_domains: List[RequirerDomain] = Field(min_length=1)
-    dns_entries: List[RequirerEntry] = Field(min_length=1)
-
-    def to_relation_data(self) -> Dict[str, str]:
-        """Convert an instance of DNSRecordRequirerData to the relation representation.
-
-        Returns:
-            Dict containing the representation.
-        """
-        dumped_model = self.model_dump(exclude_unset=True)
-        dumped_data = {}
-        for key, value in dumped_model.items():
-            if value:
-                dumped_data[key] = json.dumps(value, default=str)
-        return dumped_data
-
-    @classmethod
-    def from_relation_data(cls, relation_data: Dict[str, str]) -> "DNSRecordRequirerData":
-        """Initialize a new instance of the DNSRecordRequirerData class from the relation data.
-
-        Args:
-            relation_data: the relation data.
-
-        Returns:
-            A DNSRecordRequirerData instance.
-
-        Raises:
-            ValidationError if the value is not parseable.
-        """
-        try:
-            loaded_data = {}
-            for key, value in relation_data.items():
-                if value:
-                    loaded_data[key] = json.loads(value)
-            return DNSRecordRequirerData.model_validate(loaded_data)
-        except json.JSONDecodeError as ex:
-            # flake8-docstrings-complete doesn't interpret this properly
-            raise ValidationError.from_exception_data(ex.msg, [])  # noqa: DCO053
-
-
-class DNSRecordRequestProcessed(ops.RelationEvent):
-    """DNS event emitted when a new request is processed.
-
-    Attributes:
-        dns_record_provider_relation_data: the DNS provider relation data.
-        dns_domains: list of processed domains.
-        dns_entries: list of processed entries.
+        host: The hostname or IP address of the outgoing SMTP relay.
+        port: The port of the outgoing SMTP relay.
+        user: The SMTP AUTH user to use for the outgoing SMTP relay.
+        password: The SMTP AUTH password to use for the outgoing SMTP relay.
+        password_id: The secret ID where the SMTP AUTH password for the SMTP relay is stored.
+        auth_type: The type used to authenticate with the SMTP relay.
+        transport_security: The security protocol to use for the outgoing SMTP relay.
+        domain: The domain used by the sent emails from SMTP relay.
     """
 
     @property
-    def dns_record_provider_relation_data(self) -> DNSRecordProviderData:
-        """Get a DNSRecordProviderData for the relation data."""
-        assert self.relation.app, "DNS record relation data accessed before relation setup."
-        return DNSRecordProviderData.from_relation_data(self.relation.data[self.relation.app])
-
-    @property
-    def dns_domains(self) -> Optional[List[DNSProviderData]]:
-        """Fetch the DNS domains from the relation."""
-        return self.dns_record_provider_relation_data.dns_domains
-
-    @property
-    def dns_entries(self) -> Optional[List[DNSProviderData]]:
-        """Fetch the DNS entries from the relation."""
-        return self.dns_record_provider_relation_data.dns_entries
-
-
-class DNSRecordRequestReceived(ops.RelationEvent):
-    """DNS event emitted when a new request is made.
-
-    Attributes:
-        dns_record_requirer_relation_data: the DNS requirer relation data.
-        dns_domains: list of requested domains.
-        dns_entries: list of requested entries.
-    """
-
-    @property
-    def dns_record_requirer_relation_data(self) -> DNSRecordRequirerData:
-        """Get a DNSRecordRequirerData for the relation data."""
+    def host(self) -> str:
+        """Fetch the SMTP host from the relation."""
         assert self.relation.app
-        return DNSRecordRequirerData.from_relation_data(self.relation.data[self.relation.app])
+        return self.relation.data[self.relation.app].get("host")
 
     @property
-    def dns_domains(self) -> Optional[List[RequirerDomain]]:
-        """Fetch the DNS domains from the relation."""
-        return self.dns_record_requirer_relation_data.dns_domains
+    def port(self) -> int:
+        """Fetch the SMTP port from the relation."""
+        assert self.relation.app
+        return int(self.relation.data[self.relation.app].get("port"))
 
     @property
-    def dns_entries(self) -> Optional[List[RequirerEntry]]:
-        """Fetch the DNS entries from the relation."""
-        return self.dns_record_requirer_relation_data.dns_entries
+    def user(self) -> str:
+        """Fetch the SMTP user from the relation."""
+        assert self.relation.app
+        return self.relation.data[self.relation.app].get("user")
+
+    @property
+    def password(self) -> str:
+        """Fetch the SMTP password from the relation."""
+        assert self.relation.app
+        return self.relation.data[self.relation.app].get("password")
+
+    @property
+    def password_id(self) -> str:
+        """Fetch the SMTP password from the relation."""
+        assert self.relation.app
+        return self.relation.data[self.relation.app].get("password_id")
+
+    @property
+    def auth_type(self) -> AuthType:
+        """Fetch the SMTP auth type from the relation."""
+        assert self.relation.app
+        return AuthType(self.relation.data[self.relation.app].get("auth_type"))
+
+    @property
+    def transport_security(self) -> TransportSecurity:
+        """Fetch the SMTP transport security protocol from the relation."""
+        assert self.relation.app
+        return TransportSecurity(self.relation.data[self.relation.app].get("transport_security"))
+
+    @property
+    def domain(self) -> str:
+        """Fetch the SMTP domain from the relation."""
+        assert self.relation.app
+        return self.relation.data[self.relation.app].get("domain")
 
 
-class DNSRecordRequiresEvents(ops.CharmEvents):
-    """DNS record requirer events.
+class SmtpRequiresEvents(ops.CharmEvents):
+    """SMTP events.
 
-    This class defines the events that a DNS record requirer can emit.
+    This class defines the events that a SMTP requirer can emit.
 
     Attributes:
-        dns_record_request_processed: the DNSRecordRequestProcessed.
+        smtp_data_available: the SmtpDataAvailableEvent.
     """
 
-    dns_record_request_processed = ops.EventSource(DNSRecordRequestProcessed)
+    smtp_data_available = ops.EventSource(SmtpDataAvailableEvent)
 
 
-class DNSRecordRequires(ops.Object):
-    """Requirer side of the DNS requires relation.
+class SmtpRequires(ops.Object):
+    """Requirer side of the SMTP relation.
 
     Attributes:
         on: events the provider can emit.
     """
 
-    on = DNSRecordRequiresEvents()
+    on = SmtpRequiresEvents()
 
     def __init__(self, charm: ops.CharmBase, relation_name: str = DEFAULT_RELATION_NAME) -> None:
         """Construct.
@@ -403,29 +257,38 @@ class DNSRecordRequires(ops.Object):
         self.relation_name = relation_name
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
 
-    def get_remote_relation_data(self) -> Optional[DNSRecordProviderData]:
-        """Retrieve the remote relation data.
+    def get_relation_data(self) -> Optional[SmtpRelationData]:
+        """Retrieve the relation data.
 
         Returns:
-            DNSRecordProviderData: the relation data.
+            SmtpRelationData: the relation data.
         """
         relation = self.model.get_relation(self.relation_name)
-        return self._get_remote_relation_data(relation) if relation else None
+        return self._get_relation_data_from_relation(relation) if relation else None
 
-    def _get_remote_relation_data(self, relation: ops.Relation) -> DNSRecordProviderData:
-        """Retrieve the remote relation data.
+    def _get_relation_data_from_relation(self, relation: ops.Relation) -> SmtpRelationData:
+        """Retrieve the relation data.
 
         Args:
             relation: the relation to retrieve the data from.
 
         Returns:
-            DNSRecordProviderData: the relation data.
+            SmtpRelationData: the relation data.
         """
         assert relation.app
         relation_data = relation.data[relation.app]
-        return DNSRecordProviderData.from_relation_data(relation_data)
+        return SmtpRelationData(
+            host=relation_data.get("host"),
+            port=relation_data.get("port"),
+            user=relation_data.get("user"),
+            password=relation_data.get("password"),
+            password_id=relation_data.get("password_id"),
+            auth_type=relation_data.get("auth_type"),
+            transport_security=relation_data.get("transport_security"),
+            domain=relation_data.get("domain"),
+        )
 
-    def _is_remote_relation_data_valid(self, relation: ops.Relation) -> bool:
+    def _is_relation_data_valid(self, relation: ops.Relation) -> bool:
         """Validate the relation data.
 
         Args:
@@ -435,7 +298,7 @@ class DNSRecordRequires(ops.Object):
             true: if the relation data is valid.
         """
         try:
-            _ = self._get_remote_relation_data(relation)
+            _ = self._get_relation_data_from_relation(relation)
             return True
         except ValidationError as ex:
             error_fields = set(
@@ -453,45 +316,17 @@ class DNSRecordRequires(ops.Object):
         """
         assert event.relation.app
         relation_data = event.relation.data[event.relation.app]
-        if relation_data and self._is_remote_relation_data_valid(event.relation):
-            self.on.dns_record_request_processed.emit(
-                event.relation, app=event.app, unit=event.unit
-            )
-
-    def update_relation_data(
-        self, relation: ops.Relation, dns_record_requirer_data: DNSRecordRequirerData
-    ) -> None:
-        """Update the relation data.
-
-        Args:
-            relation: the relation for which to update the data.
-            dns_record_requirer_data: a DNSRecordRequirerData instance wrapping the data to be
-                updated.
-        """
-        relation_data = dns_record_requirer_data.to_relation_data()
-        relation.data[self.charm.model.app].update(relation_data)
+        if relation_data:
+            if relation_data["auth_type"] == AuthType.NONE.value:
+                logger.warning('Insecure setting: auth_type has a value "none"')
+            if relation_data["transport_security"] == TransportSecurity.NONE.value:
+                logger.warning('Insecure setting: transport_security has value "none"')
+            if self._is_relation_data_valid(event.relation):
+                self.on.smtp_data_available.emit(event.relation, app=event.app, unit=event.unit)
 
 
-class DNSRecordProvidesEvents(ops.CharmEvents):
-    """DNS record provider events.
-
-    This class defines the events that a DNS record provider can emit.
-
-    Attributes:
-        dns_record_request_received: the DNSRecordRequestReceived.
-    """
-
-    dns_record_request_received = ops.EventSource(DNSRecordRequestReceived)
-
-
-class DNSRecordProvides(ops.Object):
-    """Provider side of the DNS record relation.
-
-    Attributes:
-        on: events the provider can emit.
-    """
-
-    on = DNSRecordProvidesEvents()
+class SmtpProvides(ops.Object):
+    """Provider side of the SMTP relation."""
 
     def __init__(self, charm: ops.CharmBase, relation_name: str = DEFAULT_RELATION_NAME) -> None:
         """Construct.
@@ -503,101 +338,17 @@ class DNSRecordProvides(ops.Object):
         super().__init__(charm, relation_name)
         self.charm = charm
         self.relation_name = relation_name
-        self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
 
-    def get_remote_relation_data(self) -> Optional[DNSRecordRequirerData]:
-        """Retrieve the remote relation data.
-
-        Returns:
-            DNSRecordRequirerData: the relation data.
-        """
-        relation = self.model.get_relation(self.relation_name)
-        return self._get_remote_relation_data(relation) if relation else None
-
-    def _get_remote_relation_data(self, relation: ops.Relation) -> DNSRecordRequirerData:
-        """Retrieve the remote relation data.
-
-        Args:
-            relation: the relation to retrieve the data from.
-
-        Returns:
-            DNSRecordProviderData: the relation data.
-        """
-        assert relation.app
-        relation_data = relation.data[relation.app]
-        return DNSRecordRequirerData.from_relation_data(relation_data)
-
-    def _is_requirer_entry_valid(
-        self, entry: RequirerEntry, dns_domains: List[RequirerDomain]
-    ) -> bool:
-        """Validate if an entry has a corresponding domain.
-
-        Args:
-            entry: the DNS entry.
-            dns_domains: list of provided DNS domains.
-
-        Returns:
-            true: if there is a matching domain for the entry.
-        """
-        domains = [dns_domain.domain for dns_domain in dns_domains]
-        return any(map(entry.domain.endswith, domains))
-
-    def _is_dns_requirer_data_valid(self, requirer_data: DNSRecordRequirerData) -> bool:
-        """Semantically validate the requirer data.
-
-        Args:
-            requirer_data: the requirer data.
-
-        Returns:
-            true: if the data is valid.
-        """
-        for entry in requirer_data.dns_entries:
-            if not self._is_requirer_entry_valid(entry, requirer_data.dns_domains):
-                return False
-        return True
-
-    def _is_remote_relation_data_valid(self, relation: ops.Relation) -> bool:
-        """Validate the relation data.
-
-        Args:
-            relation: the relation to validate.
-
-        Returns:
-            true: if the relation data is valid.
-        """
-        try:
-            requirer_data = self._get_remote_relation_data(relation)
-            return self._is_dns_requirer_data_valid(requirer_data)
-        except ValidationError as ex:
-            error_fields = set(
-                itertools.chain.from_iterable(error["loc"] for error in ex.errors())
-            )
-            error_field_str = " ".join(f"{f}" for f in error_fields)
-            logger.warning("Error validation the relation data %s", error_field_str)
-            return False
-
-    def _on_relation_changed(self, event: ops.RelationChangedEvent) -> None:
-        """Event emitted when the relation has changed.
-
-        Args:
-            event: event triggering this handler.
-        """
-        assert event.relation.app
-        relation_data = event.relation.data[event.relation.app]
-        if relation_data and self._is_remote_relation_data_valid(event.relation):
-            self.on.dns_record_request_received.emit(
-                event.relation, app=event.app, unit=event.unit
-            )
-
-    def update_relation_data(
-        self, relation: ops.Relation, dns_record_provider_data: DNSRecordProviderData
-    ) -> None:
+    def update_relation_data(self, relation: ops.Relation, smtp_data: SmtpRelationData) -> None:
         """Update the relation data.
 
         Args:
             relation: the relation for which to update the data.
-            dns_record_provider_data: a DNSRecordProviderData instance wrapping the data to be
-                updated.
+            smtp_data: a SmtpRelationData instance wrapping the data to be updated.
         """
-        relation_data = dns_record_provider_data.to_relation_data()
+        relation_data = smtp_data.to_relation_data()
+        if relation_data["auth_type"] == AuthType.NONE.value:
+            logger.warning('Insecure setting: auth_type has a value "none"')
+        if relation_data["transport_security"] == TransportSecurity.NONE.value:
+            logger.warning('Insecure setting: transport_security has value "none"')
         relation.data[self.charm.model.app].update(relation_data)

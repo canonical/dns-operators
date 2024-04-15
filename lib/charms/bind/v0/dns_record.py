@@ -274,8 +274,8 @@ class RequirerDomain(BaseModel):
         """
         if not self.password:
             return
-        domain_secret = model.get_secret(label=f"{self.domain}")
-        if not domain_secret:
+        secret = model.get_secret(label=f"{self.domain}")
+        if not secret:
             secret = relation.app.add_secret(
                 {"domain-password": self.password}, label=f"{self.domain}"
             )
@@ -283,9 +283,9 @@ class RequirerDomain(BaseModel):
             assert secret.id
             self.password_id = secret.id
         else:
-            domain_secret.set_content({"domain-password": self.password})
-            assert domain_secret.id
-            self.password_id = domain_secret.id
+            secret.set_content({"domain-password": self.password})
+            assert secret.id
+            self.password_id = secret.id
 
 
 class RequirerEntry(BaseModel):

@@ -61,7 +61,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
     unit = app.units[0]  # type: ignore
 
     test_zone_def = f"""zone "dns.test" IN {{
-    type master;
+    type primary;
     file "{constants.DNS_CONFIG_DIR}/db.dns.test";
     allow-update {{ none; }};
 }};

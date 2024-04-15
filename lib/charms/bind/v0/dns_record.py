@@ -84,7 +84,7 @@ from pydantic import BaseModel, Field, IPvAnyAddress, ValidationError
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_RELATION_NAME = "dns_record"
+DEFAULT_RELATION_NAME = "dns-record"
 
 
 class Status(str, Enum):
@@ -210,11 +210,11 @@ class DNSRecordProviderData(BaseModel):
         return dumped_data
 
     @classmethod
-    def from_relation_data(cls, relation_data: Dict[str, str]) -> "DNSRecordProviderData":
-        """Initialize a new instance of the DNSRecordProviderData class from the relation data.
+    def from_relation(cls, relation: ops.Relation) -> "DNSRecordProviderData":
+        """Initialize a new instance of the DNSRecordProviderData class from the relation.
 
         Args:
-            relation_data: the relation data.
+            relation: the relation.
 
         Returns:
             A DNSRecordProviderData instance.
@@ -224,6 +224,8 @@ class DNSRecordProviderData(BaseModel):
         """
         try:
             loaded_data = {}
+            assert relation.app, "DNS record relation data accessed before relation setup."
+            relation_data = relation.data[relation.app]
             for key, value in relation_data.items():
                 loaded_data[key] = json.loads(value)
             return DNSRecordProviderData.model_validate(loaded_data)
@@ -238,14 +240,52 @@ class RequirerDomain(BaseModel):
     Attributes:
         domain: the domain name.
         username: username for authentication.
+        password: the password for authentication.
         password_id: secret password for authentication.
         uuid: UUID for this entry.
     """
 
     domain: str = Field(min_length=1)
     username: str
+    password: Optional[str] = Field(default=None, exclude=True)
     password_id: str
     uuid: UUID
+
+    def get_password(self, model: ops.Model) -> str:
+        """Retrieve the password corresponding to the password_id.
+
+        Args:
+            model: the Juju model.
+
+        Returns:
+            the plain password.
+        """
+        secret = model.get_secret(id=self.password_id)
+        password = secret.get_content().get("domain-password")
+        assert password
+        return password
+
+    def set_password_id(self, model: ops.Model, relation: ops.Relation) -> None:
+        """Store the password as a Juju secret.
+
+        Args:
+            model: the Juju model
+            relation: relation to grant access to the secrets to.
+        """
+        if not self.password:
+            return
+        domain_secret = model.get_secret(label=f"{self.domain}")
+        if not domain_secret:
+            secret = relation.app.add_secret(
+                {"domain-password": self.password}, label=f"{self.domain}"
+            )
+            secret.grant(relation)
+            assert secret.id
+            self.password_id = secret.id
+        else:
+            domain_secret.set_content({"domain-password": self.password})
+            assert domain_secret.id
+            self.password_id = domain_secret.id
 
 
 class RequirerEntry(BaseModel):
@@ -281,12 +321,18 @@ class DNSRecordRequirerData(BaseModel):
     dns_domains: List[RequirerDomain] = Field(min_length=1)
     dns_entries: List[RequirerEntry] = Field(min_length=1)
 
-    def to_relation_data(self) -> Dict[str, str]:
+    def to_relation_data(self, model: ops.Model, relation: ops.Relation) -> Dict[str, str]:
         """Convert an instance of DNSRecordRequirerData to the relation representation.
+
+        Args:
+            model: the Juju model.
+            relation: relation to grant access to the secrets to.
 
         Returns:
             Dict containing the representation.
         """
+        for dns_domain in self.dns_domains:  # pylint: disable=not-an-iterable
+            dns_domain.set_password_id(model, relation)
         dumped_model = self.model_dump(exclude_unset=True)
         dumped_data = {}
         for key, value in dumped_model.items():
@@ -295,11 +341,12 @@ class DNSRecordRequirerData(BaseModel):
         return dumped_data
 
     @classmethod
-    def from_relation_data(cls, relation_data: Dict[str, str]) -> "DNSRecordRequirerData":
+    def from_relation(cls, model: ops.Model, relation: ops.Relation) -> "DNSRecordRequirerData":
         """Initialize a new instance of the DNSRecordRequirerData class from the relation data.
 
         Args:
-            relation_data: the relation data.
+            model: the Juju model.
+            relation: the relation.
 
         Returns:
             A DNSRecordRequirerData instance.
@@ -309,10 +356,15 @@ class DNSRecordRequirerData(BaseModel):
         """
         try:
             loaded_data = {}
+            assert relation.app, "DNS record relation data accessed before relation setup."
+            relation_data = relation.data[relation.app]
             for key, value in relation_data.items():
                 if value:
                     loaded_data[key] = json.loads(value)
-            return DNSRecordRequirerData.model_validate(loaded_data)
+            fetched_data = DNSRecordRequirerData.model_validate(loaded_data)
+            for dns_domain in fetched_data.dns_domains:
+                dns_domain.password = dns_domain.get_password(model)
+            return fetched_data
         except json.JSONDecodeError as ex:
             # flake8-docstrings-complete doesn't interpret this properly
             raise ValidationError.from_exception_data(ex.msg, [])  # noqa: DCO053
@@ -330,8 +382,7 @@ class DNSRecordRequestProcessed(ops.RelationEvent):
     @property
     def dns_record_provider_relation_data(self) -> DNSRecordProviderData:
         """Get a DNSRecordProviderData for the relation data."""
-        assert self.relation.app, "DNS record relation data accessed before relation setup."
-        return DNSRecordProviderData.from_relation_data(self.relation.data[self.relation.app])
+        return DNSRecordProviderData.from_relation(self.relation)
 
     @property
     def dns_domains(self) -> Optional[List[DNSProviderData]]:
@@ -356,8 +407,7 @@ class DNSRecordRequestReceived(ops.RelationEvent):
     @property
     def dns_record_requirer_relation_data(self) -> DNSRecordRequirerData:
         """Get a DNSRecordRequirerData for the relation data."""
-        assert self.relation.app
-        return DNSRecordRequirerData.from_relation_data(self.relation.data[self.relation.app])
+        return DNSRecordRequirerData.from_relation(self.framework.model, self.relation)
 
     @property
     def dns_domains(self) -> Optional[List[RequirerDomain]]:
@@ -421,9 +471,7 @@ class DNSRecordRequires(ops.Object):
         Returns:
             DNSRecordProviderData: the relation data.
         """
-        assert relation.app
-        relation_data = relation.data[relation.app]
-        return DNSRecordProviderData.from_relation_data(relation_data)
+        return DNSRecordProviderData.from_relation(relation)
 
     def _is_remote_relation_data_valid(self, relation: ops.Relation) -> bool:
         """Validate the relation data.
@@ -468,7 +516,7 @@ class DNSRecordRequires(ops.Object):
             dns_record_requirer_data: a DNSRecordRequirerData instance wrapping the data to be
                 updated.
         """
-        relation_data = dns_record_requirer_data.to_relation_data()
+        relation_data = dns_record_requirer_data.to_relation_data(self.model, relation)
         relation.data[self.charm.model.app].update(relation_data)
 
 
@@ -512,20 +560,21 @@ class DNSRecordProvides(ops.Object):
             DNSRecordRequirerData: the relation data.
         """
         relation = self.model.get_relation(self.relation_name)
-        return self._get_remote_relation_data(relation) if relation else None
+        return self._get_remote_relation_data(self.model, relation) if relation else None
 
-    def _get_remote_relation_data(self, relation: ops.Relation) -> DNSRecordRequirerData:
+    def _get_remote_relation_data(
+        self, model: ops.Model, relation: ops.Relation
+    ) -> DNSRecordRequirerData:
         """Retrieve the remote relation data.
 
         Args:
+            model: the Juju model.
             relation: the relation to retrieve the data from.
 
         Returns:
             DNSRecordProviderData: the relation data.
         """
-        assert relation.app
-        relation_data = relation.data[relation.app]
-        return DNSRecordRequirerData.from_relation_data(relation_data)
+        return DNSRecordRequirerData.from_relation(model, relation)
 
     def _is_requirer_entry_valid(
         self, entry: RequirerEntry, dns_domains: List[RequirerDomain]
@@ -566,7 +615,7 @@ class DNSRecordProvides(ops.Object):
             true: if the relation data is valid.
         """
         try:
-            requirer_data = self._get_remote_relation_data(relation)
+            requirer_data = self._get_remote_relation_data(self.model, relation)
             return self._is_dns_requirer_data_valid(requirer_data)
         except ValidationError as ex:
             error_fields = set(

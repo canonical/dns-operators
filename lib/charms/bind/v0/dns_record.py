@@ -262,6 +262,7 @@ class RequirerDomain(BaseModel):
         """
         secret = model.get_secret(id=self.password_id)
         password = secret.get_content().get("domain-password")
+        # The content is always present in the secret.
         assert password
         return password
 

@@ -259,6 +259,17 @@ class RequirerDomain(BaseModel):
     password_id: str
     uuid: UUID
 
+    def __str__(self) -> str:
+        """String representation for this class' instances.
+
+        Returns:
+            the string representation of a RequirerDomain instance.
+        """
+        return (
+            f"domain={self.domain} username={self.username} password=*** "
+            f"password_id={self.password_id} uuid=UUID('{self.uuid}')"
+        )
+
     def get_password(self, model: ops.Model) -> str:
         """Retrieve the password corresponding to the password_id.
 

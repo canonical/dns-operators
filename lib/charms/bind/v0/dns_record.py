@@ -76,11 +76,18 @@ import itertools
 import json
 import logging
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Annotated, Dict, List, Optional
 from uuid import UUID
 
 import ops
-from pydantic import BaseModel, Field, IPvAnyAddress, ValidationError
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    Field,
+    IPvAnyAddress,
+    ValidationError,
+    ValidationInfo,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -310,6 +317,38 @@ class RequirerEntry(BaseModel):
     record_data: IPvAnyAddress
     uuid: UUID
 
+    def is_valid(self, dns_domains: List[RequirerDomain]) -> bool:
+        """Validate if the entry has a corresponding domain.
+
+        Args:
+            dns_domains: list of provided DNS domains.
+
+        Returns:
+            true: if there is a matching domain for the entry.
+        """
+        domains = [dns_domain.domain for dns_domain in dns_domains]
+        # pylint doesn't recognise self.domain as a str
+        return any(map(self.domain.endswith, domains))  # pylint: disable=no-member
+
+    def validate_dns_entry(self, info: ValidationInfo) -> "RequirerEntry":
+        """Validate DNS entries.
+
+        Args:
+            info: the validation info.
+
+        Returns:
+            the DNS entry if valid.
+
+        Raises:
+            ValueError: if the DNS entry is not valid.
+        """
+        validated_entry = RequirerEntry.model_validate(self)
+        if validated_entry.is_valid(info.data["dns_domains"]):
+            return validated_entry
+        raise ValueError(
+            f"Entry with domain {validated_entry.domain} requested without a valid domain"
+        )
+
 
 class DNSRecordRequirerData(BaseModel):
     """List of domains for the provider to manage.
@@ -320,7 +359,9 @@ class DNSRecordRequirerData(BaseModel):
     """
 
     dns_domains: List[RequirerDomain] = Field(min_length=1)
-    dns_entries: List[RequirerEntry] = Field(min_length=1)
+    dns_entries: List[
+        Annotated[RequirerEntry, AfterValidator(RequirerEntry.validate_dns_entry)]
+    ] = Field(min_length=1)
 
     def to_relation_data(self, model: ops.Model, relation: ops.Relation) -> Dict[str, str]:
         """Convert an instance of DNSRecordRequirerData to the relation representation.
@@ -577,35 +618,6 @@ class DNSRecordProvides(ops.Object):
         """
         return DNSRecordRequirerData.from_relation(model, relation)
 
-    def _is_requirer_entry_valid(
-        self, entry: RequirerEntry, dns_domains: List[RequirerDomain]
-    ) -> bool:
-        """Validate if an entry has a corresponding domain.
-
-        Args:
-            entry: the DNS entry.
-            dns_domains: list of provided DNS domains.
-
-        Returns:
-            true: if there is a matching domain for the entry.
-        """
-        domains = [dns_domain.domain for dns_domain in dns_domains]
-        return any(map(entry.domain.endswith, domains))
-
-    def _is_dns_requirer_data_valid(self, requirer_data: DNSRecordRequirerData) -> bool:
-        """Semantically validate the requirer data.
-
-        Args:
-            requirer_data: the requirer data.
-
-        Returns:
-            true: if the data is valid.
-        """
-        for entry in requirer_data.dns_entries:
-            if not self._is_requirer_entry_valid(entry, requirer_data.dns_domains):
-                return False
-        return True
-
     def _is_remote_relation_data_valid(self, relation: ops.Relation) -> bool:
         """Validate the relation data.
 
@@ -616,8 +628,8 @@ class DNSRecordProvides(ops.Object):
             true: if the relation data is valid.
         """
         try:
-            requirer_data = self._get_remote_relation_data(self.model, relation)
-            return self._is_dns_requirer_data_valid(requirer_data)
+            _ = self._get_remote_relation_data(self.model, relation)
+            return True
         except ValidationError as ex:
             error_fields = set(
                 itertools.chain.from_iterable(error["loc"] for error in ex.errors())

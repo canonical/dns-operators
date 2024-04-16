@@ -13,19 +13,19 @@ import exceptions
 logger = logging.getLogger(__name__)
 
 
-class ReloadError(exceptions.BlockableError):
+class ReloadError(exceptions.SnapError):
     """Exception raised when unable to reload the service."""
 
 
-class StartError(exceptions.BlockableError):
+class StartError(exceptions.SnapError):
     """Exception raised when unable to start the service."""
 
 
-class StopError(exceptions.BlockableError):
+class StopError(exceptions.SnapError):
     """Exception raised when unable to stop the service."""
 
 
-class InstallError(exceptions.BlockableError):
+class InstallError(exceptions.SnapError):
     """Exception raised when unable to install dependencies for the service."""
 
 

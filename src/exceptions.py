@@ -4,15 +4,15 @@
 """Exceptions used by the bind charm."""
 
 
-class BlockableError(Exception):
-    """Exception raised when something fails and the charm should be put in a blocked state.
+class SnapError(Exception):
+    """Exception raised when an action on the snap fails.
 
     Attrs:
         msg (str): Explanation of the error.
     """
 
     def __init__(self, msg: str):
-        """Initialize a new instance of the BlockableError exception.
+        """Initialize a new instance of the SnapError exception.
 
         Args:
             msg (str): Explanation of the error.

@@ -17,37 +17,7 @@ Bind service class.
 
 ---
 
-<a href="../src/bind.py#L77"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-### <kbd>function</kbd> `install_snap_package`
-
-```python
-install_snap_package(
-    snap_name: str,
-    snap_channel: str,
-    refresh: bool = False
-) → None
-```
-
-Installs snap package. 
-
-
-
-**Args:**
- 
- - <b>`snap_name`</b>:  the snap package to install 
- - <b>`snap_channel`</b>:  the snap package channel 
- - <b>`refresh`</b>:  whether to refresh the snap if it's already present. 
-
-
-
-**Raises:**
- 
- - <b>`BlockableError`</b>:  when encountering a SnapError or a SnapNotFoundError 
-
----
-
-<a href="../src/bind.py#L70"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/bind.py#L86"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `prepare`
 
@@ -59,7 +29,7 @@ Prepare the machine.
 
 ---
 
-<a href="../src/bind.py#L19"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/bind.py#L35"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `reload`
 
@@ -73,11 +43,11 @@ Reload the charmed-bind service.
 
 **Raises:**
  
- - <b>`BlockableError`</b>:  when encountering a SnapError 
+ - <b>`ReloadError`</b>:  when encountering a SnapError 
 
 ---
 
-<a href="../src/bind.py#L36"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/bind.py#L52"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `start`
 
@@ -91,11 +61,11 @@ Start the charmed-bind service.
 
 **Raises:**
  
- - <b>`BlockableError`</b>:  when encountering a SnapError 
+ - <b>`StartError`</b>:  when encountering a SnapError 
 
 ---
 
-<a href="../src/bind.py#L53"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/bind.py#L69"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `stop`
 
@@ -109,6 +79,42 @@ Stop the charmed-bind service.
 
 **Raises:**
  
- - <b>`BlockableError`</b>:  when encountering a SnapError 
+ - <b>`StopError`</b>:  when encountering a SnapError 
+
+
+---
+
+## <kbd>class</kbd> `InstallError`
+Exception raised when unable to install dependencies for the service. 
+
+
+
+
+
+---
+
+## <kbd>class</kbd> `ReloadError`
+Exception raised when unable to reload the service. 
+
+
+
+
+
+---
+
+## <kbd>class</kbd> `StartError`
+Exception raised when unable to start the service. 
+
+
+
+
+
+---
+
+## <kbd>class</kbd> `StopError`
+Exception raised when unable to stop the service. 
+
+
+
 
 

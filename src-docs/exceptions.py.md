@@ -9,8 +9,8 @@ Exceptions used by the bind charm.
 
 ---
 
-## <kbd>class</kbd> `BlockableError`
-Exception raised when something fails and the charm should be put in a blocked state. 
+## <kbd>class</kbd> `SnapError`
+Exception raised when an action on the snap fails. 
 
 Attrs:  msg (str): Explanation of the error. 
 
@@ -22,7 +22,7 @@ Attrs:  msg (str): Explanation of the error.
 __init__(msg: str)
 ```
 
-Initialize a new instance of the BlockableError exception. 
+Initialize a new instance of the SnapError exception. 
 
 
 

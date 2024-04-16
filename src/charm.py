@@ -42,23 +42,23 @@ class BindCharm(ops.CharmBase):
         try:
             self.bind.prepare()
             self.unit.status = ops.ActiveStatus()
-        except exceptions.BlockableError as e:
-            self.unit.status = ops.BlockedStatus(e.msg)
+        except exceptions.SnapError as e:
+            self.unit.status = ops.ErrorStatus(e.msg)
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start."""
         try:
             self.bind.start()
             self.unit.status = ops.ActiveStatus()
-        except exceptions.BlockableError as e:
-            self.unit.status = ops.BlockedStatus(e.msg)
+        except exceptions.SnapError as e:
+            self.unit.status = ops.ErrorStatus(e.msg)
 
     def _on_stop(self, _: ops.StopEvent) -> None:
         """Handle stop."""
         try:
             self.bind.stop()
-        except exceptions.BlockableError as e:
-            self.unit.status = ops.BlockedStatus(e.msg)
+        except exceptions.SnapError as e:
+            self.unit.status = ops.ErrorStatus(e.msg)
 
     def _on_upgrade_charm(self, _: ops.UpgradeCharmEvent) -> None:
         """Handle upgrade-charm."""
@@ -66,8 +66,8 @@ class BindCharm(ops.CharmBase):
         try:
             self.bind.prepare()
             self.unit.status = ops.ActiveStatus()
-        except exceptions.BlockableError as e:
-            self.unit.status = ops.BlockedStatus(e.msg)
+        except exceptions.SnapError as e:
+            self.unit.status = ops.ErrorStatus(e.msg)
 
 
 if __name__ == "__main__":  # pragma: nocover

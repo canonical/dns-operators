@@ -28,7 +28,6 @@ async def test_lifecycle(app: ops.model.Application, ops_test: OpsTest):
     # Application actually does have units
     unit = app.units[0]  # type: ignore
 
-    # Application actually does have units
     # Mypy has difficulty with ActiveStatus
     assert unit.workload_status == ops.model.ActiveStatus.name  # type: ignore
 

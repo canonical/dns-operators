@@ -9,7 +9,6 @@ import typing
 
 import ops
 
-import exceptions
 from bind import BindService
 
 logger = logging.getLogger(__name__)
@@ -39,35 +38,23 @@ class BindCharm(ops.CharmBase):
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install."""
         self.unit.status = ops.MaintenanceStatus("Preparing bind")
-        try:
-            self.bind.prepare()
-            self.unit.status = ops.ActiveStatus()
-        except exceptions.SnapError as e:
-            self.unit.status = ops.ErrorStatus(e.msg)
+        self.bind.prepare()
+        self.unit.status = ops.ActiveStatus()
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start."""
-        try:
-            self.bind.start()
-            self.unit.status = ops.ActiveStatus()
-        except exceptions.SnapError as e:
-            self.unit.status = ops.ErrorStatus(e.msg)
+        self.bind.start()
+        self.unit.status = ops.ActiveStatus()
 
     def _on_stop(self, _: ops.StopEvent) -> None:
         """Handle stop."""
-        try:
-            self.bind.stop()
-        except exceptions.SnapError as e:
-            self.unit.status = ops.ErrorStatus(e.msg)
+        self.bind.stop()
 
     def _on_upgrade_charm(self, _: ops.UpgradeCharmEvent) -> None:
         """Handle upgrade-charm."""
         self.unit.status = ops.MaintenanceStatus("Upgrading dependencies")
-        try:
-            self.bind.prepare()
-            self.unit.status = ops.ActiveStatus()
-        except exceptions.SnapError as e:
-            self.unit.status = ops.ErrorStatus(e.msg)
+        self.bind.prepare()
+        self.unit.status = ops.ActiveStatus()
 
 
 if __name__ == "__main__":  # pragma: nocover

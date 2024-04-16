@@ -266,12 +266,15 @@ class RequirerDomain(BaseModel):
 
         Returns:
             the plain password.
+
+        Raises:
+            ValueError: if the secret doesn't match the expectations.
         """
         secret = model.get_secret(id=self.password_id)
         password = secret.get_content().get("domain-password")
-        # The content is always present in the secret.
-        assert password
-        return password
+        if password:
+            return password
+        raise ValueError("Password secret does not contain expected domain-password.")
 
     def set_password_id(self, model: ops.Model, relation: ops.Relation) -> None:
         """Store the password as a Juju secret.
@@ -416,25 +419,27 @@ class DNSRecordRequestProcessed(ops.RelationEvent):
     """DNS event emitted when a new request is processed.
 
     Attributes:
-        dns_record_provider_relation_data: the DNS provider relation data.
         dns_domains: list of processed domains.
         dns_entries: list of processed entries.
     """
 
-    @property
-    def dns_record_provider_relation_data(self) -> DNSRecordProviderData:
-        """Get a DNSRecordProviderData for the relation data."""
+    def get_dns_record_provider_relation_data(self) -> DNSRecordProviderData:
+        """Get a DNSRecordProviderData for the relation data.
+
+        Returns:
+            the DNSRecordProviderData for the relation data.
+        """
         return DNSRecordProviderData.from_relation(self.relation)
 
     @property
     def dns_domains(self) -> Optional[List[DNSProviderData]]:
         """Fetch the DNS domains from the relation."""
-        return self.dns_record_provider_relation_data.dns_domains
+        return self.get_dns_record_provider_relation_data().dns_domains
 
     @property
     def dns_entries(self) -> Optional[List[DNSProviderData]]:
         """Fetch the DNS entries from the relation."""
-        return self.dns_record_provider_relation_data.dns_entries
+        return self.get_dns_record_provider_relation_data().dns_entries
 
 
 class DNSRecordRequestReceived(ops.RelationEvent):

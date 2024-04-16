@@ -231,7 +231,8 @@ class DNSRecordProviderData(BaseModel):
         """
         try:
             loaded_data = {}
-            assert relation.app, "DNS record relation data accessed before relation setup."
+            # This is always defined at this point
+            assert relation.app
             relation_data = relation.data[relation.app]
             for key, value in relation_data.items():
                 loaded_data[key] = json.loads(value)

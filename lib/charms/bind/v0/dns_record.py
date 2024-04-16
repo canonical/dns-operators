@@ -85,6 +85,7 @@ from pydantic import (
     BaseModel,
     Field,
     IPvAnyAddress,
+    SecretStr,
     ValidationError,
     ValidationInfo,
 )
@@ -255,20 +256,9 @@ class RequirerDomain(BaseModel):
 
     domain: str = Field(min_length=1)
     username: str
-    password: Optional[str] = Field(default=None, exclude=True)
+    password: Optional[SecretStr] = Field(default=None, exclude=True)
     password_id: str
     uuid: UUID
-
-    def __str__(self) -> str:
-        """String representation for this class' instances.
-
-        Returns:
-            the string representation of a RequirerDomain instance.
-        """
-        return (
-            f"domain={self.domain} username={self.username} password=*** "
-            f"password_id={self.password_id} uuid=UUID('{self.uuid}')"
-        )
 
     def get_password(self, model: ops.Model) -> str:
         """Retrieve the password corresponding to the password_id.
@@ -295,18 +285,21 @@ class RequirerDomain(BaseModel):
             model: the Juju model
             relation: relation to grant access to the secrets to.
         """
-        if not self.password:
+        # pylint doesn't like get_secret_value
+        if not self.password or not self.password.get_secret_value():  # pylint: disable=no-member
             return
+        secret_value = self.password.get_secret_value()  # pylint: disable=no-member
         secret = model.get_secret(label=f"{self.domain}")
         if not secret:
             secret = relation.app.add_secret(
-                {"domain-password": self.password}, label=f"{self.domain}"
+                {"domain-password": secret_value}, label=f"{self.domain}"
             )
             secret.grant(relation)
             assert secret.id
             self.password_id = secret.id
         else:
-            secret.set_content({"domain-password": self.password})
+            secret.set_content({"domain-password": secret_value})
+            # secret.id is not None at this point
             assert secret.id
             self.password_id = secret.id
 
@@ -420,7 +413,7 @@ class DNSRecordRequirerData(BaseModel):
                     loaded_data[key] = json.loads(value)
             fetched_data = DNSRecordRequirerData.model_validate(loaded_data)
             for dns_domain in fetched_data.dns_domains:
-                dns_domain.password = dns_domain.get_password(model)
+                dns_domain.password = SecretStr(dns_domain.get_password(model))
             return fetched_data
         except json.JSONDecodeError as ex:
             # flake8-docstrings-complete doesn't interpret this properly

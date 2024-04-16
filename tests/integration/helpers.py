@@ -66,11 +66,9 @@ async def run_on_unit(ops_test: OpsTest, unit_name: str, command: str) -> str:
         ExecutionError: if the command was not successful
     """
     complete_command = ["exec", "--unit", unit_name, "--", *command.split()]
-    return_code, stdout, _ = await ops_test.juju(*complete_command)
+    return_code, stdout, stderr = await ops_test.juju(*complete_command)
     if return_code != 0:
-        raise ExecutionError(
-            f"Expected command {command} to succeed instead it failed: {return_code}"
-        )
+        raise ExecutionError(f"Command {command} failed with code {return_code}: {stderr}")
     return stdout
 
 

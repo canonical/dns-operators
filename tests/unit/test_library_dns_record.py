@@ -28,7 +28,6 @@ provides:
 """
 
 PASSWORD_USER = secrets.token_hex()
-PASSWORD_USER_2 = secrets.token_hex()
 UUID1 = uuid.uuid4()
 UUID2 = uuid.uuid4()
 UUID3 = uuid.uuid4()

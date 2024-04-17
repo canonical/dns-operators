@@ -143,10 +143,8 @@ def get_password_secrets(model: ops.Model) -> Tuple[str, str]:
     Returns:
         a tuple containing the secret IDS created.
     """
-    secret_1 = model.app.add_secret(
-        {"domain-password": PASSWORD_USER_1}, label="cloud.canonical.com"
-    )
-    secret_2 = model.app.add_secret({"domain-password": PASSWORD_USER_2}, label="ubuntu.com")
+    secret_1 = model.app.add_secret({"domain-password": PASSWORD_USER_1}, label="user1")
+    secret_2 = model.app.add_secret({"domain-password": PASSWORD_USER_2}, label="user2")
     assert secret_1.id
     assert secret_2.id
     return secret_1.id, secret_2.id

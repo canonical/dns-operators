@@ -76,7 +76,7 @@ import itertools
 import json
 import logging
 from enum import Enum
-from typing import Annotated, Dict, List, Optional
+from typing import Annotated, Dict, List, Optional, cast
 from uuid import UUID
 
 import ops
@@ -232,9 +232,8 @@ class DNSRecordProviderData(BaseModel):
         """
         try:
             loaded_data = {}
-            # This is always defined at this point
-            assert relation.app
-            relation_data = relation.data[relation.app]
+            app = cast(ops.Application, relation.app)
+            relation_data = relation.data[app]
             for key, value in relation_data.items():
                 loaded_data[key] = json.loads(value)
             return DNSRecordProviderData.model_validate(loaded_data)
@@ -289,17 +288,17 @@ class RequirerDomain(BaseModel):
         if not self.password or not self.password.get_secret_value():  # pylint: disable=no-member
             return
         secret_value = self.password.get_secret_value()  # pylint: disable=no-member
-        secret = model.get_secret(label=f"{self.domain}")
-        if not secret:
-            secret = relation.app.add_secret(
-                {"domain-password": secret_value}, label=f"{self.domain}"
-            )
-            secret.grant(relation)
-            assert secret.id
-            self.password_id = secret.id
-        else:
+        try:
+            secret = model.get_secret(label=f"{self.username}")
             secret.set_content({"domain-password": secret_value})
             # secret.id is not None at this point
+            assert secret.id
+            self.password_id = secret.id
+        except ops.SecretNotFoundError:
+            secret = relation.app.add_secret(
+                {"domain-password": secret_value}, label=f"{self.username}"
+            )
+            secret.grant(relation)
             assert secret.id
             self.password_id = secret.id
 

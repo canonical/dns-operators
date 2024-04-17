@@ -292,8 +292,7 @@ class RequirerDomain(BaseModel):
             secret = model.get_secret(label=f"{self.username}")
             secret.set_content({"domain-password": secret_value})
             # secret.id is not None at this point
-            assert secret.id
-            self.password_id = secret.id
+            self.password_id = cast(str, secret.id)
         except ops.SecretNotFoundError:
             secret = relation.app.add_secret(
                 {"domain-password": secret_value}, label=f"{self.username}"

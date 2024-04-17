@@ -404,8 +404,8 @@ class DNSRecordRequirerData(BaseModel):
         """
         try:
             loaded_data = {}
-            assert relation.app, "DNS record relation data accessed before relation setup."
-            relation_data = relation.data[relation.app]
+            app = cast(ops.Application, relation.app)
+            relation_data = relation.data[app]
             for key, value in relation_data.items():
                 if value:
                     loaded_data[key] = json.loads(value)

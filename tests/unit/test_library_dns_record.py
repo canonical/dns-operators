@@ -5,7 +5,7 @@
 import json
 import secrets
 import uuid
-from typing import List
+from typing import Dict, List, Tuple
 
 import ops
 from charms.bind.v0 import dns_record
@@ -32,76 +32,124 @@ UUID1 = uuid.uuid4()
 UUID2 = uuid.uuid4()
 UUID3 = uuid.uuid4()
 UUID4 = uuid.uuid4()
-REQUIRER_RELATION_DATA = {
-    "dns_domains": json.dumps(
-        [
-            {
-                "domain": "cloud.canonical.com",
-                "username": "user1",
-                "password_id": PASSWORD_USER_1,
-                "uuid": str(UUID1),
-            },
-            {
-                "domain": "ubuntu.com",
-                "username": "user2",
-                "password_id": PASSWORD_USER_2,
-                "uuid": str(UUID2),
-            },
-        ]
-    ),
-    "dns_entries": json.dumps(
-        [
-            {
-                "domain": "cloud.canonical.com",
-                "host_label": "admin",
-                "ttl": 600,
-                "record_class": "IN",
-                "record_type": "A",
-                "record_data": "91.189.91.48",
-                "uuid": str(UUID3),
-            },
-            {
-                "domain": "staging.ubuntu.com",
-                "host_label": "www",
-                "record_data": "91.189.91.47",
-                "uuid": str(UUID4),
-            },
-        ]
-    ),
-}
-DNS_RECORD_REQUIRER_DATA = dns_record.DNSRecordRequirerData(
-    dns_domains=[
-        dns_record.RequirerDomain(
-            domain="cloud.canonical.com",
-            username="user1",
-            password_id=PASSWORD_USER_1,
-            uuid=UUID1,
+
+
+def get_requirer_relation_data(
+    secret_id_password_user_1: str, secret_id_password_user_2: str
+) -> Dict[str, str]:
+    """Retrieve the requirer relation data.
+
+    Args:
+        secret_id_password_user_1: secret corresponding to PASSWORD_USER_1.
+        secret_id_password_user_2: secret corresponding to PASSWORD_USER_2.
+
+    Returns:
+        a dict with the relation data.
+    """
+    return {
+        "dns_domains": json.dumps(
+            [
+                {
+                    "domain": "cloud.canonical.com",
+                    "username": "user1",
+                    "password_id": secret_id_password_user_1,
+                    "uuid": str(UUID1),
+                },
+                {
+                    "domain": "ubuntu.com",
+                    "username": "user2",
+                    "password_id": secret_id_password_user_2,
+                    "uuid": str(UUID2),
+                },
+            ]
         ),
-        dns_record.RequirerDomain(
-            domain="ubuntu.com",
-            username="user2",
-            password_id=PASSWORD_USER_2,
-            uuid=UUID2,
+        "dns_entries": json.dumps(
+            [
+                {
+                    "domain": "cloud.canonical.com",
+                    "host_label": "admin",
+                    "ttl": 600,
+                    "record_class": "IN",
+                    "record_type": "A",
+                    "record_data": "91.189.91.48",
+                    "uuid": str(UUID3),
+                },
+                {
+                    "domain": "staging.ubuntu.com",
+                    "host_label": "www",
+                    "record_data": "91.189.91.47",
+                    "uuid": str(UUID4),
+                },
+            ]
         ),
-    ],
-    dns_entries=[
-        dns_record.RequirerEntry(
-            uuid=UUID3,
-            domain="cloud.canonical.com",
-            host_label="admin",
-            ttl=600,
-            record_class=dns_record.RecordClass.IN,
-            record_type=dns_record.RecordType.A,
-            record_data=IPvAnyAddress("91.189.91.48"),
-        ),
-        dns_record.RequirerEntry(
-            uuid=UUID4,
-            domain="staging.ubuntu.com",
-            host_label="www",
-            record_data=IPvAnyAddress("91.189.91.47"),
-        ),
-    ],
-)
+    }
+
+
+def get_dns_record_requirer_data(
+    secret_id_password_user_1: str, secret_id_password_user_2: str
+) -> dns_record.DNSRecordRequirerData:
+    """Retrieve a DNSRecordRequirerData instance.
+
+    Args:
+        secret_id_password_user_1: secret corresponding to PASSWORD_USER_1.
+        secret_id_password_user_2: secret corresponding to PASSWORD_USER_2.
+
+    Returns:
+        a DNSRecordRequirerData instance.
+    """
+    return dns_record.DNSRecordRequirerData(
+        dns_domains=[
+            dns_record.RequirerDomain(
+                domain="cloud.canonical.com",
+                username="user1",
+                password=PASSWORD_USER_1,
+                password_id=secret_id_password_user_1,
+                uuid=UUID1,
+            ),
+            dns_record.RequirerDomain(
+                domain="ubuntu.com",
+                username="user2",
+                password=PASSWORD_USER_2,
+                password_id=secret_id_password_user_2,
+                uuid=UUID2,
+            ),
+        ],
+        dns_entries=[
+            dns_record.RequirerEntry(
+                uuid=UUID3,
+                domain="cloud.canonical.com",
+                host_label="admin",
+                ttl=600,
+                record_class=dns_record.RecordClass.IN,
+                record_type=dns_record.RecordType.A,
+                record_data=IPvAnyAddress("91.189.91.48"),
+            ),
+            dns_record.RequirerEntry(
+                uuid=UUID4,
+                domain="staging.ubuntu.com",
+                host_label="www",
+                record_data=IPvAnyAddress("91.189.91.47"),
+            ),
+        ],
+    )
+
+
+def get_password_secrets(model: ops.Model) -> Tuple[str, str]:
+    """Store secrets for the passwords and return their IDs.
+
+    Args:
+        model: the Juju model.
+
+    Returns:
+        a tuple containing the secret IDS created.
+    """
+    secret_1 = model.app.add_secret({"domain-password": PASSWORD_USER_1}, label="user1")
+    secret_2 = model.app.add_secret({"domain-password": PASSWORD_USER_2}, label="user2")
+    assert secret_1.id
+    assert secret_2.id
+    return secret_1.id, secret_2.id
+
+
 PROVIDER_RELATION_DATA = {
     "dns_domains": json.dumps(
         [
@@ -214,10 +262,13 @@ def test_dns_record_requirer_update_relation_data():
 
     harness.add_relation("dns-record", "dns-record")
     relation = harness.model.get_relation("dns-record")
-    harness.charm.dns_record.update_relation_data(relation, DNS_RECORD_REQUIRER_DATA)
+    secret_1, secret_2 = get_password_secrets(harness.model)
+    harness.charm.dns_record.update_relation_data(
+        relation, get_dns_record_requirer_data(secret_1, secret_2)
+    )
 
     assert relation
-    assert relation.data[harness.model.app] == REQUIRER_RELATION_DATA
+    assert relation.data[harness.model.app] == get_requirer_relation_data(secret_1, secret_2)
 
 
 def test_dns_record_requirer_emmits_event():
@@ -296,12 +347,15 @@ def test_dns_record_provider_emmits_event():
     harness.begin()
     harness.set_leader(True)
 
-    harness.add_relation("dns-record", "dns-record", app_data=REQUIRER_RELATION_DATA)
+    secret_1, secret_2 = get_password_secrets(harness.model)
+    harness.add_relation(
+        "dns-record", "dns-record", app_data=get_requirer_relation_data(secret_1, secret_2)
+    )
 
     events = harness.charm.events
     assert len(events) == 1
-    assert events[0].dns_domains == DNS_RECORD_REQUIRER_DATA.dns_domains
-    assert events[0].dns_entries == DNS_RECORD_REQUIRER_DATA.dns_entries
+    assert events[0].dns_domains == get_dns_record_requirer_data(secret_1, secret_2).dns_domains
+    assert events[0].dns_entries == get_dns_record_requirer_data(secret_1, secret_2).dns_entries
 
 
 def test_dns_record_provider_doesnt_emmit_event_when_relation_data_sematically_invalid():
@@ -313,9 +367,10 @@ def test_dns_record_provider_doesnt_emmit_event_when_relation_data_sematically_i
     harness = Harness(DNSRecordProviderCharm, meta=PROVIDER_METADATA)
     harness.begin()
     harness.set_leader(True)
+    secret_1, secret_2 = get_password_secrets(harness.model)
 
     invalid_data = {
-        "dns_domains": REQUIRER_RELATION_DATA["dns_domains"],
+        "dns_domains": get_requirer_relation_data(secret_1, secret_2)["dns_domains"],
         "dns_entries": json.dumps(
             [
                 {
@@ -371,25 +426,36 @@ def test_dns_record_provider_doesnt_emmit_event_when_relation_data_unparsable():
     assert len(harness.charm.events) == 0
 
 
-def test_dns_record_requirer_data_from_relation_data():
+def test_dns_record_requirer_get_remote_relation_data():
     """
     arrange: given a relation with requirer relation data.
     act: unserialize the relation data.
     assert: the resulting DNSRecordRequirerData is correct.
     """
-    result = dns_record.DNSRecordRequirerData.from_relation_data(REQUIRER_RELATION_DATA)
+    harness = Harness(DNSRecordProviderCharm, meta=PROVIDER_METADATA)
+    harness.begin()
+    harness.set_leader(True)
+    secret_1, secret_2 = get_password_secrets(harness.model)
+    harness.add_relation(
+        "dns-record", "dns-record", app_data=get_requirer_relation_data(secret_1, secret_2)
+    )
 
-    assert result == DNS_RECORD_REQUIRER_DATA
+    result = harness.charm.dns_record.get_remote_relation_data()
+    assert result == get_dns_record_requirer_data(secret_1, secret_2)
 
 
-def test_dns_record_provider_data_from_relation_data():
+def test_dns_record_provider_get_remote_relation_data():
     """
     arrange: given a relation with provider relation data.
     act: unserialize the relation data.
     assert: the resulting DNSRecordProviderData is correct.
     """
-    result = dns_record.DNSRecordProviderData.from_relation_data(PROVIDER_RELATION_DATA)
+    harness = Harness(DNSRecordRequirerCharm, meta=REQUIRER_METADATA)
+    harness.begin()
+    harness.set_leader(True)
+    harness.add_relation("dns-record", "dns-record", app_data=PROVIDER_RELATION_DATA)
 
+    result = result = harness.charm.dns_record.get_remote_relation_data()
     assert result == DNS_RECORD_PROVIDER_DATA
 
 

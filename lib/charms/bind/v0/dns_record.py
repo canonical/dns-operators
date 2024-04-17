@@ -299,7 +299,7 @@ class RequirerDomain(BaseModel):
             )
             secret.grant(relation)
             assert secret.id
-            self.password_id = secret.id
+            self.password_id = cast(str, secret.id)
 
 
 class RequirerEntry(BaseModel):

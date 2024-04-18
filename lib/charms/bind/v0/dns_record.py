@@ -195,14 +195,12 @@ class DNSProviderData(BaseModel):
 
 
 class DNSRecordProviderData(BaseModel):
-    """List of domains for the provider to manage.
+    """List of entries for the provider to manage.
 
     Attributes:
-        dns_domains: list of domains to manage.
         dns_entries: list of entries to manage.
     """
 
-    dns_domains: List[DNSProviderData] = Field(min_length=1)
     dns_entries: List[DNSProviderData] = Field(min_length=1)
 
     def to_relation_data(self) -> Dict[str, str]:
@@ -242,66 +240,6 @@ class DNSRecordProviderData(BaseModel):
             raise ValidationError.from_exception_data(ex.msg, [])  # noqa: DCO053
 
 
-class RequirerDomain(BaseModel):
-    """DNS requirer domains requested.
-
-    Attributes:
-        domain: the domain name.
-        username: username for authentication.
-        password: the password for authentication.
-        password_id: secret password for authentication.
-        uuid: UUID for this entry.
-    """
-
-    domain: str = Field(min_length=1)
-    username: str
-    password: Optional[SecretStr] = Field(default=None, exclude=True)
-    password_id: str
-    uuid: UUID
-
-    def get_password(self, model: ops.Model) -> str:
-        """Retrieve the password corresponding to the password_id.
-
-        Args:
-            model: the Juju model.
-
-        Returns:
-            the plain password.
-
-        Raises:
-            ValueError: if the secret doesn't match the expectations.
-        """
-        secret = model.get_secret(id=self.password_id)
-        password = secret.get_content().get("domain-password")
-        if password:
-            return password
-        raise ValueError("Password secret does not contain expected domain-password.")
-
-    def set_password_id(self, model: ops.Model, relation: ops.Relation) -> None:
-        """Store the password as a Juju secret.
-
-        Args:
-            model: the Juju model
-            relation: relation to grant access to the secrets to.
-        """
-        # pylint doesn't like get_secret_value
-        if not self.password or not self.password.get_secret_value():  # pylint: disable=no-member
-            return
-        secret_value = self.password.get_secret_value()  # pylint: disable=no-member
-        try:
-            secret = model.get_secret(label=f"{self.username}")
-            secret.set_content({"domain-password": secret_value})
-            # secret.id is not None at this point
-            self.password_id = cast(str, secret.id)
-        except ops.SecretNotFoundError:
-            secret = relation.app.add_secret(
-                {"domain-password": secret_value}, label=f"{self.username}"
-            )
-            secret.grant(relation)
-            assert secret.id
-            self.password_id = cast(str, secret.id)
-
-
 class RequirerEntry(BaseModel):
     """DNS requirer entries requested.
 
@@ -323,51 +261,72 @@ class RequirerEntry(BaseModel):
     record_data: IPvAnyAddress
     uuid: UUID
 
-    def is_valid(self, dns_domains: List[RequirerDomain]) -> bool:
-        """Validate if the entry has a corresponding domain.
-
-        Args:
-            dns_domains: list of provided DNS domains.
-
-        Returns:
-            true: if there is a matching domain for the entry.
-        """
-        domains = [dns_domain.domain for dns_domain in dns_domains]
-        # pylint doesn't recognise self.domain as a str
-        return any(map(self.domain.endswith, domains))  # pylint: disable=no-member
-
-    def validate_dns_entry(self, info: ValidationInfo) -> "RequirerEntry":
+    def validate_dns_entry(self, _: ValidationInfo) -> "RequirerEntry":
         """Validate DNS entries.
-
-        Args:
-            info: the validation info.
 
         Returns:
             the DNS entry if valid.
-
-        Raises:
-            ValueError: if the DNS entry is not valid.
         """
         validated_entry = RequirerEntry.model_validate(self)
-        if validated_entry.is_valid(info.data["dns_domains"]):
-            return validated_entry
-        raise ValueError(
-            f"Entry with domain {validated_entry.domain} requested without a valid domain"
-        )
+        # Additional validations will be done here
+        return validated_entry
 
 
 class DNSRecordRequirerData(BaseModel):
     """List of domains for the provider to manage.
 
     Attributes:
-        dns_domains: list of domains to manage.
+        service_account: service account.
+        service_account_secret_id: the secret ID containing the service account.
         dns_entries: list of entries to manage.
     """
 
-    dns_domains: List[RequirerDomain] = Field(min_length=1)
+    service_account: Optional[SecretStr] = Field(default=None, exclude=True)
+    service_account_secret_id: str
     dns_entries: List[
         Annotated[RequirerEntry, AfterValidator(RequirerEntry.validate_dns_entry)]
     ] = Field(min_length=1)
+
+    def set_service_account_secret_id(self, model: ops.Model, relation: ops.Relation) -> None:
+        """Store the service account as a Juju secret.
+
+        Args:
+            model: the Juju model
+            relation: relation to grant access to the secrets to.
+        """
+        # password is always defined since pydantic guarantees it
+        password = cast(SecretStr, self.service_account)
+        # pylint doesn't like get_secret_value
+        secret_value = password.get_secret_value()  # pylint: disable=no-member
+        try:
+            secret = model.get_secret(label="service-account")
+            secret.set_content({"service-account-password": secret_value})
+            # secret.id is not None at this point
+            self.service_account_secret_id = cast(str, secret.id)
+        except ops.SecretNotFoundError:
+            secret = relation.app.add_secret(
+                {"service-account-password": secret_value}, label="service-account"
+            )
+            secret.grant(relation)
+            self.service_account_secret_id = cast(str, secret.id)
+
+    def get_service_account(self, model: ops.Model) -> str:
+        """Retrieve the password corresponding to the password_id.
+
+        Args:
+            model: the Juju model.
+
+        Returns:
+            the plain password.
+
+        Raises:
+            ValueError: if the secret doesn't match the expectations.
+        """
+        secret = model.get_secret(id=self.service_account_secret_id)
+        password = secret.get_content().get("service-account-password")
+        if password:
+            return password
+        raise ValueError("Password secret does not contain expected service-account-password.")
 
     def to_relation_data(self, model: ops.Model, relation: ops.Relation) -> Dict[str, str]:
         """Convert an instance of DNSRecordRequirerData to the relation representation.
@@ -379,13 +338,12 @@ class DNSRecordRequirerData(BaseModel):
         Returns:
             Dict containing the representation.
         """
-        for dns_domain in self.dns_domains:  # pylint: disable=not-an-iterable
-            dns_domain.set_password_id(model, relation)
+        self.set_service_account_secret_id(model, relation)
         dumped_model = self.model_dump(exclude_unset=True)
-        dumped_data = {}
-        for key, value in dumped_model.items():
-            if value:
-                dumped_data[key] = json.dumps(value, default=str)
+        dumped_data = {
+            "service_account_secret_id": dumped_model["service_account_secret_id"],
+            "dns_entries": json.dumps(dumped_model["dns_entries"], default=str),
+        }
         return dumped_data
 
     @classmethod
@@ -403,15 +361,22 @@ class DNSRecordRequirerData(BaseModel):
             ValidationError if the value is not parseable.
         """
         try:
-            loaded_data = {}
             app = cast(ops.Application, relation.app)
             relation_data = relation.data[app]
-            for key, value in relation_data.items():
-                if value:
-                    loaded_data[key] = json.loads(value)
+            loaded_data = {
+                "service_account_secret_id": (
+                    relation_data["service_account_secret_id"]
+                    if "service_account_secret_id" in relation_data
+                    else None
+                ),
+                "dns_entries": (
+                    json.loads(relation_data["dns_entries"])
+                    if "dns_entries" in relation_data
+                    else None
+                ),
+            }
             fetched_data = DNSRecordRequirerData.model_validate(loaded_data)
-            for dns_domain in fetched_data.dns_domains:
-                dns_domain.password = SecretStr(dns_domain.get_password(model))
+            fetched_data.service_account = SecretStr(fetched_data.get_service_account(model))
             return fetched_data
         except json.JSONDecodeError as ex:
             # flake8-docstrings-complete doesn't interpret this properly
@@ -422,7 +387,6 @@ class DNSRecordRequestProcessed(ops.RelationEvent):
     """DNS event emitted when a new request is processed.
 
     Attributes:
-        dns_domains: list of processed domains.
         dns_entries: list of processed entries.
     """
 
@@ -435,11 +399,6 @@ class DNSRecordRequestProcessed(ops.RelationEvent):
         return DNSRecordProviderData.from_relation(self.relation)
 
     @property
-    def dns_domains(self) -> Optional[List[DNSProviderData]]:
-        """Fetch the DNS domains from the relation."""
-        return self.get_dns_record_provider_relation_data().dns_domains
-
-    @property
     def dns_entries(self) -> Optional[List[DNSProviderData]]:
         """Fetch the DNS entries from the relation."""
         return self.get_dns_record_provider_relation_data().dns_entries
@@ -450,7 +409,7 @@ class DNSRecordRequestReceived(ops.RelationEvent):
 
     Attributes:
         dns_record_requirer_relation_data: the DNS requirer relation data.
-        dns_domains: list of requested domains.
+        service_account: service account.
         dns_entries: list of requested entries.
     """
 
@@ -460,9 +419,9 @@ class DNSRecordRequestReceived(ops.RelationEvent):
         return DNSRecordRequirerData.from_relation(self.framework.model, self.relation)
 
     @property
-    def dns_domains(self) -> Optional[List[RequirerDomain]]:
-        """Fetch the DNS domains from the relation."""
-        return self.dns_record_requirer_relation_data.dns_domains
+    def service_account(self) -> str:
+        """Fetch the service account from the relation."""
+        return cast(str, self.dns_record_requirer_relation_data.service_account)
 
     @property
     def dns_entries(self) -> Optional[List[RequirerEntry]]:

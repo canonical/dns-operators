@@ -44,12 +44,7 @@ def get_requirer_relation_data(secret_id_password_user: str) -> Dict[str, str]:
         a dict with the relation data.
     """
     return {
-        "service_account": json.dumps(
-            {
-                "username": "user1",
-                "password_id": secret_id_password_user,
-            }
-        ),
+        "service_account_secret_id": secret_id_password_user,
         "dns_entries": json.dumps(
             [
                 {
@@ -82,11 +77,8 @@ def get_dns_record_requirer_data(secret_id_password_user: str) -> dns_record.DNS
         a DNSRecordRequirerData instance.
     """
     return dns_record.DNSRecordRequirerData(
-        service_account=dns_record.ServiceAccount(
-            username="user1",
-            password=PASSWORD_USER,
-            password_id=secret_id_password_user,
-        ),
+        service_account=PASSWORD_USER,
+        service_account_secret_id=secret_id_password_user,
         dns_entries=[
             dns_record.RequirerEntry(
                 uuid=UUID3,

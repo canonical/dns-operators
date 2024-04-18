@@ -240,61 +240,6 @@ class DNSRecordProviderData(BaseModel):
             raise ValidationError.from_exception_data(ex.msg, [])  # noqa: DCO053
 
 
-class ServiceAccount(BaseModel):
-    """DNS requirer service account.
-
-    Attributes:
-        username: username for authentication.
-        password: the password for authentication.
-        password_id: secret password for authentication.
-    """
-
-    username: str
-    password: Optional[SecretStr] = Field(default=None, exclude=True)
-    password_id: str
-
-    def get_password(self, model: ops.Model) -> str:
-        """Retrieve the password corresponding to the password_id.
-
-        Args:
-            model: the Juju model.
-
-        Returns:
-            the plain password.
-
-        Raises:
-            ValueError: if the secret doesn't match the expectations.
-        """
-        secret = model.get_secret(id=self.password_id)
-        password = secret.get_content().get("service-account-password")
-        if password:
-            return password
-        raise ValueError("Password secret does not contain expected service-account-password.")
-
-    def set_password_id(self, model: ops.Model, relation: ops.Relation) -> None:
-        """Store the password as a Juju secret.
-
-        Args:
-            model: the Juju model
-            relation: relation to grant access to the secrets to.
-        """
-        # password is always defined since pydantic guarantees it
-        password = cast(SecretStr, self.password)
-        # pylint doesn't like get_secret_value
-        secret_value = password.get_secret_value()  # pylint: disable=no-member
-        try:
-            secret = model.get_secret(label="service-account")
-            secret.set_content({"service-account-password": secret_value})
-            # secret.id is not None at this point
-            self.password_id = cast(str, secret.id)
-        except ops.SecretNotFoundError:
-            secret = relation.app.add_secret(
-                {"service-account-password": secret_value}, label="service-account"
-            )
-            secret.grant(relation)
-            self.password_id = cast(str, secret.id)
-
-
 class RequirerEntry(BaseModel):
     """DNS requirer entries requested.
 
@@ -332,13 +277,56 @@ class DNSRecordRequirerData(BaseModel):
 
     Attributes:
         service_account: service account.
+        service_account_secret_id: the secret ID containing the service account.
         dns_entries: list of entries to manage.
     """
 
-    service_account: ServiceAccount
+    service_account: Optional[SecretStr] = Field(default=None, exclude=True)
+    service_account_secret_id: str
     dns_entries: List[
         Annotated[RequirerEntry, AfterValidator(RequirerEntry.validate_dns_entry)]
     ] = Field(min_length=1)
+
+    def set_service_account_secret_id(self, model: ops.Model, relation: ops.Relation) -> None:
+        """Store the service account as a Juju secret.
+
+        Args:
+            model: the Juju model
+            relation: relation to grant access to the secrets to.
+        """
+        # password is always defined since pydantic guarantees it
+        password = cast(SecretStr, self.service_account)
+        # pylint doesn't like get_secret_value
+        secret_value = password.get_secret_value()  # pylint: disable=no-member
+        try:
+            secret = model.get_secret(label="service-account")
+            secret.set_content({"service-account-password": secret_value})
+            # secret.id is not None at this point
+            self.service_account_secret_id = cast(str, secret.id)
+        except ops.SecretNotFoundError:
+            secret = relation.app.add_secret(
+                {"service-account-password": secret_value}, label="service-account"
+            )
+            secret.grant(relation)
+            self.service_account_secret_id = cast(str, secret.id)
+
+    def get_service_account(self, model: ops.Model) -> str:
+        """Retrieve the password corresponding to the password_id.
+
+        Args:
+            model: the Juju model.
+
+        Returns:
+            the plain password.
+
+        Raises:
+            ValueError: if the secret doesn't match the expectations.
+        """
+        secret = model.get_secret(id=self.service_account_secret_id)
+        password = secret.get_content().get("service-account-password")
+        if password:
+            return password
+        raise ValueError("Password secret does not contain expected service-account-password.")
 
     def to_relation_data(self, model: ops.Model, relation: ops.Relation) -> Dict[str, str]:
         """Convert an instance of DNSRecordRequirerData to the relation representation.
@@ -350,11 +338,12 @@ class DNSRecordRequirerData(BaseModel):
         Returns:
             Dict containing the representation.
         """
-        self.service_account.set_password_id(model, relation)
+        self.set_service_account_secret_id(model, relation)
         dumped_model = self.model_dump(exclude_unset=True)
-        dumped_data = {}
-        for key, value in dumped_model.items():
-            dumped_data[key] = json.dumps(value, default=str)
+        dumped_data = {
+            "service_account_secret_id": dumped_model["service_account_secret_id"],
+            "dns_entries": json.dumps(dumped_model["dns_entries"], default=str),
+        }
         return dumped_data
 
     @classmethod
@@ -372,15 +361,22 @@ class DNSRecordRequirerData(BaseModel):
             ValidationError if the value is not parseable.
         """
         try:
-            loaded_data = {}
             app = cast(ops.Application, relation.app)
             relation_data = relation.data[app]
-            for key, value in relation_data.items():
-                loaded_data[key] = json.loads(value)
+            loaded_data = {
+                "service_account_secret_id": (
+                    relation_data["service_account_secret_id"]
+                    if "service_account_secret_id" in relation_data
+                    else None
+                ),
+                "dns_entries": (
+                    json.loads(relation_data["dns_entries"])
+                    if "dns_entries" in relation_data
+                    else None
+                ),
+            }
             fetched_data = DNSRecordRequirerData.model_validate(loaded_data)
-            fetched_data.service_account.password = SecretStr(
-                fetched_data.service_account.get_password(model)
-            )
+            fetched_data.service_account = SecretStr(fetched_data.get_service_account(model))
             return fetched_data
         except json.JSONDecodeError as ex:
             # flake8-docstrings-complete doesn't interpret this properly
@@ -423,9 +419,9 @@ class DNSRecordRequestReceived(ops.RelationEvent):
         return DNSRecordRequirerData.from_relation(self.framework.model, self.relation)
 
     @property
-    def service_account(self) -> ServiceAccount:
+    def service_account(self) -> str:
         """Fetch the service account from the relation."""
-        return self.dns_record_requirer_relation_data.service_account
+        return cast(str, self.dns_record_requirer_relation_data.service_account)
 
     @property
     def dns_entries(self) -> Optional[List[RequirerEntry]]:

@@ -67,6 +67,70 @@ def get_requirer_relation_data(secret_id_password_user: str) -> Dict[str, str]:
     }
 
 
+def get_requirer_relation_data_partially_invalid(secret_id_password_user: str) -> Dict[str, str]:
+    """Retrieve the requirer relation data.
+
+    Args:
+        secret_id_password_user: secret corresponding to PASSWORD_USER.
+
+    Returns:
+        a dict with the relation data.
+    """
+    return {
+        "service_account_secret_id": secret_id_password_user,
+        "dns_entries": json.dumps(
+            [
+                {
+                    "host_label": "admin",
+                    "ttl": 600,
+                    "record_class": "IN",
+                    "record_type": "A",
+                    "record_data": "91.189.91.48",
+                    "uuid": str(UUID3),
+                },
+                {
+                    "domain": "staging.ubuntu.com",
+                    "host_label": "www",
+                    "record_data": "91.189.91.47",
+                    "uuid": str(UUID4),
+                },
+            ]
+        ),
+    }
+
+
+def get_requirer_relation_data_without_uuid(secret_id_password_user: str) -> Dict[str, str]:
+    """Retrieve the requirer relation data.
+
+    Args:
+        secret_id_password_user: secret corresponding to PASSWORD_USER.
+
+    Returns:
+        a dict with the relation data.
+    """
+    return {
+        "service_account_secret_id": secret_id_password_user,
+        "dns_entries": json.dumps(
+            [
+                {
+                    "domain": "cloud.canonical.com",
+                    "host_label": "admin",
+                    "ttl": 600,
+                    "record_class": "IN",
+                    "record_type": "A",
+                    "record_data": "91.189.91.48",
+                },
+                {
+                    "domain": "staging.ubuntu.com",
+                    "host_label": "www",
+                    "record_data": "91.189.91.47",
+                    "uuid": str(UUID4),
+                },
+            ]
+        ),
+    }
+
+
 def get_dns_record_requirer_data(secret_id_password_user: str) -> dns_record.DNSRecordRequirerData:
     """Retrieve a DNSRecordRequirerData instance.
 
@@ -292,6 +356,64 @@ def test_dns_record_provider_emmits_event():
     assert len(events) == 1
     assert events[0].service_account == get_dns_record_requirer_data(secret).service_account
     assert events[0].dns_entries == get_dns_record_requirer_data(secret).dns_entries
+    assert events[0].procesed_entries == []
+
+
+def test_dns_record_provider_emmits_event_when_partially_valid():
+    """
+    arrange: given a provider charm.
+    act: update the remote relation databag with valid values.
+    assert: a DNSRecordRequestReceived is emitted.
+    """
+    harness = Harness(DNSRecordProviderCharm, meta=PROVIDER_METADATA)
+    harness.begin()
+    harness.set_leader(True)
+
+    secret = get_password_secret(harness.model)
+    harness.add_relation(
+        "dns-record", "dns-record", app_data=get_requirer_relation_data_partially_invalid(secret)
+    )
+
+    events = harness.charm.events
+    assert len(events) == 1
+    requirer_data = get_dns_record_requirer_data(secret)
+    assert events[0].service_account == requirer_data.service_account
+    assert len(events[0].dns_entries) == 1
+    assert events[0].dns_entries[0] == (
+        requirer_data.dns_entries[1]  # pylint: disable=unsubscriptable-object
+    )
+    assert len(events[0].procesed_entries) == 1
+    assert events[0].procesed_entries[0].uuid == (
+        requirer_data.dns_entries[0].uuid  # pylint: disable=unsubscriptable-object
+    )
+    assert events[0].procesed_entries[0].status == dns_record.Status.INVALID_DATA
+    assert events[0].procesed_entries[0].description
+
+
+def test_dns_record_provider_emmits_event_when_partially_valid_ignores_no_uuid():
+    """
+    arrange: given a provider charm.
+    act: update the remote relation databag with valid values.
+    assert: a DNSRecordRequestReceived is emitted.
+    """
+    harness = Harness(DNSRecordProviderCharm, meta=PROVIDER_METADATA)
+    harness.begin()
+    harness.set_leader(True)
+
+    secret = get_password_secret(harness.model)
+    harness.add_relation(
+        "dns-record", "dns-record", app_data=get_requirer_relation_data_without_uuid(secret)
+    )
+
+    events = harness.charm.events
+    assert len(events) == 1
+    requirer_data = get_dns_record_requirer_data(secret)
+    assert events[0].service_account == requirer_data.service_account
+    assert len(events[0].dns_entries) == 1
+    assert events[0].dns_entries[0] == (
+        requirer_data.dns_entries[1]  # pylint: disable=unsubscriptable-object
+    )
+    assert events[0].procesed_entries == []
 
 
 def test_dns_record_provider_doesnt_emmit_event_when_relation_data_invalid():
@@ -319,7 +441,7 @@ def test_dns_record_provider_doesnt_emmit_event_when_relation_data_unparsable():
     harness.begin()
     harness.set_leader(True)
 
-    harness.add_relation("dns-record", "dns-record", app_data={"invalid": "unparsable"})
+    harness.add_relation("dns-record", "dns-record", app_data={"dns_entries": "unparsable"})
 
     assert len(harness.charm.events) == 0
 
@@ -338,7 +460,10 @@ def test_dns_record_requirer_get_remote_relation_data():
     harness.add_relation("dns-record", "dns-record", app_data=get_requirer_relation_data(secret))
 
     result = harness.charm.dns_record.get_remote_relation_data()
-    assert result == get_dns_record_requirer_data(secret)
+    assert result == (
+        get_dns_record_requirer_data(secret),
+        dns_record.DNSRecordProviderData(dns_entries=[]),
+    )
 
 
 def test_dns_record_requirer_get_remote_relation_data_throws_exception_when_secret_invalid():
@@ -355,6 +480,24 @@ def test_dns_record_requirer_get_remote_relation_data_throws_exception_when_secr
     assert secret.id
     harness.add_relation(
         "dns-record", "dns-record", app_data=get_requirer_relation_data(secret.id)
+    )
+
+    with pytest.raises(ValueError):
+        harness.charm.dns_record.get_remote_relation_data()
+
+
+def test_dns_record_requirer_get_remote_relation_data_throws_exception_when_secret_doesnt_exist():
+    """
+    arrange: given a relation with requirer relation data and an invalid secret ID.
+    act: unserialize the relation data.
+    assert: a ValueError is raised.
+    """
+    harness = Harness(DNSRecordProviderCharm, meta=PROVIDER_METADATA)
+    harness.begin()
+    harness.set_leader(True)
+    harness.disable_hooks()
+    harness.add_relation(
+        "dns-record", "dns-record", app_data=get_requirer_relation_data("unexisting")
     )
 
     with pytest.raises(ValueError):

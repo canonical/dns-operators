@@ -284,7 +284,7 @@ class DNSRecordRequirerData(BaseModel):
     service_account_secret_id: str
     dns_entries: List[
         Annotated[RequirerEntry, PlainValidator(RequirerEntry.validate_dns_entry)]
-    ] = Field(min_length=1)
+    ]
 
     def set_service_account_secret_id(self, model: ops.Model, relation: ops.Relation) -> None:
         """Store the service account as a Juju secret.
@@ -311,7 +311,7 @@ class DNSRecordRequirerData(BaseModel):
 
     @classmethod
     def get_service_account(
-        cls, model: ops.Model, service_account_secret_id: str
+        cls, model: ops.Model, service_account_secret_id: Optional[str]
     ) -> Optional[SecretStr]:
         """Retrieve the password corresponding to the password_id.
 

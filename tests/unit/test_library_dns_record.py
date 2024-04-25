@@ -356,7 +356,7 @@ def test_dns_record_provider_emmits_event():
     assert len(events) == 1
     assert events[0].service_account == get_dns_record_requirer_data(secret).service_account
     assert events[0].dns_entries == get_dns_record_requirer_data(secret).dns_entries
-    assert events[0].procesed_entries == []
+    assert events[0].processed_entries == []
 
 
 def test_dns_record_provider_emmits_event_when_partially_valid():
@@ -382,12 +382,12 @@ def test_dns_record_provider_emmits_event_when_partially_valid():
     assert events[0].dns_entries[0] == (
         requirer_data.dns_entries[1]  # pylint: disable=unsubscriptable-object
     )
-    assert len(events[0].procesed_entries) == 1
-    assert events[0].procesed_entries[0].uuid == (
+    assert len(events[0].processed_entries) == 1
+    assert events[0].processed_entries[0].uuid == (
         requirer_data.dns_entries[0].uuid  # pylint: disable=unsubscriptable-object
     )
-    assert events[0].procesed_entries[0].status == dns_record.Status.INVALID_DATA
-    assert events[0].procesed_entries[0].description
+    assert events[0].processed_entries[0].status == dns_record.Status.INVALID_DATA
+    assert events[0].processed_entries[0].description
 
 
 def test_dns_record_provider_emmits_event_when_partially_valid_ignores_no_uuid():
@@ -413,7 +413,7 @@ def test_dns_record_provider_emmits_event_when_partially_valid_ignores_no_uuid()
     assert events[0].dns_entries[0] == (
         requirer_data.dns_entries[1]  # pylint: disable=unsubscriptable-object
     )
-    assert events[0].procesed_entries == []
+    assert events[0].processed_entries == []
 
 
 def test_dns_record_provider_doesnt_emmit_event_when_relation_data_invalid():

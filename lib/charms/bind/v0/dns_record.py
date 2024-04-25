@@ -282,9 +282,7 @@ class DNSRecordRequirerData(BaseModel):
 
     service_account: Optional[SecretStr] = Field(default=None, exclude=True)
     service_account_secret_id: str
-    dns_entries: List[
-        Annotated[RequirerEntry, PlainValidator(RequirerEntry.validate_dns_entry)]
-    ]
+    dns_entries: List[Annotated[RequirerEntry, PlainValidator(RequirerEntry.validate_dns_entry)]]
 
     def set_service_account_secret_id(self, model: ops.Model, relation: ops.Relation) -> None:
         """Store the service account as a Juju secret.
@@ -447,7 +445,7 @@ class DNSRecordRequestReceived(ops.RelationEvent):
         dns_record_requirer_relation_data: the DNS requirer relation data.
         service_account: service account.
         dns_entries: list of requested entries.
-        procesed_entries: list of processed entries from the original request.
+        processed_entries: list of processed entries from the original request.
     """
 
     @property
@@ -468,7 +466,7 @@ class DNSRecordRequestReceived(ops.RelationEvent):
         return self.dns_record_requirer_relation_data[0].dns_entries
 
     @property
-    def procesed_entries(self) -> List[DNSProviderData]:
+    def processed_entries(self) -> List[DNSProviderData]:
         """Fetch the processed DNS entries."""
         return self.dns_record_requirer_relation_data[1].dns_entries
 
@@ -640,7 +638,7 @@ class DNSRecordProvides(ops.Object):
             _ = self._get_remote_relation_data(self.model, relation)
             return True
         except ValueError as ex:
-            logger.warning("Error validation the relation data %s", ex)
+            logger.warning("Error validating the relation data %s", ex)
             return False
 
     def _on_relation_changed(self, event: ops.RelationChangedEvent) -> None:

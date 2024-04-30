@@ -383,20 +383,20 @@ class DNSRecordRequirerData(BaseModel):
             invalid_entries = []
             for dns_entry in dns_entries:
                 try:
-                    if service_account is not None:
-                        validated_entry = RequirerEntry.model_validate(dns_entry)
-                        valid_entries.append(validated_entry)
-                    else:
-                        provider_data = DNSProviderData(
-                            uuid=dns_entry["uuid"],
-                            status=Status.INVALID_CREDENTIALS,
-                            description="Invalid credentials",
-                        )
-                        invalid_entries.append(provider_data)
-                except ValidationError as ex:
                     if "uuid" not in dns_entry:
                         logger.warning("Received DNS entry without an UUID")
                         continue
+                    if service_account is None:
+                        provider_data = DNSProviderData(
+                            uuid=dns_entry["uuid"],
+                            status=Status.INVALID_CREDENTIALS,
+                            description="Missing credentials",
+                        )
+                        invalid_entries.append(provider_data)
+                    else:
+                        validated_entry = RequirerEntry.model_validate(dns_entry)
+                        valid_entries.append(validated_entry)
+                except ValidationError as ex:
                     provider_data = DNSProviderData(
                         uuid=dns_entry["uuid"],
                         status=Status.INVALID_DATA,

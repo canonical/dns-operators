@@ -4,7 +4,9 @@
 
 """Integration tests."""
 
+import json
 import logging
+import pathlib
 import time
 
 import ops
@@ -93,3 +95,33 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
             ops_test, f"{app.name}/{0}", "dig @127.0.0.1 dns.test TXT +short"
         )
     ).strip() == '"this-is-a-test"'
+
+
+@pytest.mark.asyncio
+@pytest.mark.abort_on_fail
+async def test_basic_relation(app: ops.model.Application, ops_test: OpsTest):
+    """
+    arrange:
+    act:
+    assert:
+    """
+    any_app_name = "any-app"
+    any_charm_content = pathlib.Path("tests/integration/any_charm.py").read_text()
+    dns_record_content = pathlib.Path("lib/charms/bind/v0/dns_record.py").read_text()
+    # requirements_content = pathlib.Path("requirements.txt").read_text()
+
+    any_charm_src_overwrite = {
+        # "requirements.txt": requirements_content,
+        "any_charm.py": any_charm_content,
+        "dns_record.py": dns_record_content,
+    }
+
+    # We deploy https://charmhub.io/any-charm and inject the any_charm.py behavior
+    # See https://github.com/canonical/any-charm on how to use any-charm
+    await ops_test.model.deploy(
+        "any-charm",
+        application_name=any_app_name,
+        channel="beta",
+        config={"src-overwrite": json.dumps(any_charm_src_overwrite)},
+    )
+    await ops_test.model.wait_for_idle(status="active")

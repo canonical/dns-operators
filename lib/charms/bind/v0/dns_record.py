@@ -281,7 +281,7 @@ class DNSRecordRequirerData(BaseModel):
     """
 
     service_account: Optional[SecretStr] = Field(default=None, exclude=True)
-    service_account_secret_id: Optional[str]
+    service_account_secret_id: Optional[str]= Field(default=None)
     dns_entries: List[Annotated[RequirerEntry, PlainValidator(RequirerEntry.validate_dns_entry)]]
 
     def set_service_account_secret_id(self, model: ops.Model, relation: ops.Relation) -> None:

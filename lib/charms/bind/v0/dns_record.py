@@ -353,14 +353,14 @@ class DNSRecordRequirerData(BaseModel):
     def from_relation(
         cls, model: ops.Model, relation: ops.Relation
     ) -> Tuple["DNSRecordRequirerData", "DNSRecordProviderData"]:
-        """Initialize a new instance of the DNSRecordRequirerData class from the relation data.
+        """Get a Tuple of DNSRecordRequirerData and DNSRecordProviderData from the relation data.
 
         Args:
             model: the Juju model.
             relation: the relation.
 
         Returns:
-            the DNSRecordRequirerData instance.
+            the relation data and the processed entries for it.
 
         Raises:
             ValueError: if the value is not parseable.

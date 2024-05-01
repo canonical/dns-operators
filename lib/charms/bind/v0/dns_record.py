@@ -72,19 +72,18 @@ LIBPATCH = 1
 PYDEPS = ["pydantic>=2"]
 
 # pylint: disable=wrong-import-position
-import itertools
 import json
 import logging
 from enum import Enum
-from typing import Annotated, Dict, List, Optional, cast
+from typing import Annotated, Dict, List, Optional, Tuple, cast
 from uuid import UUID
 
 import ops
 from pydantic import (
-    AfterValidator,
     BaseModel,
     Field,
     IPvAnyAddress,
+    PlainValidator,
     SecretStr,
     ValidationError,
     ValidationInfo,
@@ -201,7 +200,7 @@ class DNSRecordProviderData(BaseModel):
         dns_entries: list of entries to manage.
     """
 
-    dns_entries: List[DNSProviderData] = Field(min_length=1)
+    dns_entries: List[DNSProviderData]
 
     def to_relation_data(self) -> Dict[str, str]:
         """Convert an instance of DNSRecordProviderData to the relation representation.
@@ -226,7 +225,7 @@ class DNSRecordProviderData(BaseModel):
             A DNSRecordProviderData instance.
 
         Raises:
-            ValidationError if the value is not parseable.
+            ValueError: if the value is not parseable.
         """
         try:
             loaded_data = {}
@@ -236,8 +235,7 @@ class DNSRecordProviderData(BaseModel):
                 loaded_data[key] = json.loads(value)
             return DNSRecordProviderData.model_validate(loaded_data)
         except json.JSONDecodeError as ex:
-            # flake8-docstrings-complete doesn't interpret this properly
-            raise ValidationError.from_exception_data(ex.msg, [])  # noqa: DCO053
+            raise ValueError from ex
 
 
 class RequirerEntry(BaseModel):
@@ -268,7 +266,8 @@ class RequirerEntry(BaseModel):
             the DNS entry if valid.
         """
         validated_entry = RequirerEntry.model_validate(self)
-        # Additional validations will be done here
+        # Additional validations will be done here in the form of assertions
+        # assert validated_entry.domain == "cloud.canonical.com"
         return validated_entry
 
 
@@ -283,9 +282,7 @@ class DNSRecordRequirerData(BaseModel):
 
     service_account: Optional[SecretStr] = Field(default=None, exclude=True)
     service_account_secret_id: str
-    dns_entries: List[
-        Annotated[RequirerEntry, AfterValidator(RequirerEntry.validate_dns_entry)]
-    ] = Field(min_length=1)
+    dns_entries: List[Annotated[RequirerEntry, PlainValidator(RequirerEntry.validate_dns_entry)]]
 
     def set_service_account_secret_id(self, model: ops.Model, relation: ops.Relation) -> None:
         """Store the service account as a Juju secret.
@@ -310,23 +307,29 @@ class DNSRecordRequirerData(BaseModel):
             secret.grant(relation)
             self.service_account_secret_id = cast(str, secret.id)
 
-    def get_service_account(self, model: ops.Model) -> str:
+    @classmethod
+    def get_service_account(
+        cls, model: ops.Model, service_account_secret_id: Optional[str]
+    ) -> Optional[SecretStr]:
         """Retrieve the password corresponding to the password_id.
 
         Args:
             model: the Juju model.
+            service_account_secret_id: the secret ID for the service account.
 
         Returns:
-            the plain password.
-
-        Raises:
-            ValueError: if the secret doesn't match the expectations.
+            the plain password or None if not found.
         """
-        secret = model.get_secret(id=self.service_account_secret_id)
-        password = secret.get_content().get("service-account-password")
-        if password:
-            return password
-        raise ValueError("Password secret does not contain expected service-account-password.")
+        if not service_account_secret_id:
+            return None
+        try:
+            secret = model.get_secret(id=service_account_secret_id)
+            password = secret.get_content().get("service-account-password")
+            if not password:
+                return None
+            return SecretStr(password)
+        except ops.SecretNotFoundError:
+            return None
 
     def to_relation_data(self, model: ops.Model, relation: ops.Relation) -> Dict[str, str]:
         """Convert an instance of DNSRecordRequirerData to the relation representation.
@@ -347,40 +350,71 @@ class DNSRecordRequirerData(BaseModel):
         return dumped_data
 
     @classmethod
-    def from_relation(cls, model: ops.Model, relation: ops.Relation) -> "DNSRecordRequirerData":
-        """Initialize a new instance of the DNSRecordRequirerData class from the relation data.
+    def from_relation(
+        cls, model: ops.Model, relation: ops.Relation
+    ) -> Tuple["DNSRecordRequirerData", "DNSRecordProviderData"]:
+        """Get a Tuple of DNSRecordRequirerData and DNSRecordProviderData from the relation data.
 
         Args:
             model: the Juju model.
             relation: the relation.
 
         Returns:
-            A DNSRecordRequirerData instance.
+            the relation data and the processed entries for it.
 
         Raises:
-            ValidationError if the value is not parseable.
+            ValueError: if the value is not parseable.
         """
         try:
             app = cast(ops.Application, relation.app)
             relation_data = relation.data[app]
-            loaded_data = {
-                "service_account_secret_id": (
-                    relation_data["service_account_secret_id"]
-                    if "service_account_secret_id" in relation_data
-                    else None
+            service_account_secret_id = (
+                (relation_data["service_account_secret_id"])
+                if "service_account_secret_id" in relation_data
+                else None
+            )
+            service_account = DNSRecordRequirerData.get_service_account(
+                model, service_account_secret_id
+            )
+            dns_entries = (
+                json.loads(relation_data["dns_entries"]) if "dns_entries" in relation_data else []
+            )
+            valid_entries = []
+            invalid_entries = []
+            for dns_entry in dns_entries:
+                try:
+                    if "uuid" not in dns_entry:
+                        logger.warning("Received DNS entry without an UUID")
+                        continue
+                    if service_account is None:
+                        provider_data = DNSProviderData(
+                            uuid=dns_entry["uuid"],
+                            status=Status.INVALID_CREDENTIALS,
+                            description="Missing credentials",
+                        )
+                        invalid_entries.append(provider_data)
+                    else:
+                        validated_entry = RequirerEntry.model_validate(dns_entry)
+                        valid_entries.append(validated_entry)
+                except ValidationError as ex:
+                    provider_data = DNSProviderData(
+                        uuid=dns_entry["uuid"],
+                        status=Status.INVALID_DATA,
+                        description=str(ex.errors()),
+                    )
+                    invalid_entries.append(provider_data)
+            return (
+                DNSRecordRequirerData(
+                    service_account=service_account,
+                    service_account_secret_id=service_account_secret_id,
+                    dns_entries=valid_entries,
                 ),
-                "dns_entries": (
-                    json.loads(relation_data["dns_entries"])
-                    if "dns_entries" in relation_data
-                    else None
-                ),
-            }
-            fetched_data = DNSRecordRequirerData.model_validate(loaded_data)
-            fetched_data.service_account = SecretStr(fetched_data.get_service_account(model))
-            return fetched_data
+                DNSRecordProviderData(dns_entries=invalid_entries),
+            )
+
         except json.JSONDecodeError as ex:
-            # flake8-docstrings-complete doesn't interpret this properly
-            raise ValidationError.from_exception_data(ex.msg, [])  # noqa: DCO053
+            logger.warning("Invalid relation data %s", ex)
+            raise ValueError from ex
 
 
 class DNSRecordRequestProcessed(ops.RelationEvent):
@@ -411,22 +445,30 @@ class DNSRecordRequestReceived(ops.RelationEvent):
         dns_record_requirer_relation_data: the DNS requirer relation data.
         service_account: service account.
         dns_entries: list of requested entries.
+        processed_entries: list of processed entries from the original request.
     """
 
     @property
-    def dns_record_requirer_relation_data(self) -> DNSRecordRequirerData:
-        """Get a DNSRecordRequirerData for the relation data."""
+    def dns_record_requirer_relation_data(
+        self,
+    ) -> Tuple[DNSRecordRequirerData, DNSRecordProviderData]:
+        """Get the requirer data and corresponding provider data the relation data."""
         return DNSRecordRequirerData.from_relation(self.framework.model, self.relation)
 
     @property
     def service_account(self) -> str:
         """Fetch the service account from the relation."""
-        return cast(str, self.dns_record_requirer_relation_data.service_account)
+        return cast(str, self.dns_record_requirer_relation_data[0].service_account)
 
     @property
-    def dns_entries(self) -> Optional[List[RequirerEntry]]:
+    def dns_entries(self) -> List[RequirerEntry]:
         """Fetch the DNS entries from the relation."""
-        return self.dns_record_requirer_relation_data.dns_entries
+        return self.dns_record_requirer_relation_data[0].dns_entries
+
+    @property
+    def processed_entries(self) -> List[DNSProviderData]:
+        """Fetch the processed DNS entries."""
+        return self.dns_record_requirer_relation_data[1].dns_entries
 
 
 class DNSRecordRequiresEvents(ops.CharmEvents):
@@ -494,12 +536,8 @@ class DNSRecordRequires(ops.Object):
         try:
             _ = self._get_remote_relation_data(relation)
             return True
-        except ValidationError as ex:
-            error_fields = set(
-                itertools.chain.from_iterable(error["loc"] for error in ex.errors())
-            )
-            error_field_str = " ".join(f"{f}" for f in error_fields)
-            logger.warning("Error validation the relation data %s", error_field_str)
+        except ValueError as ex:
+            logger.warning("Error validation the relation data %s", ex)
             return False
 
     def _on_relation_changed(self, event: ops.RelationChangedEvent) -> None:
@@ -562,18 +600,20 @@ class DNSRecordProvides(ops.Object):
         self.relation_name = relation_name
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
 
-    def get_remote_relation_data(self) -> Optional[DNSRecordRequirerData]:
+    def get_remote_relation_data(
+        self,
+    ) -> Optional[Tuple[DNSRecordRequirerData, DNSRecordProviderData]]:
         """Retrieve the remote relation data.
 
         Returns:
-            DNSRecordRequirerData: the relation data.
+            the relation data and the processed entries for it.
         """
         relation = self.model.get_relation(self.relation_name)
         return self._get_remote_relation_data(self.model, relation) if relation else None
 
     def _get_remote_relation_data(
         self, model: ops.Model, relation: ops.Relation
-    ) -> DNSRecordRequirerData:
+    ) -> Tuple[DNSRecordRequirerData, DNSRecordProviderData]:
         """Retrieve the remote relation data.
 
         Args:
@@ -581,7 +621,7 @@ class DNSRecordProvides(ops.Object):
             relation: the relation to retrieve the data from.
 
         Returns:
-            DNSRecordProviderData: the relation data.
+            the relation data and the processed entries for it.
         """
         return DNSRecordRequirerData.from_relation(model, relation)
 
@@ -597,12 +637,8 @@ class DNSRecordProvides(ops.Object):
         try:
             _ = self._get_remote_relation_data(self.model, relation)
             return True
-        except ValidationError as ex:
-            error_fields = set(
-                itertools.chain.from_iterable(error["loc"] for error in ex.errors())
-            )
-            error_field_str = " ".join(f"{f}" for f in error_fields)
-            logger.warning("Error validation the relation data %s", error_field_str)
+        except ValueError as ex:
+            logger.warning("Error validating the relation data %s", ex)
             return False
 
     def _on_relation_changed(self, event: ops.RelationChangedEvent) -> None:

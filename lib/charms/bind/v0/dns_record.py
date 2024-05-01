@@ -288,8 +288,15 @@ class DNSRecordRequirerData(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def check_service_account_or_service_account_secret_id(cls, values: Dict) -> Dict:
-        # ignore pflake errors for this function as we're getting a conflicting DCO024 and DCO050
-        """Check if service_account or service_account_secret_id is defined."""  # noqa
+        """Check if service_account or service_account_secret_id is defined.
+
+        Args:
+            values: The values to validate
+        Returns:
+            values: The validated values
+        Raises:
+            When neither service_account nor service_account_secret_id is defined
+        """
         if (values.get("service_account") is None) and (
             values.get("service_account_secret_id") is None
         ):

@@ -4,7 +4,20 @@
 """Bind charm business logic."""
 
 import logging
+import os
+import pathlib
+import shutil
+import tempfile
+import time
+import typing
 
+from charms.bind.v0.dns_record import (
+    DNSProviderData,
+    DNSRecordProviderData,
+    DNSRecordRequirerData,
+    RequirerEntry,
+    Status,
+)
 from charms.operator_libs_linux.v2 import snap
 
 import constants
@@ -114,3 +127,72 @@ class BindService:
             error_msg = f"An exception occurred when installing {snap_name}. Reason: {e}"
             logger.error(error_msg)
             raise InstallError(error_msg) from e
+
+    def _push(self, path: pathlib.Path, source: str) -> None:
+        """Pushes a file to the unit.
+
+        Args:
+            path: The path of the file
+            source: The contents of the file to be pushed
+        """
+        with open(path, "w", encoding="utf-8") as write_file:
+            write_file.write(source)
+            logger.info("Pushed file %s", path)
+
+    def _to_bind_zones(self, rrd: DNSRecordRequirerData) -> typing.Dict[str, str]:
+        """Convert DNSRecordRequirerData to zone files."""
+        zones_entries: typing.Dict[str, typing.List[RequirerEntry]] = {}
+        for entry in rrd.dns_entries:
+            if entry.domain not in zones_entries:
+                zones_entries[entry.domain] = []
+            zones_entries[entry.domain].append(entry)
+
+        zones_content: typing.Dict[str, str] = {}
+        for zone, entries in zones_entries.items():
+            content: str = (
+                f"$ORIGIN {zone}.\n"
+                "$TTL 600\n"
+                f"@ IN SOA {zone}. mail.{zone}. ( {int(time.time())} 1d 1h 1h 10m )\n"
+                "@ IN NS localhost.\n"
+            )
+            for entry in entries:
+                content += (
+                    f"{entry.host_label} "
+                    f"{entry.record_class} "
+                    f"{entry.record_type} "
+                    f"{entry.record_data}\n"
+                )
+            zones_content[zone] = content
+        return zones_content
+
+    def _generate_named_conf_local(self, zones: typing.List[str]) -> str:
+        content: str = f'include "{constants.DNS_CONFIG_DIR}/zones.rfc1918";\n'
+        for name in zones:
+            content += (
+                f'zone "{name}" IN {{'
+                "type primary;"
+                f'file "{constants.DNS_CONFIG_DIR}/db.{name}";'
+                "allow-update { none; };"
+                "};\n"
+            )
+        return content
+
+    def handle_new_relation_data(self, rrd: DNSRecordRequirerData) -> DNSRecordProviderData:
+        """Handle new relation data."""
+        zones = self._to_bind_zones(rrd)
+        logger.debug("ZONES: %s", zones)
+        tempdir = tempfile.mkdtemp(dir=pathlib.Path(constants.STAGING_AREA))
+        for name, content in zones.items():
+            self._push(pathlib.Path(tempdir, f"db.{name}"), content)
+        self._push(
+            pathlib.Path(tempdir, "named.conf.local"), self._generate_named_conf_local(list(zones))
+        )
+        for file_name in os.listdir(tempdir):
+            shutil.move(
+                pathlib.Path(tempdir, file_name), pathlib.Path(constants.DNS_CONFIG_DIR, file_name)
+            )
+        self.reload()
+        statuses = []
+        for entry in rrd.dns_entries:
+            statuses.append(DNSProviderData(uuid=entry.uuid, status=Status.APPROVED))
+        return DNSRecordProviderData(dns_entries=statuses)

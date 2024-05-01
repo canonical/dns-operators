@@ -101,19 +101,17 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
 @pytest.mark.abort_on_fail
 async def test_basic_relation(app: ops.model.Application, ops_test: OpsTest):
     """
-    arrange:
-    act:
-    assert:
+    arrange: given deployed app, deploy any-charm that can relate to it
+    act: relate any-charm to the deployed app
+    assert: after waiting a bit, we should be able to query bind for the test record
     """
     any_app_name = "any-app"
     any_charm_content = pathlib.Path("tests/integration/any_charm.py").read_text(encoding="utf-8")
     dns_record_content = pathlib.Path("lib/charms/bind/v0/dns_record.py").read_text(
         encoding="utf-8"
     )
-    # requirements_content = pathlib.Path("requirements.txt").read_text()
 
     any_charm_src_overwrite = {
-        # "requirements.txt": requirements_content,
         "any_charm.py": any_charm_content,
         "dns_record.py": dns_record_content,
     }
@@ -125,16 +123,20 @@ async def test_basic_relation(app: ops.model.Application, ops_test: OpsTest):
         "any-charm",
         application_name=any_app_name,
         channel="beta",
-        config={"src-overwrite": json.dumps(any_charm_src_overwrite)},
+        config={
+            "src-overwrite": json.dumps(any_charm_src_overwrite),
+            "python-packages": "pydantic==2.7.1\n",
+        },
     )
     await ops_test.model.wait_for_idle(status="active")
 
     await ops_test.model.add_relation(f"{any_charm.name}", f"{app.name}")
 
+    # give some time to the bind charm to handle the request
     time.sleep(10)
 
     assert (
         await tests.integration.helpers.run_on_unit(
             ops_test, f"{app.name}/{0}", "dig @127.0.0.1 admin.dns.test A +short"
         )
-    ).strip() == '42.42.42.42'
+    ).strip() == "42.42.42.42"

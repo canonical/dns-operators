@@ -16,10 +16,10 @@ class DNSRecordRequirerCharm(ops.CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
         self.dns_record = DNSRecordRequires(self)
-        self.framework.observe(self.dns_record.on.dns_record_data_available, self._handler)
+        self.framework.observe(self.dns_record.on.dns_record_request_processed, self._handler)
         ...
 
-    def _handler(self, events: DNSRecordDataAvailableEvent) -> None:
+    def _handler(self, events: DNSRecordRequestProcessed) -> None:
         ...
 
 ```
@@ -281,7 +281,7 @@ class DNSRecordRequirerData(BaseModel):
     """
 
     service_account: Optional[SecretStr] = Field(default=None, exclude=True)
-    service_account_secret_id: str
+    service_account_secret_id: Optional[str] = Field(default=None)
     dns_entries: List[Annotated[RequirerEntry, PlainValidator(RequirerEntry.validate_dns_entry)]]
 
     def set_service_account_secret_id(self, model: ops.Model, relation: ops.Relation) -> None:

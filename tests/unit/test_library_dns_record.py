@@ -273,7 +273,7 @@ def test_dns_record_requirer_update_relation_data():
     assert relation.data[harness.model.app] == get_requirer_relation_data(secret)
 
 
-def test_dns_record_requirer_emmits_event():
+def test_dns_record_requirer_emits_event():
     """
     arrange: given a requirer charm.
     act: update the remote relation databag with valid values.
@@ -290,7 +290,7 @@ def test_dns_record_requirer_emmits_event():
     assert events[0].dns_entries == DNS_RECORD_PROVIDER_DATA.dns_entries
 
 
-def test_dns_record_requirer_doesnt_emmit_event_when_relation_data_invalid():
+def test_dns_record_requirer_doesnt_emit_event_when_relation_data_invalid():
     """
     arrange: given a requirer charm.
     act: update the remote relation databag with invalid values.
@@ -305,7 +305,7 @@ def test_dns_record_requirer_doesnt_emmit_event_when_relation_data_invalid():
     assert len(harness.charm.events) == 0
 
 
-def test_dns_record_requirer_doesnt_emmit_event_when_relation_data_unparsable():
+def test_dns_record_requirer_doesnt_emit_event_when_relation_data_unparsable():
     """
     arrange: given a requirer charm.
     act: update the remote relation databag with unparsable values.
@@ -338,7 +338,7 @@ def test_dns_record_provider_update_relation_data():
     assert relation.data[harness.model.app] == PROVIDER_RELATION_DATA
 
 
-def test_dns_record_provider_emmits_event():
+def test_dns_record_provider_emits_event():
     """
     arrange: given a provider charm.
     act: update the remote relation databag with valid values.
@@ -358,7 +358,7 @@ def test_dns_record_provider_emmits_event():
     assert events[0].processed_entries == []
 
 
-def test_dns_record_provider_emmits_event_when_partially_valid():
+def test_dns_record_provider_emits_event_when_partially_valid():
     """
     arrange: given a provider charm.
     act: update the remote relation databag with valid values.
@@ -389,7 +389,7 @@ def test_dns_record_provider_emmits_event_when_partially_valid():
     assert events[0].processed_entries[0].description
 
 
-def test_dns_record_provider_emmits_event_when_partially_valid_ignores_no_uuid():
+def test_dns_record_provider_emits_event_when_partially_valid_ignores_no_uuid():
     """
     arrange: given a provider charm.
     act: update the remote relation databag with valid values.
@@ -415,7 +415,7 @@ def test_dns_record_provider_emmits_event_when_partially_valid_ignores_no_uuid()
     assert events[0].processed_entries == []
 
 
-def test_dns_record_provider_doesnt_emmit_event_when_relation_data_invalid():
+def test_dns_record_provider_doesnt_emit_event_when_relation_data_invalid():
     """
     arrange: given a provider charm.
     act: update the remote relation databag with invalid values.
@@ -430,7 +430,7 @@ def test_dns_record_provider_doesnt_emmit_event_when_relation_data_invalid():
     assert len(harness.charm.events) == 0
 
 
-def test_dns_record_provider_doesnt_emmit_event_when_relation_data_unparsable():
+def test_dns_record_provider_doesnt_emit_event_when_relation_data_unparsable():
     """
     arrange: given a provider charm.
     act: update the remote relation databag with unparsable values.

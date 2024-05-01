@@ -287,17 +287,9 @@ class DNSRecordRequirerData(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    # ignore pflake errors for this function: https://github.com/canonical/bind-operator/actions/runs/8914628790/job/24482601814?pr=16#step:6:15
-    def check_service_account_or_service_account_secret_id(cls, values: Dict) -> Dict:  # noqa
-        """Check if service_account or service_account_secret_id is defined.
-
-        Args:
-            values: input values defining the instance on creation
-        Raises:
-            ValueError: when either service_account or service_accounrt_secret_id is not defined
-        Returns:
-            values: input values defining the instance on creation
-        """
+    def check_service_account_or_service_account_secret_id(cls, values: Dict) -> Dict:
+        # ignore pflake errors for this function as we're getting a conflicting DCO024 and DCO050
+        """Check if service_account or service_account_secret_id is defined."""  # noqa
         if (values.get("service_account") is None) and (
             values.get("service_account_secret_id") is None
         ):

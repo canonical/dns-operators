@@ -80,7 +80,6 @@ from uuid import UUID
 
 import ops
 from pydantic import (
-    model_validator,
     BaseModel,
     Field,
     IPvAnyAddress,
@@ -88,6 +87,7 @@ from pydantic import (
     SecretStr,
     ValidationError,
     ValidationInfo,
+    model_validator,
 )
 
 logger = logging.getLogger(__name__)
@@ -282,15 +282,25 @@ class DNSRecordRequirerData(BaseModel):
     """
 
     service_account: Optional[SecretStr] = Field(default=None, exclude=True)
-    service_account_secret_id: Optional[str]= Field(default=None)
+    service_account_secret_id: Optional[str] = Field(default=None)
     dns_entries: List[Annotated[RequirerEntry, PlainValidator(RequirerEntry.validate_dns_entry)]]
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def check_service_account_or_service_account_secret_id(cls, values: Dict) -> Dict:
-        """Check if service_account or service_account_secret_id is defined."""
-        if (values.get('service_account') is None) and (values.get("service_account_secret_id") is None):
-            raise ValueError('either service_account or service_account_secret_id is required')
+        """Check if service_account or service_account_secret_id is defined.
+
+        Args:
+            values: input values defining the instance on creation
+        Raises:
+            ValueError: when either service_account or service_accounrt_secret_id is not defined
+        Returns:
+            values: input values defining the instance on creation
+        """
+        if (values.get("service_account") is None) and (
+            values.get("service_account_secret_id") is None
+        ):
+            raise ValueError("either service_account or service_account_secret_id is required")
         return values
 
     def set_service_account_secret_id(self, model: ops.Model, relation: ops.Relation) -> None:

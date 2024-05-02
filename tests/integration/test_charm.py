@@ -131,9 +131,7 @@ async def test_basic_relation(app: ops.model.Application, ops_test: OpsTest):
     await ops_test.model.wait_for_idle(status="active")
 
     await ops_test.model.add_relation(f"{any_charm.name}", f"{app.name}")
-
-    # give some time to the bind charm to handle the request
-    time.sleep(10)
+    await ops_test.model.wait_for_idle(status="active")
 
     assert (
         await tests.integration.helpers.run_on_unit(

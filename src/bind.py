@@ -128,7 +128,7 @@ class BindService:
             logger.error(error_msg)
             raise InstallError(error_msg) from e
 
-    def _push(self, path: pathlib.Path, source: str) -> None:
+    def _write(self, path: pathlib.Path, source: str) -> None:
         """Pushes a file to the unit.
 
         Args:
@@ -206,8 +206,8 @@ class BindService:
         logger.debug("ZONES: %s", zones)
         tempdir = tempfile.mkdtemp()
         for name, content in zones.items():
-            self._push(pathlib.Path(tempdir, f"db.{name}"), content)
-        self._push(
+            self._write(pathlib.Path(tempdir, f"db.{name}"), content)
+        self._write(
             pathlib.Path(tempdir, "named.conf.local"), self._generate_named_conf_local(list(zones))
         )
         for file_name in os.listdir(tempdir):

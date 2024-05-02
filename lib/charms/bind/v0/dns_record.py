@@ -291,11 +291,13 @@ class DNSRecordRequirerData(BaseModel):
         """Check if service_account or service_account_secret_id is defined.
 
         Args:
-            values: input values defining the instance on creation
-        Raises:
-            ValueError: when either service_account or service_accounrt_secret_id is not defined
+            values: The values to validate
+
         Returns:
-            values: input values defining the instance on creation
+            values: The validated values
+
+        Raises:
+            ValueError: When neither service_account nor service_account_secret_id is defined
         """
         if (values.get("service_account") is None) and (
             values.get("service_account_secret_id") is None

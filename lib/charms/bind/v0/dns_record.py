@@ -67,7 +67,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 PYDEPS = ["pydantic>=2"]
 
@@ -87,6 +87,7 @@ from pydantic import (
     SecretStr,
     ValidationError,
     ValidationInfo,
+    model_validator,
 )
 
 logger = logging.getLogger(__name__)
@@ -281,8 +282,28 @@ class DNSRecordRequirerData(BaseModel):
     """
 
     service_account: Optional[SecretStr] = Field(default=None, exclude=True)
-    service_account_secret_id: str
+    service_account_secret_id: Optional[str] = Field(default=None)
     dns_entries: List[Annotated[RequirerEntry, PlainValidator(RequirerEntry.validate_dns_entry)]]
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_service_account_or_service_account_secret_id(cls, values: Dict) -> Dict:
+        """Check if service_account or service_account_secret_id is defined.
+
+        Args:
+            values: The values to validate
+
+        Returns:
+            values: The validated values
+
+        Raises:
+            ValueError: When neither service_account nor service_account_secret_id is defined
+        """
+        if (values.get("service_account") is None) and (
+            values.get("service_account_secret_id") is None
+        ):
+            raise ValueError("either service_account or service_account_secret_id is required")
+        return values
 
     def set_service_account_secret_id(self, model: ops.Model, relation: ops.Relation) -> None:
         """Store the service account as a Juju secret.

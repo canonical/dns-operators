@@ -52,7 +52,7 @@ class AnyCharm(AnyCharmBase):
         )
         return dns_record_requirer_data
 
-    def _on_dns_record_relation_joined(self, event: ops.HookEvent) -> None:
+    def _on_dns_record_relation_joined(self, event: ops.RelationEvent) -> None:
         """Handle dns_record relation joined.
 
         Args:

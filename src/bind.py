@@ -156,18 +156,13 @@ class BindService:
 
         zones_content: typing.Dict[str, str] = {}
         for zone, entries in zones_entries.items():
-            content: str = (
-                f"$ORIGIN {zone}.\n"
-                "$TTL 600\n"
-                f"@ IN SOA {zone}. mail.{zone}. ( {int(time.time())} 1d 1h 1h 10m )\n"
-                "@ IN NS localhost.\n"
-            )
+            content = constants.ZONE_HEADER_TEMPLATE.format(zone=zone, serial=int(time.time()))
             for entry in entries:
-                content += (
-                    f"{entry.host_label} "
-                    f"{entry.record_class} "
-                    f"{entry.record_type} "
-                    f"{entry.record_data}\n"
+                content += constants.ZONE_RECORD_TEMPLATE.format(
+                    host_label=entry.host_label,
+                    record_class=entry.record_class,
+                    record_type=entry.record_type,
+                    record_data=entry.record_data,
                 )
             zones_content[zone] = content
         return zones_content
@@ -184,12 +179,8 @@ class BindService:
         # It's good practice to include rfc1918
         content: str = f'include "{constants.DNS_CONFIG_DIR}/zones.rfc1918";\n'
         for name in zones:
-            content += (
-                f'zone "{name}" IN {{'
-                "type primary;"
-                f'file "{constants.DNS_CONFIG_DIR}/db.{name}";'
-                "allow-update { none; };"
-                "};\n"
+            content += constants.NAMED_CONF_ZONE_DEF_TEMPLATE.format(
+                name=name, absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{name}"
             )
         return content
 

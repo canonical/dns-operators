@@ -8,6 +8,7 @@
 import logging
 import uuid
 
+import ops
 from any_charm_base import AnyCharmBase
 from dns_record import DNSRecordRequirerData, DNSRecordRequires, RequirerEntry
 
@@ -31,6 +32,11 @@ class AnyCharm(AnyCharmBase):
         )
 
     def _test_record_data(self) -> DNSRecordRequirerData:
+        """Create test record data.
+
+        Returns:
+            test record data
+        """
         dns_entry = RequirerEntry(
             domain="dns.test",
             host_label="admin",
@@ -46,5 +52,10 @@ class AnyCharm(AnyCharmBase):
         )
         return dns_record_requirer_data
 
-    def _on_dns_record_relation_joined(self, event) -> None:
+    def _on_dns_record_relation_joined(self, event: ops.HookEvent) -> None:
+        """Handle dns_record relation joined.
+
+        Args:
+            event: dns_record relation joined event
+        """
         self.dns_record.update_relation_data(event.relation, self._test_record_data())

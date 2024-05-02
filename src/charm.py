@@ -37,6 +37,7 @@ class BindCharm(ops.CharmBase):
         )
 
     def _on_dns_record_relation_changed(self, _: ops.HookEvent) -> None:
+        """Handle dns_record relation changed."""
         if not (rrd := self.dns_record.get_remote_relation_data()):
             logger.info(
                 "No relation data could be retrieved from %s", self.dns_record.relation_name

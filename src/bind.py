@@ -140,7 +140,14 @@ class BindService:
             logger.info("Pushed file %s", path)
 
     def _to_bind_zones(self, rrd: DNSRecordRequirerData) -> typing.Dict[str, str]:
-        """Convert DNSRecordRequirerData to zone files."""
+        """Convert DNSRecordRequirerData to zone files.
+
+        Args:
+            rrd: The input DNSRecordRequirerData
+
+        Returns:
+            A dict of zones names as keys with the zones contents as values
+        """
         zones_entries: typing.Dict[str, typing.List[RequirerEntry]] = {}
         for entry in rrd.dns_entries:
             if entry.domain not in zones_entries:
@@ -166,6 +173,15 @@ class BindService:
         return zones_content
 
     def _generate_named_conf_local(self, zones: typing.List[str]) -> str:
+        """Generate the content of `named.conf.local`.
+
+        Args:
+            zones: A list of all the zones names
+
+        Returns:
+            The content of `named.conf.local`
+        """
+        # It's good practice to include rfc1918
         content: str = f'include "{constants.DNS_CONFIG_DIR}/zones.rfc1918";\n'
         for name in zones:
             content += (
@@ -178,10 +194,17 @@ class BindService:
         return content
 
     def handle_new_relation_data(self, rrd: DNSRecordRequirerData) -> DNSRecordProviderData:
-        """Handle new relation data."""
+        """Handle new relation data.
+
+        Args:
+            rrd: The DNSRecordRequirerData from the relation
+
+        Returns:
+            A resulting DNSRecordProviderData to put in the relation databag
+        """
         zones = self._to_bind_zones(rrd)
         logger.debug("ZONES: %s", zones)
-        tempdir = tempfile.mkdtemp(dir=pathlib.Path(constants.STAGING_AREA))
+        tempdir = tempfile.mkdtemp()
         for name, content in zones.items():
             self._push(pathlib.Path(tempdir, f"db.{name}"), content)
         self._push(
@@ -192,6 +215,7 @@ class BindService:
                 pathlib.Path(tempdir, file_name), pathlib.Path(constants.DNS_CONFIG_DIR, file_name)
             )
         self.reload()
+        shutil.rmtree(tempdir)
         statuses = []
         for entry in rrd.dns_entries:
             statuses.append(DNSProviderData(uuid=entry.uuid, status=Status.APPROVED))

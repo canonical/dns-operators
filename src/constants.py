@@ -8,4 +8,3 @@ SNAP_PACKAGES = {
     DNS_SNAP_NAME: {"channel": "edge"},
 }
 DNS_CONFIG_DIR = f"/var/snap/{DNS_SNAP_NAME}/current/etc/bind"
-STAGING_AREA = "/tmp"

@@ -292,8 +292,10 @@ class DNSRecordRequirerData(BaseModel):
 
         Args:
             values: The values to validate
+
         Returns:
             values: The validated values
+
         Raises:
             When neither service_account nor service_account_secret_id is defined
         """

@@ -17,7 +17,19 @@ Bind service class.
 
 ---
 
-<a href="../src/bind.py#L86"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/bind.py#L180"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+### <kbd>function</kbd> `handle_new_relation_data`
+
+```python
+handle_new_relation_data(rrd: DNSRecordRequirerData) → DNSRecordProviderData
+```
+
+Handle new relation data. 
+
+---
+
+<a href="../src/bind.py#L99"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `prepare`
 
@@ -29,7 +41,7 @@ Prepare the machine.
 
 ---
 
-<a href="../src/bind.py#L35"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/bind.py#L48"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `reload`
 
@@ -47,7 +59,7 @@ Reload the charmed-bind service.
 
 ---
 
-<a href="../src/bind.py#L52"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/bind.py#L65"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `start`
 
@@ -65,7 +77,7 @@ Start the charmed-bind service.
 
 ---
 
-<a href="../src/bind.py#L69"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/bind.py#L82"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `stop`
 

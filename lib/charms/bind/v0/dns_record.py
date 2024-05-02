@@ -16,10 +16,10 @@ class DNSRecordRequirerCharm(ops.CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
         self.dns_record = DNSRecordRequires(self)
-        self.framework.observe(self.dns_record.on.dns_record_data_available, self._handler)
+        self.framework.observe(self.dns_record.on.dns_record_request_processed, self._handler)
         ...
 
-    def _handler(self, events: DNSRecordDataAvailableEvent) -> None:
+    def _handler(self, events: DNSRecordRequestProcessed) -> None:
         ...
 
 ```
@@ -67,7 +67,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 PYDEPS = ["pydantic>=2"]
 

@@ -10,5 +10,6 @@ File containing constants to be used in the charm.
 - **DNS_SNAP_NAME**
 - **SNAP_PACKAGES**
 - **DNS_CONFIG_DIR**
+- **STAGING_AREA**
 
 

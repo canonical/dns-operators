@@ -297,7 +297,7 @@ class DNSRecordRequirerData(BaseModel):
             values: The validated values
 
         Raises:
-            When neither service_account nor service_account_secret_id is defined
+            ValueError: When neither service_account nor service_account_secret_id is defined
         """
         if (values.get("service_account") is None) and (
             values.get("service_account_secret_id") is None

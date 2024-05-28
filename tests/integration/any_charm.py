@@ -5,6 +5,7 @@
 
 """This code should be loaded into any-charm which is used for integration tests."""
 
+import json
 import logging
 import uuid
 
@@ -37,20 +38,28 @@ class AnyCharm(AnyCharmBase):
         Returns:
             test record data
         """
-        dns_entry = RequirerEntry(
-            domain="dns.test",
-            host_label="admin",
-            ttl=600,
-            record_class="IN",
-            record_type="A",
-            record_data="42.42.42.42",
-            uuid=uuid.uuid4(),
-        )
-        dns_record_requirer_data = DNSRecordRequirerData(
-            dns_entries=[dns_entry],
-            service_account="fakeserviceaccount",
-        )
-        return dns_record_requirer_data
+        # We read the dns entries from a known json file
+        with open("dns_entries.json", "r", encoding="utf-8") as dns_entries_file:
+            json_entries = json.load(dns_entries_file)
+
+            dns_entries = [
+                RequirerEntry(
+                    domain=e["domain"],
+                    host_label=e["host_label"],
+                    ttl=e["ttl"],
+                    record_class=e["record_class"],
+                    record_type=e["record_type"],
+                    record_data=e["record_data"],
+                    uuid=uuid.uuid4(),
+                )
+                for e in json_entries
+            ]
+
+            dns_record_requirer_data = DNSRecordRequirerData(
+                dns_entries=dns_entries,
+                service_account="fakeserviceaccount",
+            )
+            return dns_record_requirer_data
 
     def _on_dns_record_relation_joined(self, event: ops.RelationEvent) -> None:
         """Handle dns_record relation joined.

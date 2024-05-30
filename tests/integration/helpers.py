@@ -175,7 +175,8 @@ async def generate_anycharm_relation(
     any_charm_src_overwrite = {
         "any_charm.py": any_charm_content,
         "dns_record.py": dns_record_content,
-        "/tmp/dns_entries.json": json.dumps(dns_entries),
+        # It's okay to write to /tmp for these tests, so # nosec is used
+        "/tmp/dns_entries.json": json.dumps(dns_entries),  # nosec
     }
 
     # We deploy https://charmhub.io/any-charm and inject the any_charm.py behavior

@@ -6,6 +6,7 @@
 
 import logging
 import time
+import typing
 
 import ops
 import pytest
@@ -95,9 +96,32 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
     ).strip() == '"this-is-a-test"'
 
 
+@pytest.mark.parametrize(
+    "any_charm_name, relation_data",
+    (
+        (
+            "any-app",
+            [
+                tests.integration.helpers.DnsEntry(
+                    domain="dns.test",
+                    host_label="admin",
+                    ttl=600,
+                    record_class="IN",
+                    record_type="A",
+                    record_data="42.42.42.42",
+                )
+            ],
+        ),
+    ),
+)
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
-async def test_basic_relation(app: ops.model.Application, ops_test: OpsTest):
+async def test_basic_relation(
+    app: ops.model.Application,
+    ops_test: OpsTest,
+    any_charm_name: str,
+    relation_data: typing.List[tests.integration.helpers.DnsEntry],
+):
     """
     arrange: given deployed app, deploy any-charm that can relate to it
     act: relate any-charm to the deployed app
@@ -106,17 +130,8 @@ async def test_basic_relation(app: ops.model.Application, ops_test: OpsTest):
     await tests.integration.helpers.generate_anycharm_relation(
         app,
         ops_test,
-        "any-app",
-        [
-            tests.integration.helpers.DnsEntry(
-                domain="dns.test",
-                host_label="admin",
-                ttl=600,
-                record_class="IN",
-                record_type="A",
-                record_data="42.42.42.42",
-            )
-        ],
+        any_charm_name,
+        relation_data,
     )
 
     assert (

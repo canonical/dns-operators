@@ -175,7 +175,7 @@ async def generate_anycharm_relation(
     any_charm_src_overwrite = {
         "any_charm.py": any_charm_content,
         "dns_record.py": dns_record_content,
-        "dns_entries.json": json.dumps(dns_entries),
+        "/tmp/dns_entries.json": json.dumps(dns_entries),
     }
 
     # We deploy https://charmhub.io/any-charm and inject the any_charm.py behavior

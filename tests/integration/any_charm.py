@@ -39,7 +39,7 @@ class AnyCharm(AnyCharmBase):
             test record data
         """
         # We read the dns entries from a known json file
-        with open("dns_entries.json", "r", encoding="utf-8") as dns_entries_file:
+        with open("/tmp/dns_entries.json", "r", encoding="utf-8") as dns_entries_file:
             json_entries = json.load(dns_entries_file)
 
             dns_entries = [

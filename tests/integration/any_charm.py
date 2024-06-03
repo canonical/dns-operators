@@ -42,7 +42,7 @@ class AnyCharm(AnyCharmBase):
         # We read the dns entries from a known json file
         # It's okay to write to /tmp for these tests, so # nosec is used
         json_entries = json.loads(
-            pathlib.Path("/tmp/dns_entries.json").read_text(encoding="utf-8")
+            pathlib.Path("/tmp/dns_entries.json").read_text(encoding="utf-8")  # nosec
         )
 
         dns_entries = [

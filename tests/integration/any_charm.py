@@ -7,6 +7,7 @@
 
 import json
 import logging
+import pathlib
 import uuid
 
 import ops
@@ -40,27 +41,28 @@ class AnyCharm(AnyCharmBase):
         """
         # We read the dns entries from a known json file
         # It's okay to write to /tmp for these tests, so # nosec is used
-        with open("/tmp/dns_entries.json", "r", encoding="utf-8") as dns_entries_file:  # nosec
-            json_entries = json.load(dns_entries_file)
+        json_entries = json.loads(
+            pathlib.Path("/tmp/dns_entries.json").read_text(encoding="utf-8")
+        )
 
-            dns_entries = [
-                RequirerEntry(
-                    domain=e["domain"],
-                    host_label=e["host_label"],
-                    ttl=e["ttl"],
-                    record_class=e["record_class"],
-                    record_type=e["record_type"],
-                    record_data=e["record_data"],
-                    uuid=uuid.uuid4(),
-                )
-                for e in json_entries
-            ]
-
-            dns_record_requirer_data = DNSRecordRequirerData(
-                dns_entries=dns_entries,
-                service_account="fakeserviceaccount",
+        dns_entries = [
+            RequirerEntry(
+                domain=e["domain"],
+                host_label=e["host_label"],
+                ttl=e["ttl"],
+                record_class=e["record_class"],
+                record_type=e["record_type"],
+                record_data=e["record_data"],
+                uuid=uuid.uuid4(),
             )
-            return dns_record_requirer_data
+            for e in json_entries
+        ]
+
+        dns_record_requirer_data = DNSRecordRequirerData(
+            dns_entries=dns_entries,
+            service_account="fakeserviceaccount",
+        )
+        return dns_record_requirer_data
 
     def _on_dns_record_relation_joined(self, event: ops.RelationEvent) -> None:
         """Handle dns_record relation joined.

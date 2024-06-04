@@ -38,10 +38,14 @@ class BindCharm(ops.CharmBase):
 
     def _on_dns_record_relation_changed(self, _: ops.HookEvent) -> None:
         """Handle dns_record relation changed."""
-        if not (rrd := self.dns_record.get_remote_relation_data()):
-            logger.info(
-                "No relation data could be retrieved from %s", self.dns_record.relation_name
-            )
+        try:
+            if not (rrd := self.dns_record.get_remote_relation_data()):
+                logger.info(
+                    "No relation data could be retrieved from %s", self.dns_record.relation_name
+                )
+                return
+        except ValueError as err:
+            logger.info("Validation error of the relation data: %s", err)
             return
         self.unit.status = ops.MaintenanceStatus("Handling new relation requests")
         rpd = self.bind.handle_new_relation_data(rrd[0])

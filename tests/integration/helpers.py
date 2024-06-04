@@ -158,7 +158,7 @@ async def generate_anycharm_relation(
     any_charm_name: str,
     dns_entries: typing.List[DnsEntry],
 ):
-    """Deploy any-charm with a wanted DNS entries config and relate it to the bind app.
+    """Deploy any-charm with a wanted DNS entries config and integrate it to the bind app.
 
     Args:
         app: Deployed bind-operator app
@@ -191,7 +191,23 @@ async def generate_anycharm_relation(
             "python-packages": "pydantic==2.7.1\n",
         },
     )
-    await ops_test.model.wait_for_idle(status="active")
-
     await ops_test.model.add_relation(f"{any_charm.name}", f"{app.name}")
-    await ops_test.model.wait_for_idle(status="active")
+
+
+async def dig_query(ops_test: OpsTest, app_name: str, entry: DnsEntry) -> str:
+    """Query a DnsEntry with dig.
+
+    Args:
+        ops_test: The ops test framework instance
+        app_name: Name of the app to be queried
+        entry: DnsEntry to query
+
+    Returns: the result of the DNS query
+    """
+    return (
+        await run_on_unit(
+            ops_test,
+            f"{app_name}/0",
+            f"dig @127.0.0.1 {entry['host_label']}.{entry['domain']} {entry['record_type']} +short",
+        )
+    ).strip()

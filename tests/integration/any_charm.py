@@ -5,7 +5,9 @@
 
 """This code should be loaded into any-charm which is used for integration tests."""
 
+import json
 import logging
+import pathlib
 import uuid
 
 import ops
@@ -37,17 +39,27 @@ class AnyCharm(AnyCharmBase):
         Returns:
             test record data
         """
-        dns_entry = RequirerEntry(
-            domain="dns.test",
-            host_label="admin",
-            ttl=600,
-            record_class="IN",
-            record_type="A",
-            record_data="42.42.42.42",
-            uuid=uuid.uuid4(),
+        # We read the dns entries from a known json file
+        # It's okay to write to /tmp for these tests, so # nosec is used
+        json_entries = json.loads(
+            pathlib.Path("/tmp/dns_entries.json").read_text(encoding="utf-8")  # nosec
         )
+
+        dns_entries = [
+            RequirerEntry(
+                domain=e["domain"],
+                host_label=e["host_label"],
+                ttl=e["ttl"],
+                record_class=e["record_class"],
+                record_type=e["record_type"],
+                record_data=e["record_data"],
+                uuid=uuid.uuid4(),
+            )
+            for e in json_entries
+        ]
+
         dns_record_requirer_data = DNSRecordRequirerData(
-            dns_entries=[dns_entry],
+            dns_entries=dns_entries,
             service_account="fakeserviceaccount",
         )
         return dns_record_requirer_data

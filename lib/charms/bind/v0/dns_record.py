@@ -575,14 +575,15 @@ class DNSRecordRequires(ops.Object):
             )
 
     def update_relation_data(
-        self, relation: ops.Relation, dns_record_requirer_data: DNSRecordRequirerData
+        self,
+        relation: ops.Relation,
+        dns_record_requirer_data: DNSRecordRequirerData,
     ) -> None:
         """Update the relation data.
 
         Args:
             relation: the relation for which to update the data.
-            dns_record_requirer_data: a DNSRecordRequirerData instance wrapping the data to be
-                updated.
+            dns_record_requirer_data: DNSRecordRequirerData wrapping the data to be updated.
         """
         relation_data = dns_record_requirer_data.to_relation_data(self.model, relation)
         relation.data[self.charm.model.app].update(relation_data)
@@ -621,15 +622,31 @@ class DNSRecordProvides(ops.Object):
         self.relation_name = relation_name
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
 
-    def get_remote_relation_data(
+    def get_all_remote_relation_data(
         self,
-    ) -> Optional[Tuple[DNSRecordRequirerData, DNSRecordProviderData]]:
-        """Retrieve the remote relation data.
+    ) -> List[Optional[Tuple[DNSRecordRequirerData, DNSRecordProviderData]]]:
+        """Retrieve all the remote relations data.
 
         Returns:
             the relation data and the processed entries for it.
         """
-        relation = self.model.get_relation(self.relation_name)
+        relations_data: List[Optional[Tuple[DNSRecordRequirerData, DNSRecordProviderData]]] = []
+        for relation in self.model.relations[self.relation_name]:
+            relations_data.append(self._get_remote_relation_data(self.model, relation))
+        return relations_data
+
+    def get_remote_relation_data(
+        self, relation_id: Optional[int] = None
+    ) -> Optional[Tuple[DNSRecordRequirerData, DNSRecordProviderData]]:
+        """Retrieve the remote relation data.
+
+        Args:
+            relation_id: The id of the relation to get the data from.
+
+        Returns:
+            the relation data and the processed entries for it.
+        """
+        relation = self.model.get_relation(self.relation_name, relation_id)
         return self._get_remote_relation_data(self.model, relation) if relation else None
 
     def _get_remote_relation_data(

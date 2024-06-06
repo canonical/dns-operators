@@ -127,6 +127,16 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
                         record_data="42.42.44.44",
                     ),
                 ],
+                [
+                    tests.integration.helpers.DnsEntry(
+                        domain="dns-app-2.test",
+                        host_label="somehost",
+                        ttl=600,
+                        record_class="IN",
+                        record_type="A",
+                        record_data="41.41.41.41",
+                    ),
+                ],
             ),
             ops.model.ActiveStatus,
         ),
@@ -173,4 +183,7 @@ async def test_basic_relation(
                 result = await tests.integration.helpers.dig_query(ops_test, app.name, entry)
                 await model.wait_for_idle()
 
-                assert result == entry["record_data"]
+                assert result == entry["record_data"], (
+                    f"{entry['host_label']}.{entry['domain']}"
+                    f" {entry['record_type']} {entry['record_data']}"
+                )

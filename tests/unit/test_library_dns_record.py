@@ -459,10 +459,12 @@ def test_dns_record_requirer_get_remote_relation_data():
     harness.add_relation("dns-record", "dns-record", app_data=get_requirer_relation_data(secret))
 
     result = harness.charm.dns_record.get_remote_relation_data()
-    assert result == [(
-        get_dns_record_requirer_data(secret),
-        dns_record.DNSRecordProviderData(dns_entries=[]),
-    )]
+    assert result == [
+        (
+            get_dns_record_requirer_data(secret),
+            dns_record.DNSRecordProviderData(dns_entries=[]),
+        )
+    ]
 
 
 def test_dns_record_requirer_get_remote_relation_data_throws_exception_when_secret_invalid():

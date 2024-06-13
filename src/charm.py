@@ -44,7 +44,7 @@ class BindCharm(ops.CharmBase):
 
         """
         try:
-            relation_requirer_data = self.dns_record.get_all_remote_relation_data()
+            relation_requirer_data = self.dns_record.get_remote_relation_data()
         except ValueError as err:
             logger.info("Validation error of the relation data: %s", err)
             return

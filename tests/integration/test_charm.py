@@ -184,8 +184,8 @@ async def test_dns_record_relation(
     # Remove previously deployed instances of any-app
     for any_app_number in range(10):
         anyapp_name = f"anyapp-t{any_app_number}"
-        if anyapp_name in ops_test.model.applications:
-            await ops_test.model.remove_application(anyapp_name, block_until_done=True)
+        if anyapp_name in model.applications:
+            await model.remove_application(anyapp_name, block_until_done=True)
     # Start by deploying the any-app instances and integrate them with the bind charm
     any_app_number = 0
     for integration_data in integration_datasets:

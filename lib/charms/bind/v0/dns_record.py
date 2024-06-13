@@ -63,11 +63,11 @@ class DNSRecordProviderCharm(ops.CharmBase):
 LIBID = "908bcd1f0ad14cabbc9dca25fa0fc87c"
 
 # Increment this major API version when introducing breaking changes
-LIBAPI = 0
+LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 0
 
 PYDEPS = ["pydantic>=2"]
 
@@ -622,7 +622,7 @@ class DNSRecordProvides(ops.Object):
         self.relation_name = relation_name
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
 
-    def get_all_remote_relation_data(
+    def get_remote_relation_data(
         self,
     ) -> List[Optional[Tuple[DNSRecordRequirerData, DNSRecordProviderData]]]:
         """Retrieve all the remote relations data.
@@ -634,20 +634,6 @@ class DNSRecordProvides(ops.Object):
         for relation in self.model.relations[self.relation_name]:
             relations_data.append(self._get_remote_relation_data(self.model, relation))
         return relations_data
-
-    def get_remote_relation_data(
-        self, relation_id: Optional[int] = None
-    ) -> Optional[Tuple[DNSRecordRequirerData, DNSRecordProviderData]]:
-        """Retrieve the remote relation data.
-
-        Args:
-            relation_id: The id of the relation to get the data from.
-
-        Returns:
-            the relation data and the processed entries for it.
-        """
-        relation = self.model.get_relation(self.relation_name, relation_id)
-        return self._get_remote_relation_data(self.model, relation) if relation else None
 
     def _get_remote_relation_data(
         self, model: ops.Model, relation: ops.Relation

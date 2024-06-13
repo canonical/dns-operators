@@ -459,10 +459,10 @@ def test_dns_record_requirer_get_remote_relation_data():
     harness.add_relation("dns-record", "dns-record", app_data=get_requirer_relation_data(secret))
 
     result = harness.charm.dns_record.get_remote_relation_data()
-    assert result == (
+    assert result == [(
         get_dns_record_requirer_data(secret),
         dns_record.DNSRecordProviderData(dns_entries=[]),
-    )
+    )]
 
 
 def test_dns_record_requirer_get_remote_relation_data_throws_exception_when_secret_invalid():
@@ -481,21 +481,21 @@ def test_dns_record_requirer_get_remote_relation_data_throws_exception_when_secr
         "dns-record", "dns-record", app_data=get_requirer_relation_data(secret.id)
     )
 
-    requirer_data, provider_data = harness.charm.dns_record.get_remote_relation_data()
-    assert not requirer_data.service_account
-    assert len(requirer_data.dns_entries) == 0
-    assert len(provider_data.dns_entries) == 2
-    passed_data = get_dns_record_requirer_data(secret.id)
-    assert provider_data.dns_entries[0].uuid == (
-        passed_data.dns_entries[0].uuid  # pylint: disable=unsubscriptable-object
-    )
-    assert provider_data.dns_entries[0].status == dns_record.Status.INVALID_CREDENTIALS
-    assert provider_data.dns_entries[0].description
-    assert provider_data.dns_entries[1].uuid == (
-        passed_data.dns_entries[1].uuid  # pylint: disable=unsubscriptable-object
-    )
-    assert provider_data.dns_entries[1].status == dns_record.Status.INVALID_CREDENTIALS
-    assert provider_data.dns_entries[1].description
+    for requirer_data, provider_data in harness.charm.dns_record.get_remote_relation_data():
+        assert not requirer_data.service_account
+        assert len(requirer_data.dns_entries) == 0
+        assert len(provider_data.dns_entries) == 2
+        passed_data = get_dns_record_requirer_data(secret.id)
+        assert provider_data.dns_entries[0].uuid == (
+            passed_data.dns_entries[0].uuid  # pylint: disable=unsubscriptable-object
+        )
+        assert provider_data.dns_entries[0].status == dns_record.Status.INVALID_CREDENTIALS
+        assert provider_data.dns_entries[0].description
+        assert provider_data.dns_entries[1].uuid == (
+            passed_data.dns_entries[1].uuid  # pylint: disable=unsubscriptable-object
+        )
+        assert provider_data.dns_entries[1].status == dns_record.Status.INVALID_CREDENTIALS
+        assert provider_data.dns_entries[1].description
 
 
 def test_dns_record_requirer_get_remote_relation_data_throws_exception_when_secret_doesnt_exist():
@@ -512,21 +512,21 @@ def test_dns_record_requirer_get_remote_relation_data_throws_exception_when_secr
         "dns-record", "dns-record", app_data=get_requirer_relation_data("unexisting")
     )
 
-    requirer_data, provider_data = harness.charm.dns_record.get_remote_relation_data()
-    assert not requirer_data.service_account
-    assert len(requirer_data.dns_entries) == 0
-    assert len(provider_data.dns_entries) == 2
-    passed_data = get_dns_record_requirer_data("")
-    assert provider_data.dns_entries[0].uuid == (
-        passed_data.dns_entries[0].uuid  # pylint: disable=unsubscriptable-object
-    )
-    assert provider_data.dns_entries[0].status == dns_record.Status.INVALID_CREDENTIALS
-    assert provider_data.dns_entries[0].description
-    assert provider_data.dns_entries[1].uuid == (
-        passed_data.dns_entries[1].uuid  # pylint: disable=unsubscriptable-object
-    )
-    assert provider_data.dns_entries[1].status == dns_record.Status.INVALID_CREDENTIALS
-    assert provider_data.dns_entries[1].description
+    for requirer_data, provider_data in harness.charm.dns_record.get_remote_relation_data():
+        assert not requirer_data.service_account
+        assert len(requirer_data.dns_entries) == 0
+        assert len(provider_data.dns_entries) == 2
+        passed_data = get_dns_record_requirer_data("")
+        assert provider_data.dns_entries[0].uuid == (
+            passed_data.dns_entries[0].uuid  # pylint: disable=unsubscriptable-object
+        )
+        assert provider_data.dns_entries[0].status == dns_record.Status.INVALID_CREDENTIALS
+        assert provider_data.dns_entries[0].description
+        assert provider_data.dns_entries[1].uuid == (
+            passed_data.dns_entries[1].uuid  # pylint: disable=unsubscriptable-object
+        )
+        assert provider_data.dns_entries[1].status == dns_record.Status.INVALID_CREDENTIALS
+        assert provider_data.dns_entries[1].description
 
 
 def test_dns_record_provider_get_remote_relation_data():
@@ -540,7 +540,7 @@ def test_dns_record_provider_get_remote_relation_data():
     harness.set_leader(True)
     harness.add_relation("dns-record", "dns-record", app_data=PROVIDER_RELATION_DATA)
 
-    result = result = harness.charm.dns_record.get_remote_relation_data()
+    result = harness.charm.dns_record.get_remote_relation_data()
     assert result == DNS_RECORD_PROVIDER_DATA
 
 

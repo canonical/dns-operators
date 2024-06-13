@@ -63,11 +63,11 @@ class DNSRecordProviderCharm(ops.CharmBase):
 LIBID = "908bcd1f0ad14cabbc9dca25fa0fc87c"
 
 # Increment this major API version when introducing breaking changes
-LIBAPI = 1
+LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 0
+LIBPATCH = 4
 
 PYDEPS = ["pydantic>=2"]
 

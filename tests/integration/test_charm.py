@@ -127,6 +127,21 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
                         record_data="42.42.44.44",
                     ),
                 ],
+            ),
+            ops.model.ActiveStatus,
+        ),
+        (
+            (
+                [
+                    tests.integration.helpers.DnsEntry(
+                        domain="dns.test",
+                        host_label="admin",
+                        ttl=600,
+                        record_class="IN",
+                        record_type="A",
+                        record_data="42.42.42.42",
+                    ),
+                ],
                 [
                     tests.integration.helpers.DnsEntry(
                         domain="dns-app-2.test",
@@ -137,6 +152,16 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
                         record_data="41.41.41.41",
                     ),
                 ],
+                [
+                    tests.integration.helpers.DnsEntry(
+                        domain="dns-app-3.test",
+                        host_label="somehost",
+                        ttl=600,
+                        record_class="IN",
+                        record_type="A",
+                        record_data="40.40.40.40",
+                    ),
+                ],
             ),
             ops.model.ActiveStatus,
         ),
@@ -144,7 +169,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
 )
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
-async def test_basic_relation(
+async def test_dns_record_relation(
     app: ops.model.Application,
     ops_test: OpsTest,
     model: Model,
@@ -156,13 +181,19 @@ async def test_basic_relation(
     act: integrate any-charm instances to the deployed app
     assert: bind-operator should have the correct status and respond to dig queries
     """
+    # Remove previously deployed instances of any-app
+    for any_app_number in range(10):
+        anyapp_name = f"anyapp-t{any_app_number}"
+        if anyapp_name in ops_test.model.applications:
+            await ops_test.model.remove_application(anyapp_name, block_until_done=True)
     # Start by deploying the any-app instances and integrate them with the bind charm
     any_app_number = 0
     for integration_data in integration_datasets:
+        anyapp_name = f"anyapp-t{any_app_number}"
         await tests.integration.helpers.generate_anycharm_relation(
             app,
             ops_test,
-            f"anyapp-t{any_app_number}",
+            anyapp_name,
             integration_data,
         )
         any_app_number += 1

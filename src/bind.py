@@ -139,17 +139,17 @@ class BindService:
             write_file.write(source)
             logger.info("Pushed file %s", path)
 
-    def _to_bind_zones(self, rrd: DNSRecordRequirerData) -> typing.Dict[str, str]:
+    def _to_bind_zones(self, record_requirer_data: DNSRecordRequirerData) -> typing.Dict[str, str]:
         """Convert DNSRecordRequirerData to zone files.
 
         Args:
-            rrd: The input DNSRecordRequirerData
+            record_requirer_data: The input DNSRecordRequirerData
 
         Returns:
             A dict of zones names as keys with the zones contents as values
         """
         zones_entries: typing.Dict[str, typing.List[RequirerEntry]] = {}
-        for entry in rrd.dns_entries:
+        for entry in record_requirer_data.dns_entries:
             if entry.domain not in zones_entries:
                 zones_entries[entry.domain] = []
             zones_entries[entry.domain].append(entry)
@@ -201,8 +201,8 @@ class BindService:
 
         # Write zone files
         zones = {}
-        for rrd, _ in relation_data:
-            zones.update(self._to_bind_zones(rrd))
+        for record_requirer_data, _ in relation_data:
+            zones.update(self._to_bind_zones(record_requirer_data))
         logger.debug("ZONES: %s", zones)
         for name, content in zones.items():
             self._write(pathlib.Path(tempdir, f"db.{name}"), content)
@@ -226,7 +226,7 @@ class BindService:
 
         # Create output statuses
         statuses = []
-        for rrd, _ in relation_data:
-            for entry in rrd.dns_entries:
+        for record_requirer_data, _ in relation_data:
+            for entry in record_requirer_data.dns_entries:
                 statuses.append(DNSProviderData(uuid=entry.uuid, status=Status.APPROVED))
         return DNSRecordProviderData(dns_entries=statuses)

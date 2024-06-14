@@ -624,13 +624,13 @@ class DNSRecordProvides(ops.Object):
 
     def get_remote_relation_data(
         self,
-    ) -> List[Optional[Tuple[DNSRecordRequirerData, DNSRecordProviderData]]]:
+    ) -> List[Tuple[DNSRecordRequirerData, DNSRecordProviderData]]:
         """Retrieve all the remote relations data.
 
         Returns:
             the relation data and the processed entries for it.
         """
-        relations_data: List[Optional[Tuple[DNSRecordRequirerData, DNSRecordProviderData]]] = []
+        relations_data: List[Tuple[DNSRecordRequirerData, DNSRecordProviderData]] = []
         for relation in self.model.relations[self.relation_name]:
             relations_data.append(self._get_remote_relation_data(self.model, relation))
         return relations_data

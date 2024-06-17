@@ -36,17 +36,22 @@ class BindCharm(ops.CharmBase):
             self.on.dns_record_relation_changed, self._on_dns_record_relation_changed
         )
 
-    def _on_dns_record_relation_changed(self, _: ops.HookEvent) -> None:
-        """Handle dns_record relation changed."""
-        if not (rrd := self.dns_record.get_remote_relation_data()):
-            logger.info(
-                "No relation data could be retrieved from %s", self.dns_record.relation_name
-            )
+    def _on_dns_record_relation_changed(self, event: ops.RelationChangedEvent) -> None:
+        """Handle dns_record relation changed.
+
+        Args:
+            event: Event triggering the relation changed handler.
+
+        """
+        try:
+            relation_requirer_data = self.dns_record.get_remote_relation_data()
+        except ValueError as err:
+            logger.info("Validation error of the relation data: %s", err)
             return
         self.unit.status = ops.MaintenanceStatus("Handling new relation requests")
-        rpd = self.bind.handle_new_relation_data(rrd[0])
-        relation = self.model.get_relation(self.dns_record.relation_name)
-        self.dns_record.update_relation_data(relation, rpd)
+        relation_provider_data = self.bind.handle_relation_data(relation_requirer_data)
+        relation = self.model.get_relation(self.dns_record.relation_name, event.relation.id)
+        self.dns_record.update_relation_data(relation, relation_provider_data)
         self.unit.status = ops.ActiveStatus()
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:

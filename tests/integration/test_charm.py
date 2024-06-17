@@ -10,7 +10,7 @@ import typing
 
 import ops
 import pytest
-from pytest_operator.plugin import OpsTest
+from pytest_operator.plugin import Model, OpsTest
 
 import constants
 import tests.integration.helpers
@@ -97,45 +97,124 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
 
 
 @pytest.mark.parametrize(
-    "any_charm_name, relation_data",
+    "integration_datasets, status",
     (
         (
-            "any-app",
-            [
-                tests.integration.helpers.DnsEntry(
-                    domain="dns.test",
-                    host_label="admin",
-                    ttl=600,
-                    record_class="IN",
-                    record_type="A",
-                    record_data="42.42.42.42",
-                )
-            ],
+            (
+                [
+                    tests.integration.helpers.DnsEntry(
+                        domain="dns.test",
+                        host_label="admin",
+                        ttl=600,
+                        record_class="IN",
+                        record_type="A",
+                        record_data="42.42.42.42",
+                    ),
+                    tests.integration.helpers.DnsEntry(
+                        domain="dns.test",
+                        host_label="admin2",
+                        ttl=600,
+                        record_class="IN",
+                        record_type="A",
+                        record_data="42.42.42.43",
+                    ),
+                    tests.integration.helpers.DnsEntry(
+                        domain="dns2.test",
+                        host_label="admin",
+                        ttl=600,
+                        record_class="IN",
+                        record_type="A",
+                        record_data="42.42.44.44",
+                    ),
+                ],
+            ),
+            ops.model.ActiveStatus,
+        ),
+        (
+            (
+                [
+                    tests.integration.helpers.DnsEntry(
+                        domain="dns.test",
+                        host_label="admin",
+                        ttl=600,
+                        record_class="IN",
+                        record_type="A",
+                        record_data="42.42.42.42",
+                    ),
+                ],
+                [
+                    tests.integration.helpers.DnsEntry(
+                        domain="dns-app-2.test",
+                        host_label="somehost",
+                        ttl=600,
+                        record_class="IN",
+                        record_type="A",
+                        record_data="41.41.41.41",
+                    ),
+                ],
+                [
+                    tests.integration.helpers.DnsEntry(
+                        domain="dns-app-3.test",
+                        host_label="somehost",
+                        ttl=600,
+                        record_class="IN",
+                        record_type="A",
+                        record_data="40.40.40.40",
+                    ),
+                ],
+            ),
+            ops.model.ActiveStatus,
         ),
     ),
 )
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
-async def test_basic_relation(
+async def test_dns_record_relation(
     app: ops.model.Application,
     ops_test: OpsTest,
-    any_charm_name: str,
-    relation_data: typing.List[tests.integration.helpers.DnsEntry],
+    model: Model,
+    status: ops.model.StatusBase,
+    integration_datasets: typing.Tuple[typing.List[tests.integration.helpers.DnsEntry]],
 ):
     """
-    arrange: given deployed app, deploy any-charm that can relate to it
-    act: relate any-charm to the deployed app
-    assert: after waiting a bit, we should be able to query bind for the test record
+    arrange: given deployed bind-operator
+    act: integrate any-charm instances to the deployed app
+    assert: bind-operator should have the correct status and respond to dig queries
     """
-    await tests.integration.helpers.generate_anycharm_relation(
-        app,
-        ops_test,
-        any_charm_name,
-        relation_data,
-    )
-
-    assert (
-        await tests.integration.helpers.run_on_unit(
-            ops_test, f"{app.name}/{0}", "dig @127.0.0.1 admin.dns.test A +short"
+    # Remove previously deployed instances of any-app
+    for any_app_number in range(10):
+        anyapp_name = f"anyapp-t{any_app_number}"
+        if anyapp_name in model.applications:
+            await model.remove_application(anyapp_name, block_until_done=True)
+    # Start by deploying the any-app instances and integrate them with the bind charm
+    any_app_number = 0
+    for integration_data in integration_datasets:
+        anyapp_name = f"anyapp-t{any_app_number}"
+        await tests.integration.helpers.generate_anycharm_relation(
+            app,
+            ops_test,
+            anyapp_name,
+            integration_data,
         )
-    ).strip() == "42.42.42.42"
+        any_app_number += 1
+
+    await model.wait_for_idle()
+
+    # Test the status of the bind-operator instance
+    # Application actually does have units
+    unit = app.units[0]  # type: ignore
+    assert unit.workload_status == status.name
+
+    # Test if the records give the correct results
+    # Do that only if we have an active status
+    if status == ops.model.ActiveStatus:
+        for integration_data in integration_datasets:
+            for entry in integration_data:
+
+                result = await tests.integration.helpers.dig_query(ops_test, app.name, entry)
+                await model.wait_for_idle()
+
+                assert result == entry["record_data"], (
+                    f"{entry['host_label']}.{entry['domain']}"
+                    f" {entry['record_type']} {entry['record_data']}"
+                )

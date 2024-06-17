@@ -67,7 +67,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 4
 
 PYDEPS = ["pydantic>=2"]
 
@@ -575,14 +575,15 @@ class DNSRecordRequires(ops.Object):
             )
 
     def update_relation_data(
-        self, relation: ops.Relation, dns_record_requirer_data: DNSRecordRequirerData
+        self,
+        relation: ops.Relation,
+        dns_record_requirer_data: DNSRecordRequirerData,
     ) -> None:
         """Update the relation data.
 
         Args:
             relation: the relation for which to update the data.
-            dns_record_requirer_data: a DNSRecordRequirerData instance wrapping the data to be
-                updated.
+            dns_record_requirer_data: DNSRecordRequirerData wrapping the data to be updated.
         """
         relation_data = dns_record_requirer_data.to_relation_data(self.model, relation)
         relation.data[self.charm.model.app].update(relation_data)
@@ -623,14 +624,16 @@ class DNSRecordProvides(ops.Object):
 
     def get_remote_relation_data(
         self,
-    ) -> Optional[Tuple[DNSRecordRequirerData, DNSRecordProviderData]]:
-        """Retrieve the remote relation data.
+    ) -> List[Tuple[DNSRecordRequirerData, DNSRecordProviderData]]:
+        """Retrieve all the remote relations data.
 
         Returns:
             the relation data and the processed entries for it.
         """
-        relation = self.model.get_relation(self.relation_name)
-        return self._get_remote_relation_data(self.model, relation) if relation else None
+        relations_data: List[Tuple[DNSRecordRequirerData, DNSRecordProviderData]] = []
+        for relation in self.model.relations[self.relation_name]:
+            relations_data.append(self._get_remote_relation_data(self.model, relation))
+        return relations_data
 
     def _get_remote_relation_data(
         self, model: ops.Model, relation: ops.Relation

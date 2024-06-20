@@ -22,6 +22,7 @@ from charms.operator_libs_linux.v2 import snap
 
 import constants
 import exceptions
+from data_structures import DnsEntry, Zone
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +140,9 @@ class BindService:
             write_file.write(source)
             logger.info("Pushed file %s", path)
 
-    def _to_bind_zones(self, record_requirer_data: DNSRecordRequirerData) -> typing.Dict[str, str]:
+    def _record_requirer_data_to_zones(
+        self, record_requirer_data: DNSRecordRequirerData
+    ) -> typing.List[Zone]:
         """Convert DNSRecordRequirerData to zone files.
 
         Args:
@@ -154,18 +157,82 @@ class BindService:
                 zones_entries[entry.domain] = []
             zones_entries[entry.domain].append(entry)
 
-        zones_content: typing.Dict[str, str] = {}
-        for zone, entries in zones_entries.items():
-            content = constants.ZONE_HEADER_TEMPLATE.format(zone=zone, serial=int(time.time()))
+        zones: typing.List[Zone] = []
+        for domain, entries in zones_entries.items():
+            zone = Zone(domain=domain, entries=[])
             for entry in entries:
+                zone.entries.append(
+                    DnsEntry(
+                        domain=entry.domain,
+                        host_label=entry.host_label,
+                        record_class=entry.record_class,
+                        record_type=entry.record_type,
+                        record_data=entry.record_data,
+                        ttl=entry.ttl,
+                    )
+                )
+            zones.append(zone)
+        return zones
+
+    def _get_conflicts(
+        self, zones: typing.List[Zone]
+    ) -> typing.Tuple[typing.Set[DnsEntry], typing.Set[DnsEntry]]:
+        """Return conflicting and non-conflicting entries.
+
+        Args:
+            zones: list of the zones to check
+
+        Returns:
+            A tuple containing the non-conflicting and conflicting entries
+        """
+        entries = [e for z in zones for e in z.entries]
+        nonconflicting_entries: typing.Set[DnsEntry] = set()
+        conflicting_entries: typing.Set[DnsEntry] = set()
+        while entries:
+            entry = entries.pop()
+            found_conflict = False
+            if entry in conflicting_entries:
+                continue
+            for e in entries:
+                if entry.conflicts(e):
+                    found_conflict = True
+                    print(f"conflict {entry}")
+                    print(f"conflict {e}")
+                    print("---")
+                    conflicting_entries.add(entry)
+                    conflicting_entries.add(e)
+
+            if not found_conflict:
+                print(f"nonconflict {entry}")
+                print("---")
+                nonconflicting_entries.add(entry)
+
+        return (nonconflicting_entries, conflicting_entries)
+
+    def _zones_to_files(self, zones: typing.List[Zone]) -> typing.Dict[str, str]:
+        """Return zone files and their content.
+
+        Args:
+            zones: list of the zones to transform to text
+
+        Returns:
+            A dict whose keys are the domain of each zone
+            and the values the content of the zone file
+        """
+        zone_files: typing.Dict[str, str] = {}
+        for zone in zones:
+            content = constants.ZONE_HEADER_TEMPLATE.format(
+                zone=zone.domain, serial=int(time.time())
+            )
+            for entry in zone.entries:
                 content += constants.ZONE_RECORD_TEMPLATE.format(
                     host_label=entry.host_label,
                     record_class=entry.record_class,
                     record_type=entry.record_type,
                     record_data=entry.record_data,
                 )
-            zones_content[zone] = content
-        return zones_content
+            zone_files[zone.domain] = content
+        return zone_files
 
     def _generate_named_conf_local(self, zones: typing.List[str]) -> str:
         """Generate the content of `named.conf.local`.
@@ -199,17 +266,20 @@ class BindService:
         # Create staging area
         tempdir = tempfile.mkdtemp()
 
-        # Write zone files
-        zones = {}
+        # Create zones list
+        zones: typing.List[Zone] = []
         for record_requirer_data, _ in relation_data:
-            zones.update(self._to_bind_zones(record_requirer_data))
-        logger.debug("ZONES: %s", zones)
-        for name, content in zones.items():
+            zones.extend(self._record_requirer_data_to_zones(record_requirer_data))
+
+        # Write zone files
+        zone_files: typing.Dict[str, str] = self._zones_to_files(zones)
+        for name, content in zone_files.items():
             self._write(pathlib.Path(tempdir, f"db.{name}"), content)
 
         # Write the named.conf file
         self._write(
-            pathlib.Path(tempdir, "named.conf.local"), self._generate_named_conf_local(list(zones))
+            pathlib.Path(tempdir, "named.conf.local"),
+            self._generate_named_conf_local([z.domain for z in zones]),
         )
 
         # Move the valid staging area files to the config dir

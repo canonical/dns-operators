@@ -12,6 +12,7 @@ import ops
 import pytest
 from pytest_operator.plugin import Model, OpsTest
 
+import bind
 import constants
 import tests.integration.helpers
 
@@ -102,7 +103,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
         (
             (
                 [
-                    tests.integration.helpers.DnsEntry(
+                    bind.DnsEntry(
                         domain="dns.test",
                         host_label="admin",
                         ttl=600,
@@ -110,7 +111,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
                         record_type="A",
                         record_data="42.42.42.42",
                     ),
-                    tests.integration.helpers.DnsEntry(
+                    bind.DnsEntry(
                         domain="dns.test",
                         host_label="admin2",
                         ttl=600,
@@ -118,7 +119,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
                         record_type="A",
                         record_data="42.42.42.43",
                     ),
-                    tests.integration.helpers.DnsEntry(
+                    bind.DnsEntry(
                         domain="dns2.test",
                         host_label="admin",
                         ttl=600,
@@ -133,7 +134,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
         (
             (
                 [
-                    tests.integration.helpers.DnsEntry(
+                    bind.DnsEntry(
                         domain="dns.test",
                         host_label="admin",
                         ttl=600,
@@ -143,7 +144,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
                     ),
                 ],
                 [
-                    tests.integration.helpers.DnsEntry(
+                    bind.DnsEntry(
                         domain="dns-app-2.test",
                         host_label="somehost",
                         ttl=600,
@@ -153,7 +154,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
                     ),
                 ],
                 [
-                    tests.integration.helpers.DnsEntry(
+                    bind.DnsEntry(
                         domain="dns-app-3.test",
                         host_label="somehost",
                         ttl=600,
@@ -165,6 +166,31 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
             ),
             ops.model.ActiveStatus,
         ),
+        (
+            (
+                [
+                    bind.DnsEntry(
+                        domain="dns.test",
+                        host_label="admin",
+                        ttl=600,
+                        record_class="IN",
+                        record_type="A",
+                        record_data="42.42.42.42",
+                    ),
+                ],
+                [
+                    bind.DnsEntry(
+                        domain="dns.test",
+                        host_label="admin",
+                        ttl=600,
+                        record_class="IN",
+                        record_type="A",
+                        record_data="41.41.41.41",
+                    ),
+                ],
+            ),
+            ops.model.BlockedStatus,
+        ),
     ),
 )
 @pytest.mark.asyncio
@@ -174,7 +200,7 @@ async def test_dns_record_relation(
     ops_test: OpsTest,
     model: Model,
     status: ops.model.StatusBase,
-    integration_datasets: typing.Tuple[typing.List[tests.integration.helpers.DnsEntry]],
+    integration_datasets: typing.Tuple[typing.List[bind.DnsEntry]],
 ):
     """
     arrange: given deployed bind-operator

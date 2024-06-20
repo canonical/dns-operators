@@ -14,25 +14,7 @@ import typing
 import ops
 from pytest_operator.plugin import OpsTest
 
-
-class DnsEntry(typing.TypedDict):
-    """Class used to pass DNS entries around in tests.
-
-    Attributes:
-        domain: example: "dns.test"
-        host_label: example: "admin"
-        ttl: example: 600
-        record_class: example: "IN"
-        record_type: example: "A"
-        record_data: example: "42.42.42.42"
-    """
-
-    domain: str
-    host_label: str
-    ttl: int
-    record_class: str
-    record_type: str
-    record_data: str
+import bind
 
 
 class ExecutionError(Exception):
@@ -156,7 +138,7 @@ async def generate_anycharm_relation(
     app: ops.model.Application,
     ops_test: OpsTest,
     any_charm_name: str,
-    dns_entries: typing.List[DnsEntry],
+    dns_entries: typing.List[bind.DnsEntry],
 ):
     """Deploy any-charm with a wanted DNS entries config and integrate it to the bind app.
 
@@ -194,7 +176,7 @@ async def generate_anycharm_relation(
     await ops_test.model.add_relation(f"{any_charm.name}", f"{app.name}")
 
 
-async def dig_query(ops_test: OpsTest, app_name: str, entry: DnsEntry) -> str:
+async def dig_query(ops_test: OpsTest, app_name: str, entry: bind.DnsEntry) -> str:
     """Query a DnsEntry with dig.
 
     Args:

@@ -11,6 +11,7 @@ import tempfile
 import time
 import typing
 
+import ops
 from charms.bind.v0.dns_record import (
     DNSProviderData,
     DNSRecordProviderData,
@@ -22,7 +23,7 @@ from charms.operator_libs_linux.v2 import snap
 
 import constants
 import exceptions
-from data_structures import DnsEntry, Zone
+from data_structures import DnsEntry, Zone, create_dns_entry_from_requirer_entry
 
 logger = logging.getLogger(__name__)
 
@@ -161,16 +162,7 @@ class BindService:
         for domain, entries in zones_entries.items():
             zone = Zone(domain=domain, entries=[])
             for entry in entries:
-                zone.entries.append(
-                    DnsEntry(
-                        domain=entry.domain,
-                        host_label=entry.host_label,
-                        record_class=entry.record_class,
-                        record_type=entry.record_type,
-                        record_data=entry.record_data,
-                        ttl=entry.ttl,
-                    )
-                )
+                zone.entries.append(create_dns_entry_from_requirer_entry(entry))
             zones.append(zone)
         return zones
 
@@ -194,17 +186,12 @@ class BindService:
             if entry in conflicting_entries:
                 continue
             for e in entries:
-                if entry.conflicts(e):
+                if entry.conflicts(e) and entry != e:
                     found_conflict = True
-                    print(f"conflict {entry}")
-                    print(f"conflict {e}")
-                    print("---")
                     conflicting_entries.add(entry)
                     conflicting_entries.add(e)
 
             if not found_conflict:
-                print(f"nonconflict {entry}")
-                print("---")
                 nonconflicting_entries.add(entry)
 
         return (nonconflicting_entries, conflicting_entries)
@@ -294,9 +281,57 @@ class BindService:
         # Remove staging area
         shutil.rmtree(tempdir)
 
-        # Create output statuses
+        # Return the provider data with the entries' status
+        return self._create_dns_record_provider_data(relation_data)
+
+    def _create_dns_record_provider_data(
+        self,
+        relation_data: typing.List[typing.Tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+    ) -> DNSRecordProviderData:
+        """Create dns record provider data from relation data.
+
+        Args:
+            relation_data: input relation data
+
+        Returns:
+            A DNSRecordProviderData object with requests' status
+        """
+        zones: typing.List[Zone] = []
+        for record_requirer_data, _ in relation_data:
+            zones.extend(self._record_requirer_data_to_zones(record_requirer_data))
+        nonconflicting, conflicting = self._get_conflicts(zones)
         statuses = []
         for record_requirer_data, _ in relation_data:
-            for entry in record_requirer_data.dns_entries:
-                statuses.append(DNSProviderData(uuid=entry.uuid, status=Status.APPROVED))
+            for requirer_entry in record_requirer_data.dns_entries:
+                dns_entry = create_dns_entry_from_requirer_entry(requirer_entry)
+                if dns_entry in nonconflicting:
+                    statuses.append(
+                        DNSProviderData(uuid=requirer_entry.uuid, status=Status.APPROVED)
+                    )
+                    continue
+                if dns_entry in conflicting:
+                    statuses.append(
+                        DNSProviderData(uuid=requirer_entry.uuid, status=Status.CONFLICT)
+                    )
+                    continue
+                statuses.append(DNSProviderData(uuid=requirer_entry.uuid, status=Status.UNKNOWN))
         return DNSRecordProviderData(dns_entries=statuses)
+
+    def collect_status(
+        self,
+        event: ops.CollectStatusEvent,
+        relation_data: typing.List[typing.Tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+    ) -> None:
+        """Add status for the charm based on the status of the dns record requests.
+
+        Args:
+            event: Event triggering the collect-status hook
+            relation_data: data coming from the relation databag
+        """
+        zones: typing.List[Zone] = []
+        for record_requirer_data, _ in relation_data:
+            zones.extend(self._record_requirer_data_to_zones(record_requirer_data))
+        nonconflicting, conflicting = self._get_conflicts(zones)
+        if len(conflicting) > 0:
+            event.add_status(ops.BlockedStatus("Conflicting requests"))
+        event.add_status(ops.ActiveStatus())

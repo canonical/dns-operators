@@ -14,7 +14,7 @@ import typing
 import ops
 from pytest_operator.plugin import OpsTest
 
-import bind
+import data_structures
 
 
 class ExecutionError(Exception):
@@ -138,7 +138,7 @@ async def generate_anycharm_relation(
     app: ops.model.Application,
     ops_test: OpsTest,
     any_charm_name: str,
-    dns_entries: typing.List[bind.DnsEntry],
+    dns_entries: typing.List[data_structures.DnsEntry],
 ):
     """Deploy any-charm with a wanted DNS entries config and integrate it to the bind app.
 
@@ -176,7 +176,7 @@ async def generate_anycharm_relation(
     await ops_test.model.add_relation(f"{any_charm.name}", f"{app.name}")
 
 
-async def dig_query(ops_test: OpsTest, app_name: str, entry: bind.DnsEntry) -> str:
+async def dig_query(ops_test: OpsTest, app_name: str, entry: data_structures.DnsEntry) -> str:
     """Query a DnsEntry with dig.
 
     Args:

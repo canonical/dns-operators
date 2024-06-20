@@ -27,23 +27,15 @@ import data_structures
                 ),
                 data_structures.DnsEntry(
                     domain="dns.test",
-                    host_label="admin2",
-                    ttl=600,
-                    record_class="IN",
-                    record_type="A",
-                    record_data="42.42.42.43",
-                ),
-                data_structures.DnsEntry(
-                    domain="dns2.test",
                     host_label="admin",
                     ttl=600,
                     record_class="IN",
                     record_type="A",
-                    record_data="42.42.44.44",
+                    record_data="42.42.42.42",
                 ),
             ],
-            {1},
-            {1, 3},
+            {0},
+            set(),
         ),
         (
             [
@@ -56,16 +48,16 @@ import data_structures
                     record_data="42.42.42.42",
                 ),
                 data_structures.DnsEntry(
-                    domain="dns-app-2.test",
-                    host_label="somehost",
+                    domain="dns2.test",
+                    host_label="admin",
                     ttl=600,
                     record_class="IN",
                     record_type="A",
                     record_data="41.41.41.41",
                 ),
                 data_structures.DnsEntry(
-                    domain="dns-app-3.test",
-                    host_label="somehost",
+                    domain="dns.test",
+                    host_label="admin2",
                     ttl=600,
                     record_class="IN",
                     record_type="A",
@@ -98,6 +90,11 @@ import data_structures
             {0, 1},
         ),
     ),
+    ids=(
+        "Duplicate entry",
+        "No conflicts",
+        "Basic conflict",
+    ),
 )
 def test_get_conflicts(integration_datasets, nonconflicting, conflicting):
     """
@@ -127,10 +124,10 @@ def test_get_conflicts(integration_datasets, nonconflicting, conflicting):
     zones = bind_service._record_requirer_data_to_zones(  # pylint: disable=protected-access
         record_requirer_data
     )
-    valid, conflicts = bind_service._get_conflicts(zones)  # pylint: disable=protected-access
+    output = bind_service._get_conflicts(zones)  # pylint: disable=protected-access
 
     nonconflicting = {e for i, e in enumerate(integration_datasets) if i in nonconflicting}
     conflicting = {e for i, e in enumerate(integration_datasets) if i in conflicting}
 
-    assert nonconflicting == valid
-    assert conflicting == conflicts
+    assert nonconflicting == output[0]
+    assert conflicting == output[1]

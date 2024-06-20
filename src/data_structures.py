@@ -4,9 +4,10 @@
 """Common data structures used in this charm."""
 
 import typing
+import json
 
 import pydantic
-from charms.bind.v0.dns_record import RecordClass, RecordType
+from charms.bind.v0.dns_record import RecordClass, RecordType, RequirerEntry
 
 
 class DnsEntry(pydantic.BaseModel):
@@ -28,9 +29,6 @@ class DnsEntry(pydantic.BaseModel):
     record_type: RecordType
     record_data: pydantic.IPvAnyAddress
 
-    # This works as a primary key in a database
-    # Two DnsEntry with the same key will conflict
-
     def conflicts(self, other: "DnsEntry") -> bool:
         """Check if it conflicts with another DnsEntry.
 
@@ -40,7 +38,7 @@ class DnsEntry(pydantic.BaseModel):
         Returns:
             True if they conflict, False otherwise.
         """
-        key_attributes: typing.Set[str] = {"host_label", "record_class", "record_type"}
+        key_attributes: typing.Set[str] = {"domain", "host_label", "record_class", "record_type"}
         return hash(tuple(getattr(self, k) for k in key_attributes)) == hash(
             tuple(getattr(other, k) for k in key_attributes)
         )
@@ -64,3 +62,22 @@ class Zone(pydantic.BaseModel):
 
     domain: str
     entries: typing.List[DnsEntry]
+
+
+def create_dns_entry_from_requirer_entry(requirer_entry: RequirerEntry) -> DnsEntry:
+    """Create a DnsEntry from a RequirerEntry.
+
+    Args:
+        requirer_entry: input RequirerEntry
+
+    Returns:
+        A DnsEntry
+    """
+    return DnsEntry(
+        domain=requirer_entry.domain,
+        host_label=requirer_entry.host_label,
+        record_class=requirer_entry.record_class,
+        record_type=requirer_entry.record_type,
+        record_data=requirer_entry.record_data,
+        ttl=requirer_entry.ttl,
+    )

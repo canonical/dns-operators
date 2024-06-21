@@ -258,6 +258,11 @@ class BindService:
         for record_requirer_data, _ in relation_data:
             zones.extend(self._record_requirer_data_to_zones(record_requirer_data))
 
+        # Check for conflicts
+        nonconflicting, conflicting = self._get_conflicts(zones)
+        if len(conflicting) > 0:
+            return self._create_dns_record_provider_data(relation_data)
+
         # Write zone files
         zone_files: typing.Dict[str, str] = self._zones_to_files(zones)
         for name, content in zone_files.items():

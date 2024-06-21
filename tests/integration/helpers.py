@@ -158,7 +158,9 @@ async def generate_anycharm_relation(
         "any_charm.py": any_charm_content,
         "dns_record.py": dns_record_content,
         # It's okay to write to /tmp for these tests, so # nosec is used
-        "/tmp/dns_entries.json": json.dumps(dns_entries),  # nosec
+        "/tmp/dns_entries.json": json.dumps(
+            [e.model_dump(mode="json") for e in dns_entries]
+        ),  # nosec
     }
 
     # We deploy https://charmhub.io/any-charm and inject the any_charm.py behavior
@@ -190,6 +192,6 @@ async def dig_query(ops_test: OpsTest, app_name: str, entry: data_structures.Dns
         await run_on_unit(
             ops_test,
             f"{app_name}/0",
-            f"dig @127.0.0.1 {entry['host_label']}.{entry['domain']} {entry['record_type']} +short",
+            f"dig @127.0.0.1 {entry.host_label}.{entry.domain} {entry.record_type} +short",
         )
     ).strip()

@@ -331,7 +331,7 @@ class BindService:
         zones: typing.List[Zone] = []
         for record_requirer_data, _ in relation_data:
             zones.extend(self._record_requirer_data_to_zones(record_requirer_data))
-        nonconflicting, conflicting = self._get_conflicts(zones)
+        _, conflicting = self._get_conflicts(zones)
         if len(conflicting) > 0:
             event.add_status(ops.BlockedStatus("Conflicting requests"))
         event.add_status(ops.ActiveStatus())

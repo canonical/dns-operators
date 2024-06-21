@@ -240,7 +240,7 @@ async def test_dns_record_relation(
                 result = await tests.integration.helpers.dig_query(ops_test, app.name, entry)
                 await model.wait_for_idle()
 
-                assert result == entry["record_data"], (
-                    f"{entry['host_label']}.{entry['domain']}"
-                    f" {entry['record_type']} {entry['record_data']}"
+                assert result == str(entry.record_data), (
+                    f"{entry.host_label}.{entry.domain}"
+                    f" {entry.record_type} {entry.record_data}"
                 )

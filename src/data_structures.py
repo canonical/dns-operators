@@ -4,7 +4,6 @@
 """Common data structures used in this charm."""
 
 import typing
-import json
 
 import pydantic
 from charms.bind.v0.dns_record import RecordClass, RecordType, RequirerEntry

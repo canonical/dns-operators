@@ -259,7 +259,7 @@ class BindService:
             zones.extend(self._record_requirer_data_to_zones(record_requirer_data))
 
         # Check for conflicts
-        nonconflicting, conflicting = self._get_conflicts(zones)
+        _, conflicting = self._get_conflicts(zones)
         if len(conflicting) > 0:
             return self._create_dns_record_provider_data(relation_data)
 

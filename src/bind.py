@@ -130,17 +130,6 @@ class BindService:
             logger.error(error_msg)
             raise InstallError(error_msg) from e
 
-    def _write(self, path: pathlib.Path, source: str) -> None:
-        """Pushes a file to the unit.
-
-        Args:
-            path: The path of the file
-            source: The contents of the file to be pushed
-        """
-        with open(path, "w", encoding="utf-8") as write_file:
-            write_file.write(source)
-            logger.info("Pushed file %s", path)
-
     def _record_requirer_data_to_zones(
         self, record_requirer_data: DNSRecordRequirerData
     ) -> typing.List[Zone]:
@@ -196,7 +185,7 @@ class BindService:
 
         return (nonconflicting_entries, conflicting_entries)
 
-    def _zones_to_files(self, zones: typing.List[Zone]) -> typing.Dict[str, str]:
+    def _zones_to_files_content(self, zones: typing.List[Zone]) -> typing.Dict[str, str]:
         """Return zone files and their content.
 
         Args:
@@ -250,9 +239,6 @@ class BindService:
         Returns:
             A resulting DNSRecordProviderData to put in the relation databag
         """
-        # Create staging area
-        tempdir = tempfile.mkdtemp()
-
         # Create zones list
         zones: typing.List[Zone] = []
         for record_requirer_data, _ in relation_data:
@@ -263,28 +249,27 @@ class BindService:
         if len(conflicting) > 0:
             return self._create_dns_record_provider_data(relation_data)
 
-        # Write zone files
-        zone_files: typing.Dict[str, str] = self._zones_to_files(zones)
-        for name, content in zone_files.items():
-            self._write(pathlib.Path(tempdir, f"db.{name}"), content)
+        # Create staging area
+        with tempfile.TemporaryDirectory() as tempdir:
+            # Write zone files
+            zone_files: typing.Dict[str, str] = self._zones_to_files_content(zones)
+            for name, content in zone_files.items():
+                pathlib.Path(tempdir, f"db.{name}").write_text(content, encoding="utf-8")
 
-        # Write the named.conf file
-        self._write(
-            pathlib.Path(tempdir, "named.conf.local"),
-            self._generate_named_conf_local([z.domain for z in zones]),
-        )
-
-        # Move the valid staging area files to the config dir
-        for file_name in os.listdir(tempdir):
-            shutil.move(
-                pathlib.Path(tempdir, file_name), pathlib.Path(constants.DNS_CONFIG_DIR, file_name)
+            # Write the named.conf file
+            pathlib.Path(tempdir, "named.conf.local").write_text(
+                self._generate_named_conf_local([z.domain for z in zones]), encoding="utf-8"
             )
+
+            # Move the valid staging area files to the config dir
+            for file_name in os.listdir(tempdir):
+                shutil.move(
+                    pathlib.Path(tempdir, file_name),
+                    pathlib.Path(constants.DNS_CONFIG_DIR, file_name),
+                )
 
         # Reload charmed-bind config
         self.reload()
-
-        # Remove staging area
-        shutil.rmtree(tempdir)
 
         # Return the provider data with the entries' status
         return self._create_dns_record_provider_data(relation_data)

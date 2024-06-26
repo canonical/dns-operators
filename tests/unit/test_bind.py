@@ -17,7 +17,7 @@ import models
     (
         (
             [
-                data_structures.DnsEntry(
+                models.DnsEntry(
                     domain="dns.test",
                     host_label="admin",
                     ttl=600,
@@ -25,7 +25,7 @@ import models
                     record_type="A",
                     record_data="42.42.42.42",
                 ),
-                data_structures.DnsEntry(
+                models.DnsEntry(
                     domain="dns.test",
                     host_label="admin",
                     ttl=600,
@@ -39,7 +39,7 @@ import models
         ),
         (
             [
-                data_structures.DnsEntry(
+                models.DnsEntry(
                     domain="dns.test",
                     host_label="admin",
                     ttl=600,
@@ -47,7 +47,7 @@ import models
                     record_type="A",
                     record_data="42.42.42.42",
                 ),
-                data_structures.DnsEntry(
+                models.DnsEntry(
                     domain="dns2.test",
                     host_label="admin",
                     ttl=600,
@@ -55,7 +55,7 @@ import models
                     record_type="A",
                     record_data="41.41.41.41",
                 ),
-                data_structures.DnsEntry(
+                models.DnsEntry(
                     domain="dns.test",
                     host_label="admin2",
                     ttl=600,
@@ -69,7 +69,7 @@ import models
         ),
         (
             [
-                data_structures.DnsEntry(
+                models.DnsEntry(
                     domain="dns.test",
                     host_label="admin",
                     ttl=600,
@@ -77,7 +77,7 @@ import models
                     record_type="A",
                     record_data="42.42.42.42",
                 ),
-                data_structures.DnsEntry(
+                models.DnsEntry(
                     domain="dns.test",
                     host_label="admin",
                     ttl=600,

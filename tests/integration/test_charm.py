@@ -103,7 +103,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
         (
             (
                 [
-                    data_structures.DnsEntry(
+                    models.DnsEntry(
                         domain="dns.test",
                         host_label="admin",
                         ttl=600,
@@ -111,7 +111,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
                         record_type="A",
                         record_data="42.42.42.42",
                     ),
-                    data_structures.DnsEntry(
+                    models.DnsEntry(
                         domain="dns.test",
                         host_label="admin2",
                         ttl=600,
@@ -119,7 +119,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
                         record_type="A",
                         record_data="42.42.42.43",
                     ),
-                    data_structures.DnsEntry(
+                    models.DnsEntry(
                         domain="dns2.test",
                         host_label="admin",
                         ttl=600,
@@ -134,7 +134,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
         (
             (
                 [
-                    data_structures.DnsEntry(
+                    models.DnsEntry(
                         domain="dns.test",
                         host_label="admin",
                         ttl=600,
@@ -144,7 +144,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
                     ),
                 ],
                 [
-                    data_structures.DnsEntry(
+                    models.DnsEntry(
                         domain="dns-app-2.test",
                         host_label="somehost",
                         ttl=600,
@@ -154,7 +154,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
                     ),
                 ],
                 [
-                    data_structures.DnsEntry(
+                    models.DnsEntry(
                         domain="dns-app-3.test",
                         host_label="somehost",
                         ttl=600,
@@ -169,7 +169,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
         (
             (
                 [
-                    data_structures.DnsEntry(
+                    models.DnsEntry(
                         domain="dns.test",
                         host_label="admin",
                         ttl=600,
@@ -179,7 +179,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
                     ),
                 ],
                 [
-                    data_structures.DnsEntry(
+                    models.DnsEntry(
                         domain="dns.test",
                         host_label="admin",
                         ttl=600,
@@ -200,7 +200,7 @@ async def test_dns_record_relation(
     ops_test: OpsTest,
     model: Model,
     status: ops.model.StatusBase,
-    integration_datasets: typing.Tuple[typing.List[data_structures.DnsEntry]],
+    integration_datasets: typing.Tuple[typing.List[models.DnsEntry]],
 ):
     """
     arrange: given deployed bind-operator

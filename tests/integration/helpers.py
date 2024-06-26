@@ -138,7 +138,7 @@ async def generate_anycharm_relation(
     app: ops.model.Application,
     ops_test: OpsTest,
     any_charm_name: str,
-    dns_entries: typing.List[data_structures.DnsEntry],
+    dns_entries: typing.List[models.DnsEntry],
 ):
     """Deploy any-charm with a wanted DNS entries config and integrate it to the bind app.
 
@@ -178,7 +178,7 @@ async def generate_anycharm_relation(
     await ops_test.model.add_relation(f"{any_charm.name}", f"{app.name}")
 
 
-async def dig_query(ops_test: OpsTest, app_name: str, entry: data_structures.DnsEntry) -> str:
+async def dig_query(ops_test: OpsTest, app_name: str, entry: models.DnsEntry) -> str:
     """Query a DnsEntry with dig.
 
     Args:

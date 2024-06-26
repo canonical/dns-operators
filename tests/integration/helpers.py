@@ -14,7 +14,7 @@ import typing
 import ops
 from pytest_operator.plugin import OpsTest
 
-import data_structures
+import models
 
 
 class ExecutionError(Exception):

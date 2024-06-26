@@ -9,7 +9,7 @@ import pytest
 from charms.bind.v0 import dns_record
 
 import bind
-import data_structures
+import models
 
 
 @pytest.mark.parametrize(

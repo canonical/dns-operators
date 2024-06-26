@@ -13,7 +13,7 @@ import pytest
 from pytest_operator.plugin import Model, OpsTest
 
 import constants
-import data_structures
+import models
 import tests.integration.helpers
 
 logger = logging.getLogger(__name__)

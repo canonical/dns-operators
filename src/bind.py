@@ -23,7 +23,7 @@ from charms.operator_libs_linux.v2 import snap
 
 import constants
 import exceptions
-from data_structures import DnsEntry, Zone, create_dns_entry_from_requirer_entry
+from models import DnsEntry, Zone, create_dns_entry_from_requirer_entry
 
 logger = logging.getLogger(__name__)
 

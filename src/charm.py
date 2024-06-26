@@ -53,7 +53,6 @@ class BindCharm(ops.CharmBase):
         relation_provider_data = self.bind.handle_relation_data(relation_requirer_data)
         relation = self.model.get_relation(self.dns_record.relation_name, event.relation.id)
         self.dns_record.update_relation_data(relation, relation_provider_data)
-        self.unit.status = ops.ActiveStatus()
 
     def _on_collect_status(self, event: ops.CollectStatusEvent) -> None:
         """Handle collect status event.
@@ -71,18 +70,15 @@ class BindCharm(ops.CharmBase):
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle changed configuration event."""
-        self.unit.status = ops.ActiveStatus()
 
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install."""
         self.unit.status = ops.MaintenanceStatus("Preparing bind")
         self.bind.prepare()
-        self.unit.status = ops.ActiveStatus()
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start."""
         self.bind.start()
-        self.unit.status = ops.ActiveStatus()
 
     def _on_stop(self, _: ops.StopEvent) -> None:
         """Handle stop."""
@@ -92,7 +88,6 @@ class BindCharm(ops.CharmBase):
         """Handle upgrade-charm."""
         self.unit.status = ops.MaintenanceStatus("Upgrading dependencies")
         self.bind.prepare()
-        self.unit.status = ops.ActiveStatus()
 
 
 if __name__ == "__main__":  # pragma: nocover

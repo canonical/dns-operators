@@ -5,7 +5,6 @@
 import json
 import secrets
 import uuid
-from typing import Dict, List
 
 import ops
 from charms.bind.v0 import dns_record
@@ -33,7 +32,7 @@ UUID3 = uuid.uuid4()
 UUID4 = uuid.uuid4()
 
 
-def get_requirer_relation_data(secret_id_password_user: str) -> Dict[str, str]:
+def get_requirer_relation_data(secret_id_password_user: str) -> dict[str, str]:
     """Retrieve the requirer relation data.
 
     Args:
@@ -66,7 +65,7 @@ def get_requirer_relation_data(secret_id_password_user: str) -> Dict[str, str]:
     }
 
 
-def get_requirer_relation_data_partially_invalid(secret_id_password_user: str) -> Dict[str, str]:
+def get_requirer_relation_data_partially_invalid(secret_id_password_user: str) -> dict[str, str]:
     """Retrieve the requirer relation data.
 
     Args:
@@ -98,7 +97,7 @@ def get_requirer_relation_data_partially_invalid(secret_id_password_user: str) -
     }
 
 
-def get_requirer_relation_data_without_uuid(secret_id_password_user: str) -> Dict[str, str]:
+def get_requirer_relation_data_without_uuid(secret_id_password_user: str) -> dict[str, str]:
     """Retrieve the requirer relation data.
 
     Args:
@@ -219,7 +218,7 @@ class DNSRecordRequirerCharm(ops.CharmBase):
         """
         super().__init__(*args)
         self.dns_record = dns_record.DNSRecordRequires(self)
-        self.events: List[dns_record.DNSRecordRequestProcessed] = []
+        self.events: list[dns_record.DNSRecordRequestProcessed] = []
         self.framework.observe(self.dns_record.on.dns_record_request_processed, self._record_event)
 
     def _record_event(self, event: ops.EventBase) -> None:
@@ -242,7 +241,7 @@ class DNSRecordProviderCharm(ops.CharmBase):
         """
         super().__init__(*args)
         self.dns_record = dns_record.DNSRecordProvides(self)
-        self.events: List[dns_record.DNSRecordRequestReceived] = []
+        self.events: list[dns_record.DNSRecordRequestReceived] = []
         self.framework.observe(self.dns_record.on.dns_record_request_received, self._record_event)
 
     def _record_event(self, event: ops.EventBase) -> None:

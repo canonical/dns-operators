@@ -9,7 +9,6 @@ import pathlib
 import random
 import string
 import tempfile
-import typing
 
 import ops
 from pytest_operator.plugin import OpsTest
@@ -138,7 +137,7 @@ async def generate_anycharm_relation(
     app: ops.model.Application,
     ops_test: OpsTest,
     any_charm_name: str,
-    dns_entries: typing.List[models.DnsEntry],
+    dns_entries: list[models.DnsEntry],
 ):
     """Deploy any-charm with a wanted DNS entries config and integrate it to the bind app.
 

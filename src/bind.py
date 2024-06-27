@@ -9,7 +9,6 @@ import pathlib
 import shutil
 import tempfile
 import time
-import typing
 
 import ops
 from charms.bind.v0.dns_record import (
@@ -132,7 +131,7 @@ class BindService:
 
     def _record_requirer_data_to_zones(
         self, record_requirer_data: DNSRecordRequirerData
-    ) -> typing.List[Zone]:
+    ) -> list[Zone]:
         """Convert DNSRecordRequirerData to zone files.
 
         Args:
@@ -141,13 +140,13 @@ class BindService:
         Returns:
             A dict of zones names as keys with the zones contents as values
         """
-        zones_entries: typing.Dict[str, typing.List[RequirerEntry]] = {}
+        zones_entries: dict[str, list[RequirerEntry]] = {}
         for entry in record_requirer_data.dns_entries:
             if entry.domain not in zones_entries:
                 zones_entries[entry.domain] = []
             zones_entries[entry.domain].append(entry)
 
-        zones: typing.List[Zone] = []
+        zones: list[Zone] = []
         for domain, entries in zones_entries.items():
             zone = Zone(domain=domain, entries=[])
             for entry in entries:
@@ -155,9 +154,7 @@ class BindService:
             zones.append(zone)
         return zones
 
-    def _get_conflicts(
-        self, zones: typing.List[Zone]
-    ) -> typing.Tuple[typing.Set[DnsEntry], typing.Set[DnsEntry]]:
+    def _get_conflicts(self, zones: list[Zone]) -> tuple[set[DnsEntry], set[DnsEntry]]:
         """Return conflicting and non-conflicting entries.
 
         Args:
@@ -167,8 +164,8 @@ class BindService:
             A tuple containing the non-conflicting and conflicting entries
         """
         entries = [e for z in zones for e in z.entries]
-        nonconflicting_entries: typing.Set[DnsEntry] = set()
-        conflicting_entries: typing.Set[DnsEntry] = set()
+        nonconflicting_entries: set[DnsEntry] = set()
+        conflicting_entries: set[DnsEntry] = set()
         while entries:
             entry = entries.pop()
             found_conflict = False
@@ -185,7 +182,7 @@ class BindService:
 
         return (nonconflicting_entries, conflicting_entries)
 
-    def _zones_to_files_content(self, zones: typing.List[Zone]) -> typing.Dict[str, str]:
+    def _zones_to_files_content(self, zones: list[Zone]) -> dict[str, str]:
         """Return zone files and their content.
 
         Args:
@@ -195,7 +192,7 @@ class BindService:
             A dict whose keys are the domain of each zone
             and the values the content of the zone file
         """
-        zone_files: typing.Dict[str, str] = {}
+        zone_files: dict[str, str] = {}
         for zone in zones:
             content = constants.ZONE_HEADER_TEMPLATE.format(
                 zone=zone.domain, serial=int(time.time())
@@ -210,7 +207,7 @@ class BindService:
             zone_files[zone.domain] = content
         return zone_files
 
-    def _generate_named_conf_local(self, zones: typing.List[str]) -> str:
+    def _generate_named_conf_local(self, zones: list[str]) -> str:
         """Generate the content of `named.conf.local`.
 
         Args:
@@ -229,7 +226,7 @@ class BindService:
 
     def handle_relation_data(
         self,
-        relation_data: typing.List[typing.Tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
     ) -> DNSRecordProviderData:
         """Handle new relation data.
 
@@ -240,7 +237,7 @@ class BindService:
             A resulting DNSRecordProviderData to put in the relation databag
         """
         # Create zones list
-        zones: typing.List[Zone] = []
+        zones: list[Zone] = []
         for record_requirer_data, _ in relation_data:
             zones.extend(self._record_requirer_data_to_zones(record_requirer_data))
 
@@ -252,7 +249,7 @@ class BindService:
         # Create staging area
         with tempfile.TemporaryDirectory() as tempdir:
             # Write zone files
-            zone_files: typing.Dict[str, str] = self._zones_to_files_content(zones)
+            zone_files: dict[str, str] = self._zones_to_files_content(zones)
             for name, content in zone_files.items():
                 pathlib.Path(tempdir, f"db.{name}").write_text(content, encoding="utf-8")
 
@@ -276,7 +273,7 @@ class BindService:
 
     def _create_dns_record_provider_data(
         self,
-        relation_data: typing.List[typing.Tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
     ) -> DNSRecordProviderData:
         """Create dns record provider data from relation data.
 
@@ -286,7 +283,7 @@ class BindService:
         Returns:
             A DNSRecordProviderData object with requests' status
         """
-        zones: typing.List[Zone] = []
+        zones: list[Zone] = []
         for record_requirer_data, _ in relation_data:
             zones.extend(self._record_requirer_data_to_zones(record_requirer_data))
         nonconflicting, conflicting = self._get_conflicts(zones)
@@ -310,7 +307,7 @@ class BindService:
     def collect_status(
         self,
         event: ops.CollectStatusEvent,
-        relation_data: typing.List[typing.Tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
     ) -> None:
         """Add status for the charm based on the status of the dns record requests.
 
@@ -318,7 +315,7 @@ class BindService:
             event: Event triggering the collect-status hook
             relation_data: data coming from the relation databag
         """
-        zones: typing.List[Zone] = []
+        zones: list[Zone] = []
         for record_requirer_data, _ in relation_data:
             zones.extend(self._record_requirer_data_to_zones(record_requirer_data))
         _, conflicting = self._get_conflicts(zones)

@@ -3,7 +3,6 @@
 
 """Common data structures used in this charm."""
 
-import typing
 
 import pydantic
 from charms.bind.v0.dns_record import RecordClass, RecordType, RequirerEntry
@@ -37,7 +36,7 @@ class DnsEntry(pydantic.BaseModel):
         Returns:
             True if they conflict, False otherwise.
         """
-        key_attributes: typing.Set[str] = {"domain", "host_label", "record_class", "record_type"}
+        key_attributes: set[str] = {"domain", "host_label", "record_class", "record_type"}
         return hash(tuple(getattr(self, k) for k in key_attributes)) == hash(
             tuple(getattr(other, k) for k in key_attributes)
         )
@@ -60,7 +59,7 @@ class Zone(pydantic.BaseModel):
     """
 
     domain: str
-    entries: typing.List[DnsEntry]
+    entries: list[DnsEntry]
 
 
 def create_dns_entry_from_requirer_entry(requirer_entry: RequirerEntry) -> DnsEntry:

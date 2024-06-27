@@ -6,7 +6,6 @@
 
 import logging
 import time
-import typing
 
 import ops
 import pytest
@@ -200,7 +199,7 @@ async def test_dns_record_relation(
     ops_test: OpsTest,
     model: Model,
     status: ops.model.StatusBase,
-    integration_datasets: typing.Tuple[typing.List[models.DnsEntry]],
+    integration_datasets: tuple[list[models.DnsEntry]],
 ):
     """
     arrange: given deployed bind-operator

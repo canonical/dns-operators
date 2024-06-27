@@ -11,6 +11,7 @@ import tempfile
 import time
 import typing
 
+import ops
 from charms.bind.v0.dns_record import (
     DNSProviderData,
     DNSRecordProviderData,
@@ -22,6 +23,7 @@ from charms.operator_libs_linux.v2 import snap
 
 import constants
 import exceptions
+from models import DnsEntry, Zone, create_dns_entry_from_requirer_entry
 
 logger = logging.getLogger(__name__)
 
@@ -128,18 +130,9 @@ class BindService:
             logger.error(error_msg)
             raise InstallError(error_msg) from e
 
-    def _write(self, path: pathlib.Path, source: str) -> None:
-        """Pushes a file to the unit.
-
-        Args:
-            path: The path of the file
-            source: The contents of the file to be pushed
-        """
-        with open(path, "w", encoding="utf-8") as write_file:
-            write_file.write(source)
-            logger.info("Pushed file %s", path)
-
-    def _to_bind_zones(self, record_requirer_data: DNSRecordRequirerData) -> typing.Dict[str, str]:
+    def _record_requirer_data_to_zones(
+        self, record_requirer_data: DNSRecordRequirerData
+    ) -> typing.List[Zone]:
         """Convert DNSRecordRequirerData to zone files.
 
         Args:
@@ -154,18 +147,68 @@ class BindService:
                 zones_entries[entry.domain] = []
             zones_entries[entry.domain].append(entry)
 
-        zones_content: typing.Dict[str, str] = {}
-        for zone, entries in zones_entries.items():
-            content = constants.ZONE_HEADER_TEMPLATE.format(zone=zone, serial=int(time.time()))
+        zones: typing.List[Zone] = []
+        for domain, entries in zones_entries.items():
+            zone = Zone(domain=domain, entries=[])
             for entry in entries:
+                zone.entries.append(create_dns_entry_from_requirer_entry(entry))
+            zones.append(zone)
+        return zones
+
+    def _get_conflicts(
+        self, zones: typing.List[Zone]
+    ) -> typing.Tuple[typing.Set[DnsEntry], typing.Set[DnsEntry]]:
+        """Return conflicting and non-conflicting entries.
+
+        Args:
+            zones: list of the zones to check
+
+        Returns:
+            A tuple containing the non-conflicting and conflicting entries
+        """
+        entries = [e for z in zones for e in z.entries]
+        nonconflicting_entries: typing.Set[DnsEntry] = set()
+        conflicting_entries: typing.Set[DnsEntry] = set()
+        while entries:
+            entry = entries.pop()
+            found_conflict = False
+            if entry in conflicting_entries:
+                continue
+            for e in entries:
+                if entry.conflicts(e) and entry != e:
+                    found_conflict = True
+                    conflicting_entries.add(entry)
+                    conflicting_entries.add(e)
+
+            if not found_conflict:
+                nonconflicting_entries.add(entry)
+
+        return (nonconflicting_entries, conflicting_entries)
+
+    def _zones_to_files_content(self, zones: typing.List[Zone]) -> typing.Dict[str, str]:
+        """Return zone files and their content.
+
+        Args:
+            zones: list of the zones to transform to text
+
+        Returns:
+            A dict whose keys are the domain of each zone
+            and the values the content of the zone file
+        """
+        zone_files: typing.Dict[str, str] = {}
+        for zone in zones:
+            content = constants.ZONE_HEADER_TEMPLATE.format(
+                zone=zone.domain, serial=int(time.time())
+            )
+            for entry in zone.entries:
                 content += constants.ZONE_RECORD_TEMPLATE.format(
                     host_label=entry.host_label,
                     record_class=entry.record_class,
                     record_type=entry.record_type,
                     record_data=entry.record_data,
                 )
-            zones_content[zone] = content
-        return zones_content
+            zone_files[zone.domain] = content
+        return zone_files
 
     def _generate_named_conf_local(self, zones: typing.List[str]) -> str:
         """Generate the content of `named.conf.local`.
@@ -196,37 +239,89 @@ class BindService:
         Returns:
             A resulting DNSRecordProviderData to put in the relation databag
         """
-        # Create staging area
-        tempdir = tempfile.mkdtemp()
-
-        # Write zone files
-        zones = {}
+        # Create zones list
+        zones: typing.List[Zone] = []
         for record_requirer_data, _ in relation_data:
-            zones.update(self._to_bind_zones(record_requirer_data))
-        logger.debug("ZONES: %s", zones)
-        for name, content in zones.items():
-            self._write(pathlib.Path(tempdir, f"db.{name}"), content)
+            zones.extend(self._record_requirer_data_to_zones(record_requirer_data))
 
-        # Write the named.conf file
-        self._write(
-            pathlib.Path(tempdir, "named.conf.local"), self._generate_named_conf_local(list(zones))
-        )
+        # Check for conflicts
+        _, conflicting = self._get_conflicts(zones)
+        if len(conflicting) > 0:
+            return self._create_dns_record_provider_data(relation_data)
 
-        # Move the valid staging area files to the config dir
-        for file_name in os.listdir(tempdir):
-            shutil.move(
-                pathlib.Path(tempdir, file_name), pathlib.Path(constants.DNS_CONFIG_DIR, file_name)
+        # Create staging area
+        with tempfile.TemporaryDirectory() as tempdir:
+            # Write zone files
+            zone_files: typing.Dict[str, str] = self._zones_to_files_content(zones)
+            for name, content in zone_files.items():
+                pathlib.Path(tempdir, f"db.{name}").write_text(content, encoding="utf-8")
+
+            # Write the named.conf file
+            pathlib.Path(tempdir, "named.conf.local").write_text(
+                self._generate_named_conf_local([z.domain for z in zones]), encoding="utf-8"
             )
+
+            # Move the valid staging area files to the config dir
+            for file_name in os.listdir(tempdir):
+                shutil.move(
+                    pathlib.Path(tempdir, file_name),
+                    pathlib.Path(constants.DNS_CONFIG_DIR, file_name),
+                )
 
         # Reload charmed-bind config
         self.reload()
 
-        # Remove staging area
-        shutil.rmtree(tempdir)
+        # Return the provider data with the entries' status
+        return self._create_dns_record_provider_data(relation_data)
 
-        # Create output statuses
+    def _create_dns_record_provider_data(
+        self,
+        relation_data: typing.List[typing.Tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+    ) -> DNSRecordProviderData:
+        """Create dns record provider data from relation data.
+
+        Args:
+            relation_data: input relation data
+
+        Returns:
+            A DNSRecordProviderData object with requests' status
+        """
+        zones: typing.List[Zone] = []
+        for record_requirer_data, _ in relation_data:
+            zones.extend(self._record_requirer_data_to_zones(record_requirer_data))
+        nonconflicting, conflicting = self._get_conflicts(zones)
         statuses = []
         for record_requirer_data, _ in relation_data:
-            for entry in record_requirer_data.dns_entries:
-                statuses.append(DNSProviderData(uuid=entry.uuid, status=Status.APPROVED))
+            for requirer_entry in record_requirer_data.dns_entries:
+                dns_entry = create_dns_entry_from_requirer_entry(requirer_entry)
+                if dns_entry in nonconflicting:
+                    statuses.append(
+                        DNSProviderData(uuid=requirer_entry.uuid, status=Status.APPROVED)
+                    )
+                    continue
+                if dns_entry in conflicting:
+                    statuses.append(
+                        DNSProviderData(uuid=requirer_entry.uuid, status=Status.CONFLICT)
+                    )
+                    continue
+                statuses.append(DNSProviderData(uuid=requirer_entry.uuid, status=Status.UNKNOWN))
         return DNSRecordProviderData(dns_entries=statuses)
+
+    def collect_status(
+        self,
+        event: ops.CollectStatusEvent,
+        relation_data: typing.List[typing.Tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+    ) -> None:
+        """Add status for the charm based on the status of the dns record requests.
+
+        Args:
+            event: Event triggering the collect-status hook
+            relation_data: data coming from the relation databag
+        """
+        zones: typing.List[Zone] = []
+        for record_requirer_data, _ in relation_data:
+            zones.extend(self._record_requirer_data_to_zones(record_requirer_data))
+        _, conflicting = self._get_conflicts(zones)
+        if len(conflicting) > 0:
+            event.add_status(ops.BlockedStatus("Conflicting requests"))
+        event.add_status(ops.ActiveStatus())

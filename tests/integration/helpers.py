@@ -14,25 +14,7 @@ import typing
 import ops
 from pytest_operator.plugin import OpsTest
 
-
-class DnsEntry(typing.TypedDict):
-    """Class used to pass DNS entries around in tests.
-
-    Attributes:
-        domain: example: "dns.test"
-        host_label: example: "admin"
-        ttl: example: 600
-        record_class: example: "IN"
-        record_type: example: "A"
-        record_data: example: "42.42.42.42"
-    """
-
-    domain: str
-    host_label: str
-    ttl: int
-    record_class: str
-    record_type: str
-    record_data: str
+import models
 
 
 class ExecutionError(Exception):
@@ -156,7 +138,7 @@ async def generate_anycharm_relation(
     app: ops.model.Application,
     ops_test: OpsTest,
     any_charm_name: str,
-    dns_entries: typing.List[DnsEntry],
+    dns_entries: typing.List[models.DnsEntry],
 ):
     """Deploy any-charm with a wanted DNS entries config and integrate it to the bind app.
 
@@ -176,7 +158,9 @@ async def generate_anycharm_relation(
         "any_charm.py": any_charm_content,
         "dns_record.py": dns_record_content,
         # It's okay to write to /tmp for these tests, so # nosec is used
-        "/tmp/dns_entries.json": json.dumps(dns_entries),  # nosec
+        "/tmp/dns_entries.json": json.dumps(
+            [e.model_dump(mode="json") for e in dns_entries]
+        ),  # nosec
     }
 
     # We deploy https://charmhub.io/any-charm and inject the any_charm.py behavior
@@ -194,7 +178,7 @@ async def generate_anycharm_relation(
     await ops_test.model.add_relation(f"{any_charm.name}", f"{app.name}")
 
 
-async def dig_query(ops_test: OpsTest, app_name: str, entry: DnsEntry) -> str:
+async def dig_query(ops_test: OpsTest, app_name: str, entry: models.DnsEntry) -> str:
     """Query a DnsEntry with dig.
 
     Args:
@@ -208,6 +192,6 @@ async def dig_query(ops_test: OpsTest, app_name: str, entry: DnsEntry) -> str:
         await run_on_unit(
             ops_test,
             f"{app_name}/0",
-            f"dig @127.0.0.1 {entry['host_label']}.{entry['domain']} {entry['record_type']} +short",
+            f"dig @127.0.0.1 {entry.host_label}.{entry.domain} {entry.record_type} +short",
         )
     ).strip()

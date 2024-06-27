@@ -35,6 +35,7 @@ class BindCharm(ops.CharmBase):
         self.framework.observe(
             self.on.dns_record_relation_changed, self._on_dns_record_relation_changed
         )
+        self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
 
     def _on_dns_record_relation_changed(self, event: ops.RelationChangedEvent) -> None:
         """Handle dns_record relation changed.
@@ -52,22 +53,32 @@ class BindCharm(ops.CharmBase):
         relation_provider_data = self.bind.handle_relation_data(relation_requirer_data)
         relation = self.model.get_relation(self.dns_record.relation_name, event.relation.id)
         self.dns_record.update_relation_data(relation, relation_provider_data)
-        self.unit.status = ops.ActiveStatus()
+
+    def _on_collect_status(self, event: ops.CollectStatusEvent) -> None:
+        """Handle collect status event.
+
+        Args:
+            event: Event triggering the collect-status hook
+        """
+        try:
+            relation_requirer_data = self.dns_record.get_remote_relation_data()
+        except ValueError as err:
+            logger.info("Validation error of the relation data: %s", err)
+            event.add_status(ops.BlockedStatus(f"Validation error of the relation data: {err}"))
+            return
+        self.bind.collect_status(event, relation_requirer_data)
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
-        """Handle changed configuration."""
-        self.unit.status = ops.ActiveStatus()
+        """Handle changed configuration event."""
 
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install."""
         self.unit.status = ops.MaintenanceStatus("Preparing bind")
         self.bind.prepare()
-        self.unit.status = ops.ActiveStatus()
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start."""
         self.bind.start()
-        self.unit.status = ops.ActiveStatus()
 
     def _on_stop(self, _: ops.StopEvent) -> None:
         """Handle stop."""
@@ -77,7 +88,6 @@ class BindCharm(ops.CharmBase):
         """Handle upgrade-charm."""
         self.unit.status = ops.MaintenanceStatus("Upgrading dependencies")
         self.bind.prepare()
-        self.unit.status = ops.ActiveStatus()
 
 
 if __name__ == "__main__":  # pragma: nocover

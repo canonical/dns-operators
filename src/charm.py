@@ -45,14 +45,14 @@ class BindCharm(ops.CharmBase):
 
         """
         try:
-            relation_requirer_data = self.dns_record.get_remote_relation_data()
+            relation_data = self.dns_record.get_remote_relation_data()
         except ValueError as err:
             logger.info("Validation error of the relation data: %s", err)
             return
         self.unit.status = ops.MaintenanceStatus("Handling new relation requests")
-        relation_provider_data = self.bind.handle_relation_data(relation_requirer_data)
+        dns_record_provider_data = self.bind.create_dns_record_provider_data(relation_data)
         relation = self.model.get_relation(self.dns_record.relation_name, event.relation.id)
-        self.dns_record.update_relation_data(relation, relation_provider_data)
+        self.dns_record.update_relation_data(relation, dns_record_provider_data)
 
     def _on_collect_status(self, event: ops.CollectStatusEvent) -> None:
         """Handle collect status event.

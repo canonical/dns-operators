@@ -46,8 +46,11 @@ class InstallError(exceptions.SnapError):
 class BindService:
     """Bind service class."""
 
-    def reload(self) -> None:
+    def reload(self, force_start: bool) -> None:
         """Reload the charmed-bind service.
+
+        Args:
+            force_start: start the service even if it was inactive
 
         Raises:
             ReloadError: when encountering a SnapError
@@ -55,7 +58,9 @@ class BindService:
         try:
             cache = snap.SnapCache()
             charmed_bind = cache[constants.DNS_SNAP_NAME]
-            charmed_bind.restart(reload=True)
+            charmed_bind_service = charmed_bind.services[constants.DNS_SNAP_SERVICE]
+            if charmed_bind_service['active'] or force_start:
+                charmed_bind.restart(reload=True)
         except snap.SnapError as e:
             error_msg = (
                 f"An exception occurred when reloading {constants.DNS_SNAP_NAME}. Reason: {e}"
@@ -138,7 +143,7 @@ class BindService:
             record_requirer_data: The input DNSRecordRequirerData
 
         Returns:
-            A dict of zones names as keys with the zones contents as values
+            A list of zones
         """
         zones_entries: dict[str, list[RequirerEntry]] = {}
         for entry in record_requirer_data.dns_entries:
@@ -150,11 +155,38 @@ class BindService:
         for domain, entries in zones_entries.items():
             zone = Zone(domain=domain, entries=[])
             for entry in entries:
-                zone.entries.append(create_dns_entry_from_requirer_entry(entry))
+                zone.entries.add(create_dns_entry_from_requirer_entry(entry))
             zones.append(zone)
         return zones
 
-    def _get_conflicts(self, zones: list[Zone]) -> tuple[set[DnsEntry], set[DnsEntry]]:
+    def _dns_record_relations_data_to_zones(
+        self,
+        relation_data: typing.List[typing.Tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+    ) -> list[Zone]:
+        """Return zones from all the dns_record relations data.
+
+        Args:
+            relation_data: input relation data
+
+        Returns:
+            The zones from the record_requirer_data
+        """
+        zones: typing.List[Zone] = []
+        for record_requirer_data, _ in relation_data:
+            for new_zone in self._record_requirer_data_to_zones(record_requirer_data):
+                # If the new zone is already in the list, merge with it
+                if any(zone.domain == new_zone.domain for zone in zones):
+                    for zone in zones:
+                        if zone.domain == new_zone.domain:
+                            zone.entries.update(new_zone.entries)
+                else:
+                    # If the new zone wasn't in the list, add it
+                    zones.append(new_zone)
+        return zones
+
+    def _get_conflicts(
+        self, zones: typing.List[Zone]
+    ) -> typing.Tuple[typing.Set[DnsEntry], typing.Set[DnsEntry]]:
         """Return conflicting and non-conflicting entries.
 
         Args:
@@ -224,34 +256,22 @@ class BindService:
             )
         return content
 
-    def handle_relation_data(
+    def update_zonefiles_and_reload(
         self,
-        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
-    ) -> DNSRecordProviderData:
-        """Handle new relation data.
+        relation_data: typing.List[typing.Tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+    ) -> None:
+        """Update the zonefiles from bind's config and reload bind.
 
         Args:
-            relation_data: The list of DNSRecordRequirerData from the dns_record relations
-
-        Returns:
-            A resulting DNSRecordProviderData to put in the relation databag
+            relation_data: input relation data
         """
-        # Create zones list
-        zones: list[Zone] = []
-        for record_requirer_data, _ in relation_data:
-            zones.extend(self._record_requirer_data_to_zones(record_requirer_data))
-
-        # Check for conflicts
-        _, conflicting = self._get_conflicts(zones)
-        if len(conflicting) > 0:
-            return self._create_dns_record_provider_data(relation_data)
-
+        zones = self._dns_record_relations_data_to_zones(relation_data)
         # Create staging area
         with tempfile.TemporaryDirectory() as tempdir:
             # Write zone files
-            zone_files: dict[str, str] = self._zones_to_files_content(zones)
-            for name, content in zone_files.items():
-                pathlib.Path(tempdir, f"db.{name}").write_text(content, encoding="utf-8")
+            zone_files: typing.Dict[str, str] = self._zones_to_files_content(zones)
+            for domain, content in zone_files.items():
+                pathlib.Path(tempdir, f"db.{domain}").write_text(content, encoding="utf-8")
 
             # Write the named.conf file
             pathlib.Path(tempdir, "named.conf.local").write_text(
@@ -265,8 +285,8 @@ class BindService:
                     pathlib.Path(constants.DNS_CONFIG_DIR, file_name),
                 )
 
-        # Reload charmed-bind config
-        self.reload()
+        # Reload charmed-bind config (only if already started)
+        self.reload(force_start=False)
 
         # Return the provider data with the entries' status
         return self._create_dns_record_provider_data(relation_data)
@@ -283,9 +303,7 @@ class BindService:
         Returns:
             A DNSRecordProviderData object with requests' status
         """
-        zones: list[Zone] = []
-        for record_requirer_data, _ in relation_data:
-            zones.extend(self._record_requirer_data_to_zones(record_requirer_data))
+        zones = self._dns_record_relations_data_to_zones(relation_data)
         nonconflicting, conflicting = self._get_conflicts(zones)
         statuses = []
         for record_requirer_data, _ in relation_data:

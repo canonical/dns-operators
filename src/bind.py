@@ -171,14 +171,14 @@ class BindService:
         Returns:
             The zones from the record_requirer_data
         """
-        zones: dict[Zone] = {}
+        zones: dict[str, Zone] = {}
         for record_requirer_data, _ in relation_data:
             for new_zone in self._record_requirer_data_to_zones(record_requirer_data):
                 if new_zone.domain in zones:
                     zones[new_zone.domain].entries.update(new_zone.entries)
                 else:
                     zones[new_zone.domain] = new_zone
-        return zones.values()
+        return list(zones)
 
     def _get_conflicts(self, zones: list[Zone]) -> tuple[set[DnsEntry], set[DnsEntry]]:
         """Return conflicting and non-conflicting entries.

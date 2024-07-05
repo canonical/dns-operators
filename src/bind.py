@@ -161,7 +161,7 @@ class BindService:
 
     def _dns_record_relations_data_to_zones(
         self,
-        relation_data: typing.List[typing.Tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
     ) -> list[Zone]:
         """Return zones from all the dns_record relations data.
 
@@ -171,7 +171,7 @@ class BindService:
         Returns:
             The zones from the record_requirer_data
         """
-        zones: typing.List[Zone] = []
+        zones: list[Zone] = []
         for record_requirer_data, _ in relation_data:
             for new_zone in self._record_requirer_data_to_zones(record_requirer_data):
                 # If the new zone is already in the list, merge with it
@@ -185,8 +185,8 @@ class BindService:
         return zones
 
     def _get_conflicts(
-        self, zones: typing.List[Zone]
-    ) -> typing.Tuple[typing.Set[DnsEntry], typing.Set[DnsEntry]]:
+        self, zones: list[Zone]
+    ) -> tuple[set[DnsEntry], set[DnsEntry]]:
         """Return conflicting and non-conflicting entries.
 
         Args:
@@ -258,7 +258,7 @@ class BindService:
 
     def update_zonefiles_and_reload(
         self,
-        relation_data: typing.List[typing.Tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
     ) -> None:
         """Update the zonefiles from bind's config and reload bind.
 
@@ -269,7 +269,7 @@ class BindService:
         # Create staging area
         with tempfile.TemporaryDirectory() as tempdir:
             # Write zone files
-            zone_files: typing.Dict[str, str] = self._zones_to_files_content(zones)
+            zone_files: dict[str, str] = self._zones_to_files_content(zones)
             for domain, content in zone_files.items():
                 pathlib.Path(tempdir, f"db.{domain}").write_text(content, encoding="utf-8")
 

@@ -8,5 +8,5 @@ jobs:
     uses: canonical/operator-workflows/.github/workflows/test.yaml@main
     secrets: inherit
     with:
-      self-hosted-runner: true
+      self-hosted-runner: false  # Avoid using our quota of github requests for unit tests
       self-hosted-runner-label: "edge"

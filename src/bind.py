@@ -59,7 +59,7 @@ class BindService:
             cache = snap.SnapCache()
             charmed_bind = cache[constants.DNS_SNAP_NAME]
             charmed_bind_service = charmed_bind.services[constants.DNS_SNAP_SERVICE]
-            if charmed_bind_service['active'] or force_start:
+            if charmed_bind_service["active"] or force_start:
                 charmed_bind.restart(reload=True)
         except snap.SnapError as e:
             error_msg = (
@@ -184,9 +184,7 @@ class BindService:
                     zones.append(new_zone)
         return zones
 
-    def _get_conflicts(
-        self, zones: list[Zone]
-    ) -> tuple[set[DnsEntry], set[DnsEntry]]:
+    def _get_conflicts(self, zones: list[Zone]) -> tuple[set[DnsEntry], set[DnsEntry]]:
         """Return conflicting and non-conflicting entries.
 
         Args:
@@ -259,11 +257,14 @@ class BindService:
     def update_zonefiles_and_reload(
         self,
         relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
-    ) -> None:
+    ) -> DNSRecordProviderData:
         """Update the zonefiles from bind's config and reload bind.
 
         Args:
             relation_data: input relation data
+
+        Returns:
+            The DNSRecordProviderData with the status of each request
         """
         zones = self._dns_record_relations_data_to_zones(relation_data)
         # Create staging area

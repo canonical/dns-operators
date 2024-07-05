@@ -50,7 +50,7 @@ class BindCharm(ops.CharmBase):
             logger.info("Validation error of the relation data: %s", err)
             return
         self.unit.status = ops.MaintenanceStatus("Handling new relation requests")
-        dns_record_provider_data = self.bind.create_dns_record_provider_data(relation_data)
+        dns_record_provider_data = self.bind.update_zonefiles_and_reload(relation_data)
         relation = self.model.get_relation(self.dns_record.relation_name, event.relation.id)
         self.dns_record.update_relation_data(relation, dns_record_provider_data)
 

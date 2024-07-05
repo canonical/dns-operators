@@ -4,7 +4,6 @@
 """Unit tests for the bind module."""
 
 import uuid
-import itertools
 
 import pytest
 from charms.bind.v0 import dns_record

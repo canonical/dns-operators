@@ -263,6 +263,12 @@ class BindService:
             The DNSRecordProviderData with the status of each request
         """
         zones = self._dns_record_relations_data_to_zones(relation_data)
+
+        # Check for conflicts
+        _, conflicting = self._get_conflicts(zones)
+        if len(conflicting) > 0:
+            return self._create_dns_record_provider_data(relation_data)
+
         # Create staging area
         with tempfile.TemporaryDirectory() as tempdir:
             # Write zone files

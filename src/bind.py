@@ -178,7 +178,7 @@ class BindService:
                     zones[new_zone.domain].entries.update(new_zone.entries)
                 else:
                     zones[new_zone.domain] = new_zone
-        return list(zones)
+        return list(zones.values())
 
     def _get_conflicts(self, zones: list[Zone]) -> tuple[set[DnsEntry], set[DnsEntry]]:
         """Return conflicting and non-conflicting entries.

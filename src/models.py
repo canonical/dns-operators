@@ -59,7 +59,7 @@ class Zone(pydantic.BaseModel):
     """
 
     domain: str
-    entries: list[DnsEntry]
+    entries: set[DnsEntry]
 
 
 def create_dns_entry_from_requirer_entry(requirer_entry: RequirerEntry) -> DnsEntry:

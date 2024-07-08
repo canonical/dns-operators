@@ -138,6 +138,122 @@ class BindService:
         systemd.service_enable("dispatch-reload-bind.timer")
         systemd.service_start("dispatch-reload-bind.timer")
 
+    def collect_status(
+        self,
+        event: ops.CollectStatusEvent,
+        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+    ) -> None:
+        """Add status for the charm based on the status of the dns record requests.
+
+        Args:
+            event: Event triggering the collect-status hook
+            relation_data: data coming from the relation databag
+        """
+        zones: list[Zone] = []
+        for record_requirer_data, _ in relation_data:
+            zones.extend(self._record_requirer_data_to_zones(record_requirer_data))
+        _, conflicting = self._get_conflicts(zones)
+        if len(conflicting) > 0:
+            event.add_status(ops.BlockedStatus("Conflicting requests"))
+        event.add_status(ops.ActiveStatus())
+
+    def update_zonefiles_and_reload(
+        self,
+        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+    ) -> None:
+        """Update the zonefiles from bind's config and reload bind.
+
+        Args:
+            relation_data: input relation data
+        """
+        zones = self._dns_record_relations_data_to_zones(relation_data)
+
+        # Check for conflicts
+        _, conflicting = self._get_conflicts(zones)
+        if len(conflicting) > 0:
+            return
+
+        # Create staging area
+        with tempfile.TemporaryDirectory() as tempdir:
+            # Write zone files
+            zone_files: dict[str, str] = self._zones_to_files_content(zones)
+            for domain, content in zone_files.items():
+                pathlib.Path(tempdir, f"db.{domain}").write_text(content, encoding="utf-8")
+
+            # Write the named.conf file
+            pathlib.Path(tempdir, "named.conf.local").write_text(
+                self._generate_named_conf_local([z.domain for z in zones]), encoding="utf-8"
+            )
+
+            # Move the valid staging area files to the config dir
+            for file_name in os.listdir(tempdir):
+                shutil.move(
+                    pathlib.Path(tempdir, file_name),
+                    pathlib.Path(constants.DNS_CONFIG_DIR, file_name),
+                )
+
+        # Reload charmed-bind config (only if already started)
+        self.reload(force_start=False)
+
+    def create_dns_record_provider_data(
+        self,
+        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+    ) -> DNSRecordProviderData:
+        """Create dns record provider data from relation data.
+
+        Args:
+            relation_data: input relation data
+
+        Returns:
+            A DNSRecordProviderData object with requests' status
+        """
+        zones = self._dns_record_relations_data_to_zones(relation_data)
+        nonconflicting, conflicting = self._get_conflicts(zones)
+        statuses = []
+        for record_requirer_data, _ in relation_data:
+            for requirer_entry in record_requirer_data.dns_entries:
+                dns_entry = create_dns_entry_from_requirer_entry(requirer_entry)
+                if dns_entry in nonconflicting:
+                    statuses.append(
+                        DNSProviderData(uuid=requirer_entry.uuid, status=Status.APPROVED)
+                    )
+                    continue
+                if dns_entry in conflicting:
+                    statuses.append(
+                        DNSProviderData(uuid=requirer_entry.uuid, status=Status.CONFLICT)
+                    )
+                    continue
+                statuses.append(DNSProviderData(uuid=requirer_entry.uuid, status=Status.UNKNOWN))
+        return DNSRecordProviderData(dns_entries=statuses)
+
+    def has_a_zone_changed(
+        self,
+        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+    ) -> bool:
+        """Check if a zone definition has changed.
+
+        Args:
+            relation_data: input relation data
+
+        Returns:
+            True if a zone has changed, False otherwise.
+        """
+        zones = self._dns_record_relations_data_to_zones(relation_data)
+        for zone in zones:
+            zonefile_content = pathlib.Path(
+                constants.DNS_CONFIG_DIR, f"db.{zone.domain}"
+            ).read_text(encoding="utf-8")
+            try:
+                metadata = self._get_zonefile_metadata(zonefile_content)
+            except (
+                exceptions.InvalidZoneFileMetadataError,
+                exceptions.EmptyZoneFileMetadataError,
+            ):
+                return True
+            if "HASH" in metadata and hash(zone) != int(metadata["HASH"]):
+                return True
+        return False
+
     def _install_snap_package(
         self, snap_name: str, snap_channel: str, refresh: bool = False
     ) -> None:
@@ -187,55 +303,6 @@ class BindService:
                 zone.entries.add(create_dns_entry_from_requirer_entry(entry))
             zones.append(zone)
         return zones
-
-    def _dns_record_relations_data_to_zones(
-        self,
-        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
-    ) -> list[Zone]:
-        """Return zones from all the dns_record relations data.
-
-        Args:
-            relation_data: input relation data
-
-        Returns:
-            The zones from the record_requirer_data
-        """
-        zones: dict[str, Zone] = {}
-        for record_requirer_data, _ in relation_data:
-            for new_zone in self._record_requirer_data_to_zones(record_requirer_data):
-                if new_zone.domain in zones:
-                    zones[new_zone.domain].entries.update(new_zone.entries)
-                else:
-                    zones[new_zone.domain] = new_zone
-        return list(zones.values())
-
-    def has_a_zone_changed(
-        self,
-        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
-    ) -> bool:
-        """Check if a zone definition has changed.
-
-        Args:
-            relation_data: input relation data
-
-        Returns:
-            True if a zone has changed, False otherwise.
-        """
-        zones = self._dns_record_relations_data_to_zones(relation_data)
-        for zone in zones:
-            zonefile_content = pathlib.Path(
-                constants.DNS_CONFIG_DIR, f"db.{zone.domain}"
-            ).read_text(encoding="utf-8")
-            try:
-                metadata = self._get_zonefile_metadata(zonefile_content)
-            except (
-                exceptions.InvalidZoneFileMetadataError,
-                exceptions.EmptyZoneFileMetadataError,
-            ):
-                return True
-            if "HASH" in metadata and hash(zone) != int(metadata["HASH"]):
-                return True
-        return False
 
     def _get_conflicts(self, zones: list[Zone]) -> tuple[set[DnsEntry], set[DnsEntry]]:
         """Return conflicting and non-conflicting entries.
@@ -311,38 +378,26 @@ class BindService:
             )
         return content
 
-    def update_zonefiles_and_reload(
+    def _dns_record_relations_data_to_zones(
         self,
         relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
-    ) -> None:
-        """Update the zonefiles from bind's config and reload bind.
+    ) -> list[Zone]:
+        """Return zones from all the dns_record relations data.
 
         Args:
             relation_data: input relation data
+
+        Returns:
+            The zones from the record_requirer_data
         """
-        zones = self._dns_record_relations_data_to_zones(relation_data)
-
-        # Create staging area
-        with tempfile.TemporaryDirectory() as tempdir:
-            # Write zone files
-            zone_files: dict[str, str] = self._zones_to_files_content(zones)
-            for domain, content in zone_files.items():
-                pathlib.Path(tempdir, f"db.{domain}").write_text(content, encoding="utf-8")
-
-            # Write the named.conf file
-            pathlib.Path(tempdir, "named.conf.local").write_text(
-                self._generate_named_conf_local([z.domain for z in zones]), encoding="utf-8"
-            )
-
-            # Move the valid staging area files to the config dir
-            for file_name in os.listdir(tempdir):
-                shutil.move(
-                    pathlib.Path(tempdir, file_name),
-                    pathlib.Path(constants.DNS_CONFIG_DIR, file_name),
-                )
-
-        # Reload charmed-bind config (only if already started)
-        self.reload(force_start=False)
+        zones: dict[str, Zone] = {}
+        for record_requirer_data, _ in relation_data:
+            for new_zone in self._record_requirer_data_to_zones(record_requirer_data):
+                if new_zone.domain in zones:
+                    zones[new_zone.domain].entries.update(new_zone.entries)
+                else:
+                    zones[new_zone.domain] = new_zone
+        return list(zones.values())
 
     def _get_zonefile_metadata(self, zonefile_content: str) -> dict[str, str]:
         """Get the metadata of a zonefile.
@@ -377,53 +432,3 @@ class BindService:
         if metadata:
             return metadata
         raise exceptions.EmptyZoneFileMetadataError("No metadata found !")
-
-    def create_dns_record_provider_data(
-        self,
-        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
-    ) -> DNSRecordProviderData:
-        """Create dns record provider data from relation data.
-
-        Args:
-            relation_data: input relation data
-
-        Returns:
-            A DNSRecordProviderData object with requests' status
-        """
-        zones = self._dns_record_relations_data_to_zones(relation_data)
-        nonconflicting, conflicting = self._get_conflicts(zones)
-        statuses = []
-        for record_requirer_data, _ in relation_data:
-            for requirer_entry in record_requirer_data.dns_entries:
-                dns_entry = create_dns_entry_from_requirer_entry(requirer_entry)
-                if dns_entry in nonconflicting:
-                    statuses.append(
-                        DNSProviderData(uuid=requirer_entry.uuid, status=Status.APPROVED)
-                    )
-                    continue
-                if dns_entry in conflicting:
-                    statuses.append(
-                        DNSProviderData(uuid=requirer_entry.uuid, status=Status.CONFLICT)
-                    )
-                    continue
-                statuses.append(DNSProviderData(uuid=requirer_entry.uuid, status=Status.UNKNOWN))
-        return DNSRecordProviderData(dns_entries=statuses)
-
-    def collect_status(
-        self,
-        event: ops.CollectStatusEvent,
-        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
-    ) -> None:
-        """Add status for the charm based on the status of the dns record requests.
-
-        Args:
-            event: Event triggering the collect-status hook
-            relation_data: data coming from the relation databag
-        """
-        zones: list[Zone] = []
-        for record_requirer_data, _ in relation_data:
-            zones.extend(self._record_requirer_data_to_zones(record_requirer_data))
-        _, conflicting = self._get_conflicts(zones)
-        if len(conflicting) > 0:
-            event.add_status(ops.BlockedStatus("Conflicting requests"))
-        event.add_status(ops.ActiveStatus())

@@ -50,3 +50,19 @@ class EmptyZoneFileMetadataError(Exception):
             msg (str): Explanation of the error.
         """
         self.msg = msg
+
+
+class DuplicateMetadataEntryError(Exception):
+    """Exception raised when a zonefile has metadata with duplicate entries.
+
+    Attrs:
+        msg (str): Explanation of the error.
+    """
+
+    def __init__(self, msg: str):
+        """Initialize a new instance of the DuplicateMetadataEntryError exception.
+
+        Args:
+            msg (str): Explanation of the error.
+        """
+        self.msg = msg

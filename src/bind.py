@@ -411,6 +411,7 @@ class BindService:
         Raises:
             InvalidZoneFileMetadataError: when the metadata of the zonefile could not be parsed.
             EmptyZoneFileMetadataError: when the metadata of the zonefile is empty.
+            DuplicateMetadataEntryError: when the metadata of the zonefile has duplicate entries.
         """
         # This assumes that the file was generated with the constants.ZONE_HEADER_TEMPLATE template
         metadata = {}
@@ -423,9 +424,12 @@ class BindService:
                 logger.debug("%s", line)
                 for token in line.split(";")[1].split():
                     k, v = token.split(":")
+                    if k in metadata:
+                        raise exceptions.DuplicateMetadataEntryError(
+                            f"Duplicate metadata entry '{k}'"
+                        )
                     metadata[k] = v
                 logger.debug("%s", metadata)
-                break
         except (IndexError, ValueError) as err:
             raise exceptions.InvalidZoneFileMetadataError(err) from err
 

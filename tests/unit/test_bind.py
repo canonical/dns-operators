@@ -168,6 +168,21 @@ def test_get_conflicts(integration_datasets, zones_name, nonconflicting, conflic
         ("", {}, exceptions.EmptyZoneFileMetadataError),
         ("sometext; someothertext", {}, exceptions.EmptyZoneFileMetadataError),
         ("$ORIGIN test.dns.test.; HASH:1234", {"HASH": "1234"}, None),
+        (
+            "$ORIGIN test.dns.test.; HASH:1234\n$ORIGIN test2.dns.test.; PLOP:plop",
+            {"HASH": "1234", "PLOP": "plop"},
+            None,
+        ),
+        (
+            "$ORIGIN test.dns.test.; HASH:1234 HASH:4567",
+            {},
+            exceptions.DuplicateMetadataEntryError,
+        ),
+        (
+            "$ORIGIN test.dns.test.; HASH:1234\n$ORIGIN test2.dns.test.; HASH:4567",
+            {},
+            exceptions.DuplicateMetadataEntryError,
+        ),
         ("$ORIGIN test.dns.test.; HASH::", None, exceptions.InvalidZoneFileMetadataError),
         ("$ORIGIN test.dns.test.;    ", {"HASH": "1234"}, exceptions.EmptyZoneFileMetadataError),
         (

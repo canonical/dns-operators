@@ -51,7 +51,7 @@ class DnsEntry(pydantic.BaseModel):
         h = hashlib.blake2b()
         for data in (getattr(self, k) for k in self.__dict__):
             h.update(str(data).encode())
-        return int.from_bytes(h.digest(), byteorder='big')
+        return int.from_bytes(h.digest(), byteorder="big")
 
 
 class Zone(pydantic.BaseModel):
@@ -73,8 +73,8 @@ class Zone(pydantic.BaseModel):
         """
         h = hashlib.blake2b()
         for entry_hash in (hash(e) for e in self.entries):
-            h.update(entry_hash.to_bytes(length=1, byteorder='big'))
-        return int.from_bytes(h.digest(), byteorder='big')
+            h.update(entry_hash.to_bytes(length=1, byteorder="big"))
+        return int.from_bytes(h.digest(), byteorder="big")
 
 
 def create_dns_entry_from_requirer_entry(requirer_entry: RequirerEntry) -> DnsEntry:

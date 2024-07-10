@@ -73,7 +73,7 @@ class Zone(pydantic.BaseModel):
         """
         h = hashlib.blake2b()
         for entry_hash in (hash(e) for e in self.entries):
-            h.update(entry_hash.to_bytes(length=1, byteorder="big"))
+            h.update(entry_hash.to_bytes((entry_hash.bit_length() + 7) // 8, byteorder="big"))
         return int.from_bytes(h.digest(), byteorder="big")
 
 

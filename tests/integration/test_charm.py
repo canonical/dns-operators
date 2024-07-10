@@ -251,13 +251,17 @@ async def test_dns_record_relation(
     unit = app.units[0]  # type: ignore
     assert unit.workload_status == status.name
 
+    # Force reload bind
+    restart_cmd = f"sudo snap restart --reload {constants.DNS_SNAP_NAME}"
+    await tests.integration.helpers.run_on_unit(ops_test, unit.name, restart_cmd)
+
     # Test if the records give the correct results
     # Do that only if we have an active status
     if status == ops.model.ActiveStatus:
         for integration_data in integration_datasets:
             for entry in integration_data:
 
-                result = await tests.integration.helpers.dig_query(ops_test, app.name, entry)
+                result = await tests.integration.helpers.dig_query(ops_test, app.name, entry, retry=True, wait=5)
                 assert result == str(entry.record_data), (
                     f"{entry.host_label}.{entry.domain}"
                     f" {entry.record_type} {entry.record_data}"

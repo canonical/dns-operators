@@ -9,6 +9,7 @@ import pathlib
 import random
 import string
 import tempfile
+import time
 
 import ops
 from pytest_operator.plugin import OpsTest
@@ -177,20 +178,32 @@ async def generate_anycharm_relation(
     await ops_test.model.add_relation(f"{any_charm.name}", f"{app.name}")
 
 
-async def dig_query(ops_test: OpsTest, app_name: str, entry: models.DnsEntry) -> str:
+async def dig_query(
+    ops_test: OpsTest, app_name: str, entry: models.DnsEntry, retry: bool = False, wait: int = 5
+) -> str:
     """Query a DnsEntry with dig.
 
     Args:
         ops_test: The ops test framework instance
         app_name: Name of the app to be queried
         entry: DnsEntry to query
+        retry: If the dig request should be retried
+        wait: duration in seconds to wait between retries
 
     Returns: the result of the DNS query
     """
-    return (
-        await run_on_unit(
-            ops_test,
-            f"{app_name}/0",
-            f"dig @127.0.0.1 {entry.host_label}.{entry.domain} {entry.record_type} +short",
-        )
-    ).strip()
+    result: str = ""
+    retry = False
+    for _ in range(5):
+        result = (
+            await run_on_unit(
+                ops_test,
+                f"{app_name}/0",
+                f"dig @127.0.0.1 {entry.host_label}.{entry.domain} {entry.record_type} +short",
+            )
+        ).strip()
+        if result != "" or not retry:
+            break
+        time.sleep(wait)
+
+    return result

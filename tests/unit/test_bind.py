@@ -9,6 +9,7 @@ import pytest
 from charms.bind.v0 import dns_record
 
 import bind
+import exceptions
 import models
 
 
@@ -159,3 +160,51 @@ def test_get_conflicts(integration_datasets, zones_name, nonconflicting, conflic
     output = bind_service._get_conflicts(zones)  # pylint: disable=protected-access
     assert nonconflicting == {f"{e.host_label}.{e.domain}" for e in output[0]}
     assert conflicting == {f"{e.host_label}.{e.domain}" for e in output[1]}
+
+
+@pytest.mark.parametrize(
+    "zonefile_content, metadata, error",
+    (
+        ("", {}, exceptions.EmptyZoneFileMetadataError),
+        ("sometext; someothertext", {}, exceptions.EmptyZoneFileMetadataError),
+        ("$ORIGIN test.dns.test.; HASH:1234", {"HASH": "1234"}, None),
+        (
+            "$ORIGIN test.dns.test.; HASH:1234\n$ORIGIN test2.dns.test.; PLOP:plop",
+            {"HASH": "1234", "PLOP": "plop"},
+            None,
+        ),
+        (
+            "$ORIGIN test.dns.test.; HASH:1234 HASH:4567",
+            {},
+            exceptions.DuplicateMetadataEntryError,
+        ),
+        (
+            "$ORIGIN test.dns.test.; HASH:1234\n$ORIGIN test2.dns.test.; HASH:4567",
+            {},
+            exceptions.DuplicateMetadataEntryError,
+        ),
+        ("$ORIGIN test.dns.test.; HASH::", None, exceptions.InvalidZoneFileMetadataError),
+        ("$ORIGIN test.dns.test.;    ", {"HASH": "1234"}, exceptions.EmptyZoneFileMetadataError),
+        (
+            "\n\nsometext\n\n$ORIGIN test.dns.test.; HASH:1234 PLOP:plop\nsomeothertext",
+            {"HASH": "1234", "PLOP": "plop"},
+            None,
+        ),
+    ),
+)
+def test_get_zonefile_metadata(zonefile_content: str, metadata: dict[str, str], error):
+    """
+    arrange: nothing
+    act: get the metadata from the zonefile_content
+    assert: the correct metadata should be found or the correct exception raised
+    """
+    bind_service = bind.BindService()
+    if error is not None:
+        with pytest.raises(error):
+            bind_service._get_zonefile_metadata(  # pylint: disable=protected-access
+                zonefile_content
+            )
+    else:
+        assert metadata == bind_service._get_zonefile_metadata(  # pylint: disable=protected-access
+            zonefile_content
+        )

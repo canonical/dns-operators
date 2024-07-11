@@ -18,6 +18,7 @@ from charms.bind.v0.dns_record import (
     RequirerEntry,
     Status,
 )
+from charms.operator_libs_linux.v1 import systemd
 from charms.operator_libs_linux.v2 import snap
 
 import constants
@@ -102,12 +103,40 @@ class BindService:
             logger.error(error_msg)
             raise StopError(error_msg) from e
 
-    def prepare(self) -> None:
-        """Prepare the machine."""
+    def prepare(self, unit_name: str) -> None:
+        """Prepare the machine.
+
+        Args:
+            unit_name: The name of the current unit
+        """
         self._install_snap_package(
             snap_name=constants.DNS_SNAP_NAME,
             snap_channel=constants.SNAP_PACKAGES[constants.DNS_SNAP_NAME]["channel"],
         )
+        self._install_bind_reload_service(unit_name)
+
+    def _install_bind_reload_service(self, unit_name: str) -> None:
+        """Install the bind reload service.
+
+        Args:
+            unit_name: The name of the current unit
+        """
+        (
+            pathlib.Path(constants.SYSTEMD_SERVICES_PATH) / "dispatch-reload-bind.service"
+        ).write_text(
+            constants.DISPATCH_EVENT_SERVICE.format(
+                event="reload-bind",
+                timeout="10s",
+                unit=unit_name,
+            ),
+            encoding="utf-8",
+        )
+        (pathlib.Path(constants.SYSTEMD_SERVICES_PATH) / "dispatch-reload-bind.timer").write_text(
+            constants.SYSTEMD_SERVICE_TIMER.format(interval="1", service="dispatch-reload-bind"),
+            encoding="utf-8",
+        )
+        systemd.service_enable("dispatch-reload-bind.timer")
+        systemd.service_start("dispatch-reload-bind.timer")
 
     def collect_status(
         self,
@@ -131,21 +160,18 @@ class BindService:
     def update_zonefiles_and_reload(
         self,
         relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
-    ) -> DNSRecordProviderData:
+    ) -> None:
         """Update the zonefiles from bind's config and reload bind.
 
         Args:
             relation_data: input relation data
-
-        Returns:
-            The DNSRecordProviderData with the status of each request
         """
         zones = self._dns_record_relations_data_to_zones(relation_data)
 
         # Check for conflicts
         _, conflicting = self._get_conflicts(zones)
         if len(conflicting) > 0:
-            return self._create_dns_record_provider_data(relation_data)
+            return
 
         # Create staging area
         with tempfile.TemporaryDirectory() as tempdir:
@@ -169,8 +195,64 @@ class BindService:
         # Reload charmed-bind config (only if already started)
         self.reload(force_start=False)
 
-        # Return the provider data with the entries' status
-        return self._create_dns_record_provider_data(relation_data)
+    def create_dns_record_provider_data(
+        self,
+        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+    ) -> DNSRecordProviderData:
+        """Create dns record provider data from relation data.
+
+        Args:
+            relation_data: input relation data
+
+        Returns:
+            A DNSRecordProviderData object with requests' status
+        """
+        zones = self._dns_record_relations_data_to_zones(relation_data)
+        nonconflicting, conflicting = self._get_conflicts(zones)
+        statuses = []
+        for record_requirer_data, _ in relation_data:
+            for requirer_entry in record_requirer_data.dns_entries:
+                dns_entry = create_dns_entry_from_requirer_entry(requirer_entry)
+                if dns_entry in nonconflicting:
+                    statuses.append(
+                        DNSProviderData(uuid=requirer_entry.uuid, status=Status.APPROVED)
+                    )
+                    continue
+                if dns_entry in conflicting:
+                    statuses.append(
+                        DNSProviderData(uuid=requirer_entry.uuid, status=Status.CONFLICT)
+                    )
+                    continue
+                statuses.append(DNSProviderData(uuid=requirer_entry.uuid, status=Status.UNKNOWN))
+        return DNSRecordProviderData(dns_entries=statuses)
+
+    def has_a_zone_changed(
+        self,
+        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+    ) -> bool:
+        """Check if a zone definition has changed.
+
+        Args:
+            relation_data: input relation data
+
+        Returns:
+            True if a zone has changed, False otherwise.
+        """
+        zones = self._dns_record_relations_data_to_zones(relation_data)
+        for zone in zones:
+            zonefile_content = pathlib.Path(
+                constants.DNS_CONFIG_DIR, f"db.{zone.domain}"
+            ).read_text(encoding="utf-8")
+            try:
+                metadata = self._get_zonefile_metadata(zonefile_content)
+            except (
+                exceptions.InvalidZoneFileMetadataError,
+                exceptions.EmptyZoneFileMetadataError,
+            ):
+                return True
+            if "HASH" in metadata and hash(zone) != int(metadata["HASH"]):
+                return True
+        return False
 
     def _install_snap_package(
         self, snap_name: str, snap_channel: str, refresh: bool = False
@@ -263,7 +345,11 @@ class BindService:
         zone_files: dict[str, str] = {}
         for zone in zones:
             content = constants.ZONE_HEADER_TEMPLATE.format(
-                zone=zone.domain, serial=int(time.time())
+                zone=zone.domain,
+                # The serial is the timestamp divided by 60.
+                # We only need precision to the minute and want to avoid overflows
+                serial=int(time.time() / 60),
+                hash=hash(zone),
             )
             for entry in zone.entries:
                 content += constants.ZONE_RECORD_TEMPLATE.format(
@@ -292,37 +378,6 @@ class BindService:
             )
         return content
 
-    def _create_dns_record_provider_data(
-        self,
-        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
-    ) -> DNSRecordProviderData:
-        """Create dns record provider data from relation data.
-
-        Args:
-            relation_data: input relation data
-
-        Returns:
-            A DNSRecordProviderData object with requests' status
-        """
-        zones = self._dns_record_relations_data_to_zones(relation_data)
-        nonconflicting, conflicting = self._get_conflicts(zones)
-        statuses = []
-        for record_requirer_data, _ in relation_data:
-            for requirer_entry in record_requirer_data.dns_entries:
-                dns_entry = create_dns_entry_from_requirer_entry(requirer_entry)
-                if dns_entry in nonconflicting:
-                    statuses.append(
-                        DNSProviderData(uuid=requirer_entry.uuid, status=Status.APPROVED)
-                    )
-                    continue
-                if dns_entry in conflicting:
-                    statuses.append(
-                        DNSProviderData(uuid=requirer_entry.uuid, status=Status.CONFLICT)
-                    )
-                    continue
-                statuses.append(DNSProviderData(uuid=requirer_entry.uuid, status=Status.UNKNOWN))
-        return DNSRecordProviderData(dns_entries=statuses)
-
     def _dns_record_relations_data_to_zones(
         self,
         relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
@@ -343,3 +398,41 @@ class BindService:
                 else:
                     zones[new_zone.domain] = new_zone
         return list(zones.values())
+
+    def _get_zonefile_metadata(self, zonefile_content: str) -> dict[str, str]:
+        """Get the metadata of a zonefile.
+
+        Args:
+            zonefile_content: The content of the zonefile.
+
+        Returns:
+            The hash of the corresponding zonefile.
+
+        Raises:
+            InvalidZoneFileMetadataError: when the metadata of the zonefile could not be parsed.
+            EmptyZoneFileMetadataError: when the metadata of the zonefile is empty.
+            DuplicateMetadataEntryError: when the metadata of the zonefile has duplicate entries.
+        """
+        # This assumes that the file was generated with the constants.ZONE_HEADER_TEMPLATE template
+        metadata = {}
+        try:
+            lines = zonefile_content.split("\n")
+            for line in lines:
+                # We only take the $ORIGIN line into account
+                if not line.startswith("$ORIGIN"):
+                    continue
+                logger.debug("%s", line)
+                for token in line.split(";")[1].split():
+                    k, v = token.split(":")
+                    if k in metadata:
+                        raise exceptions.DuplicateMetadataEntryError(
+                            f"Duplicate metadata entry '{k}'"
+                        )
+                    metadata[k] = v
+                logger.debug("%s", metadata)
+        except (IndexError, ValueError) as err:
+            raise exceptions.InvalidZoneFileMetadataError(err) from err
+
+        if metadata:
+            return metadata
+        raise exceptions.EmptyZoneFileMetadataError("No metadata found !")

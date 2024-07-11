@@ -18,3 +18,51 @@ class SnapError(Exception):
             msg (str): Explanation of the error.
         """
         self.msg = msg
+
+
+class InvalidZoneFileMetadataError(Exception):
+    """Exception raised when a zonefile has invalid metadata.
+
+    Attrs:
+        msg (str): Explanation of the error.
+    """
+
+    def __init__(self, msg: str):
+        """Initialize a new instance of the InvalidZoneFileMetadataError exception.
+
+        Args:
+            msg (str): Explanation of the error.
+        """
+        self.msg = msg
+
+
+class EmptyZoneFileMetadataError(Exception):
+    """Exception raised when a zonefile has no metadata.
+
+    Attrs:
+        msg (str): Explanation of the error.
+    """
+
+    def __init__(self, msg: str):
+        """Initialize a new instance of the EmptyZoneFileMetadataError exception.
+
+        Args:
+            msg (str): Explanation of the error.
+        """
+        self.msg = msg
+
+
+class DuplicateMetadataEntryError(Exception):
+    """Exception raised when a zonefile has metadata with duplicate entries.
+
+    Attrs:
+        msg (str): Explanation of the error.
+    """
+
+    def __init__(self, msg: str):
+        """Initialize a new instance of the DuplicateMetadataEntryError exception.
+
+        Args:
+            msg (str): Explanation of the error.
+        """
+        self.msg = msg

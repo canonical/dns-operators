@@ -10,6 +10,7 @@ import typing
 import ops
 from charms.bind.v0.dns_record import DNSRecordProvides
 
+import events
 from bind import BindService
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,9 @@ class BindCharm(ops.CharmBase):
         super().__init__(*args)
         self.bind = BindService()
         self.dns_record = DNSRecordProvides(self)
+
+        self.on.define_event("reload_bind", events.ReloadBindEvent)
+
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.start, self._on_start)
@@ -36,6 +40,18 @@ class BindCharm(ops.CharmBase):
             self.on.dns_record_relation_changed, self._on_dns_record_relation_changed
         )
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
+        self.framework.observe(self.on.reload_bind, self._on_reload_bind)
+
+    def _on_reload_bind(self, _: events.ReloadBindEvent) -> None:
+        """Handle periodic reload bind event."""
+        logger.info("PERIODIC RELOAD")
+        try:
+            relation_data = self.dns_record.get_remote_relation_data()
+        except ValueError as err:
+            logger.info("Validation error of the relation data: %s", err)
+            return
+        if self.bind.has_a_zone_changed(relation_data):
+            self.bind.update_zonefiles_and_reload(relation_data)
 
     def _on_dns_record_relation_changed(self, event: ops.RelationChangedEvent) -> None:
         """Handle dns_record relation changed.
@@ -50,7 +66,7 @@ class BindCharm(ops.CharmBase):
             logger.info("Validation error of the relation data: %s", err)
             return
         self.unit.status = ops.MaintenanceStatus("Handling new relation requests")
-        dns_record_provider_data = self.bind.update_zonefiles_and_reload(relation_data)
+        dns_record_provider_data = self.bind.create_dns_record_provider_data(relation_data)
         relation = self.model.get_relation(self.dns_record.relation_name, event.relation.id)
         self.dns_record.update_relation_data(relation, dns_record_provider_data)
 
@@ -74,7 +90,7 @@ class BindCharm(ops.CharmBase):
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install."""
         self.unit.status = ops.MaintenanceStatus("Preparing bind")
-        self.bind.prepare()
+        self.bind.prepare(self.unit.name)
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start."""
@@ -87,7 +103,7 @@ class BindCharm(ops.CharmBase):
     def _on_upgrade_charm(self, _: ops.UpgradeCharmEvent) -> None:
         """Handle upgrade-charm."""
         self.unit.status = ops.MaintenanceStatus("Upgrading dependencies")
-        self.bind.prepare()
+        self.bind.prepare(self.unit.name)
 
 
 if __name__ == "__main__":  # pragma: nocover

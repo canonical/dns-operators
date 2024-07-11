@@ -3,6 +3,7 @@
 
 """Common data structures used in this charm."""
 
+import hashlib
 
 import pydantic
 from charms.bind.v0.dns_record import RecordClass, RecordType, RequirerEntry
@@ -47,7 +48,10 @@ class DnsEntry(pydantic.BaseModel):
         Returns:
             A hash for the current object.
         """
-        return hash(tuple(getattr(self, k) for k in self.__dict__))
+        h = hashlib.blake2b()
+        for data in (getattr(self, k) for k in self.__dict__):
+            h.update(str(data).encode())
+        return int.from_bytes(h.digest(), byteorder="big")
 
 
 class Zone(pydantic.BaseModel):
@@ -60,6 +64,17 @@ class Zone(pydantic.BaseModel):
 
     domain: str
     entries: set[DnsEntry]
+
+    def __hash__(self) -> int:
+        """Get a hash of a Zone based on its DNSEntries.
+
+        Returns:
+            A hash for the current object.
+        """
+        h = hashlib.blake2b()
+        for entry_hash in (hash(e) for e in self.entries):
+            h.update(entry_hash.to_bytes((entry_hash.bit_length() + 7) // 8, byteorder="big"))
+        return int.from_bytes(h.digest(), byteorder="big")
 
 
 def create_dns_entry_from_requirer_entry(requirer_entry: RequirerEntry) -> DnsEntry:

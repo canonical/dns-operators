@@ -5,7 +5,7 @@
 """Charm for bind."""
 
 import logging
-import subprocess
+import subprocess  # nosec
 import time
 import typing
 

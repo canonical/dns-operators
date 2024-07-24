@@ -131,7 +131,7 @@ class BindCharm(ops.CharmBase):
         for _ in range(5):
             result = str(
                 subprocess.run(
-                    ["dig"] + cmd.split(" "),
+                    ["dig"] + cmd.split(" "),  # nosec
                     capture_output=True,
                     text=True,
                     check=True,

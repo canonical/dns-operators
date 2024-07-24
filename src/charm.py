@@ -75,7 +75,8 @@ class BindCharm(ops.CharmBase):
         self.unit.status = ops.MaintenanceStatus("Handling new relation requests")
         dns_record_provider_data = self.bind.create_dns_record_provider_data(relation_data)
         relation = self.model.get_relation(self.dns_record.relation_name, event.relation.id)
-        self.dns_record.update_relation_data(relation, dns_record_provider_data)
+        if self.unit.is_leader():
+            self.dns_record.update_relation_data(relation, dns_record_provider_data)
 
     def _on_collect_status(self, event: ops.CollectStatusEvent) -> None:
         """Handle collect status event.
@@ -130,8 +131,7 @@ class BindCharm(ops.CharmBase):
         for _ in range(5):
             result = str(
                 subprocess.run(
-                    f"dig {cmd}",
-                    shell=True,
+                    ["dig"] + cmd.split(" "),
                     capture_output=True,
                     text=True,
                     check=True,

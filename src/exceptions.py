@@ -66,3 +66,35 @@ class DuplicateMetadataEntryError(Exception):
             msg (str): Explanation of the error.
         """
         self.msg = msg
+
+
+class PeerRelationUnavailableError(Exception):
+    """Exception raised when the peer relation is unavailable.
+
+    Attrs:
+        msg (str): Explanation of the error.
+    """
+
+    def __init__(self, msg: str):
+        """Initialize a new instance of the PeerRelationUnavailableError exception.
+
+        Args:
+            msg (str): Explanation of the error.
+        """
+        self.msg = msg
+
+
+class PeerRelationNetworkUnavailableError(Exception):
+    """Exception raised when the peer relation network is unavailable.
+
+    Attrs:
+        msg (str): Explanation of the error.
+    """
+
+    def __init__(self, msg: str):
+        """Initialize a new instance of the PeerRelationNetworkUnavailableError exception.
+
+        Args:
+            msg (str): Explanation of the error.
+        """
+        self.msg = msg

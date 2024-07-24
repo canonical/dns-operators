@@ -56,6 +56,7 @@ class BindService:
         Raises:
             ReloadError: when encountering a SnapError
         """
+        logger.debug("Reloading charmed bind")
         try:
             cache = snap.SnapCache()
             charmed_bind = cache[constants.DNS_SNAP_NAME]
@@ -114,6 +115,7 @@ class BindService:
             snap_channel=constants.SNAP_PACKAGES[constants.DNS_SNAP_NAME]["channel"],
         )
         self._install_bind_reload_service(unit_name)
+        self.update_zonefiles_and_reload([])
 
     def _install_bind_reload_service(self, unit_name: str) -> None:
         """Install the bind reload service.
@@ -175,6 +177,15 @@ class BindService:
 
         # Create staging area
         with tempfile.TemporaryDirectory() as tempdir:
+
+            # Write the service.test file
+            pathlib.Path(constants.DNS_CONFIG_DIR, f"db.{constants.ZONE_SERVICE_NAME}").write_text(
+                constants.ZONE_SERVICE.format(
+                    serial=int(time.time() / 60),
+                ),
+                encoding="utf-8",
+            )
+
             # Write zone files
             zone_files: dict[str, str] = self._zones_to_files_content(zones)
             for domain, content in zone_files.items():
@@ -240,14 +251,15 @@ class BindService:
         """
         zones = self._dns_record_relations_data_to_zones(relation_data)
         for zone in zones:
-            zonefile_content = pathlib.Path(
-                constants.DNS_CONFIG_DIR, f"db.{zone.domain}"
-            ).read_text(encoding="utf-8")
             try:
+                zonefile_content = pathlib.Path(
+                    constants.DNS_CONFIG_DIR, f"db.{zone.domain}"
+                ).read_text(encoding="utf-8")
                 metadata = self._get_zonefile_metadata(zonefile_content)
             except (
                 exceptions.InvalidZoneFileMetadataError,
                 exceptions.EmptyZoneFileMetadataError,
+                FileNotFoundError,
             ):
                 return True
             if "HASH" in metadata and hash(zone) != int(metadata["HASH"]):
@@ -359,6 +371,7 @@ class BindService:
                     record_data=entry.record_data,
                 )
             zone_files[zone.domain] = content
+
         return zone_files
 
     def _generate_named_conf_local(self, zones: list[str]) -> str:
@@ -372,6 +385,11 @@ class BindService:
         """
         # It's good practice to include rfc1918
         content: str = f'include "{constants.DNS_CONFIG_DIR}/zones.rfc1918";\n'
+        # Include a zone specifically used for some services tests
+        content += constants.NAMED_CONF_ZONE_DEF_TEMPLATE.format(
+            name=f"{constants.ZONE_SERVICE_NAME}",
+            absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{constants.ZONE_SERVICE_NAME}",
+        )
         for name in zones:
             content += constants.NAMED_CONF_ZONE_DEF_TEMPLATE.format(
                 name=name, absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{name}"

@@ -10,6 +10,15 @@ SNAP_PACKAGES = {
 }
 DNS_CONFIG_DIR = f"/var/snap/{DNS_SNAP_NAME}/current/etc/bind"
 
+ZONE_SERVICE_NAME = "service.test"
+
+ZONE_SERVICE = f"""$ORIGIN {ZONE_SERVICE_NAME}.
+$TTL 600
+@ IN SOA {ZONE_SERVICE_NAME}. mail.{ZONE_SERVICE_NAME}. ( {{serial}} 1d 1h 1h 10m )
+@ IN NS localhost.
+status IN TXT "ok"
+"""
+
 ZONE_HEADER_TEMPLATE = """$ORIGIN {zone}.; HASH:{hash}
 $TTL 600
 @ IN SOA {zone}. mail.{zone}. ( {serial} 1d 1h 1h 10m )
@@ -47,3 +56,5 @@ Persistent=true
 [Install]
 WantedBy=timers.target
 """
+
+PEER = "bind-peers"

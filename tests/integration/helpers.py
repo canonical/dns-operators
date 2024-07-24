@@ -4,6 +4,9 @@
 
 """Helper functions for the integration tests."""
 
+# Ignore duplicate code from the helpers (they can be in the charm also)
+# pylint: disable=duplicate-code
+
 import json
 import pathlib
 import random
@@ -14,6 +17,7 @@ import time
 import ops
 from pytest_operator.plugin import OpsTest
 
+import constants
 import models
 
 
@@ -179,31 +183,93 @@ async def generate_anycharm_relation(
 
 
 async def dig_query(
-    ops_test: OpsTest, app_name: str, entry: models.DnsEntry, retry: bool = False, wait: int = 5
+    ops_test: OpsTest, app: ops.model.Application, cmd: str, retry: bool = False, wait: int = 5
 ) -> str:
     """Query a DnsEntry with dig.
 
     Args:
         ops_test: The ops test framework instance
-        app_name: Name of the app to be queried
-        entry: DnsEntry to query
+        app: Application to be used to launch the command
+        cmd: Dig command to perform
         retry: If the dig request should be retried
         wait: duration in seconds to wait between retries
 
     Returns: the result of the DNS query
     """
     result: str = ""
-    retry = False
+    # Application actually does have units
+    unit = app.units[0]  # type: ignore
     for _ in range(5):
-        result = (
-            await run_on_unit(
-                ops_test,
-                f"{app_name}/0",
-                f"dig @127.0.0.1 {entry.host_label}.{entry.domain} {entry.record_type} +short",
-            )
-        ).strip()
-        if result != "" or not retry:
+        result = (await run_on_unit(ops_test, unit.name, f"dig {cmd}")).strip()
+        if (result.strip() != "" and "timed out" not in result) or not retry:
             break
         time.sleep(wait)
 
     return result
+
+
+async def get_active_unit(app: ops.model.Application, ops_test: OpsTest) -> ops.model.Unit | None:
+    """Get the current active unit if it exists
+
+    Args:
+        app: Application to search for an active unit
+        ops_test: The ops test framework instance
+
+    Returns:
+        The current active unit if it exists, None otherwise
+    """
+    for u in app.units:  # type: ignore
+        data = json.loads((await ops_test.juju("show-unit", u.name, "--format", "json"))[1])
+        relations = data[u.name]["relation-info"]
+        for r in relations:
+            if r["endpoint"] == "bind-peers":
+                peer_relation = r
+                break
+        if peer_relation is None:
+            continue
+        if "active-unit" not in peer_relation["application-data"]:
+            continue
+        if (
+            peer_relation["local-unit"]["data"]["ingress-address"]
+            == peer_relation["application-data"]["active-unit"]
+        ):
+            return u
+    return None
+
+
+async def check_if_active_unit_exists(app: ops.model.Application, ops_test: OpsTest) -> bool:
+    """Check if an active unit exists and is reachable
+
+    Args:
+        app: Application to search for an active unit
+        ops_test: The ops test framework instance
+
+    Returns:
+        The current active unit if it exists, None otherwise
+    """
+    # Application actually does have units
+    unit = app.units[0]  # type: ignore
+    data = json.loads((await ops_test.juju("show-unit", unit.name, "--format", "json"))[1])
+    relations = data[unit.name]["relation-info"]
+    for r in relations:
+        if r["endpoint"] == "bind-peers":
+            peer_relation = r
+            break
+    if peer_relation is None:
+        return False
+    if "active-unit" not in peer_relation["application-data"]:
+        return False
+    active_unit = peer_relation["application-data"]["active-unit"]
+    if not active_unit:
+        return False
+
+    status = await dig_query(
+        ops_test,
+        app,
+        f"@{active_unit} status.{constants.ZONE_SERVICE_NAME} TXT +short",
+        retry=True,
+        wait=5,
+    )
+    if status != '"ok"':
+        return False
+    return True

@@ -104,7 +104,7 @@ class BindService:
             logger.error(error_msg)
             raise StopError(error_msg) from e
 
-    def prepare(self, unit_name: str) -> None:
+    def setup(self, unit_name: str) -> None:
         """Prepare the machine.
 
         Args:

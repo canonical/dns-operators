@@ -85,8 +85,11 @@ class BindCharm(ops.CharmBase):
         Args:
             event: Event triggering the collect-status hook
         """
-        if self._is_active_unit():
-            event.add_status(ops.ActiveStatus("active"))
+        try:
+            if self._is_active_unit():
+                event.add_status(ops.ActiveStatus("active"))
+        except exceptions.PeerRelationUnavailableError:
+            event.add_status(ops.BlockedStatus("Peer relation is not available"))
         try:
             relation_requirer_data = self.dns_record.get_remote_relation_data()
         except ValueError as err:
@@ -101,8 +104,7 @@ class BindCharm(ops.CharmBase):
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install."""
         self.unit.status = ops.MaintenanceStatus("Preparing bind")
-        self.bind.prepare(self.unit.name)
-        self.bind.update_zonefiles_and_reload([])
+        self.bind.setup(self.unit.name)
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start."""
@@ -138,13 +140,9 @@ class BindCharm(ops.CharmBase):
         Raises:
             PeerRelationUnavailableError: when the peer relation does not exist
         """
-        if not self.peer_relation:
-            raise exceptions.PeerRelationUnavailableError(
-                "Peer relation not available when trying to get unit IP."
-            )
-
         active_unit_ip = self._active_unit_ip()
 
+        assert self.peer_relation is not None
         if not active_unit_ip:
             self.peer_relation.data[self.app].update({"active-unit": self._unit_ip()})
             return True
@@ -164,6 +162,9 @@ class BindCharm(ops.CharmBase):
 
     async def _dig_query(self, cmd: str, retry: bool = False, wait: int = 5) -> str:
         """Query a DnsEntry with dig.
+
+        This function was created for simplicity's sake. If we need to make more DNS requests
+        in the future, we should revisit it by employing a python library.
 
         Args:
             cmd: The dig command to perform
@@ -195,10 +196,7 @@ class BindCharm(ops.CharmBase):
         Returns:
             True if the charm is effectively the active unit.
         """
-        try:
-            return self._active_unit_ip() == self._unit_ip()
-        except exceptions.PeerRelationUnavailableError:
-            return False
+        return self._active_unit_ip() == self._unit_ip()
 
     def _active_unit_ip(self) -> str:
         """Get current active unit ip.

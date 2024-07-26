@@ -117,7 +117,7 @@ class BindCharm(ops.CharmBase):
     def _on_upgrade_charm(self, _: ops.UpgradeCharmEvent) -> None:
         """Handle upgrade-charm."""
         self.unit.status = ops.MaintenanceStatus("Upgrading dependencies")
-        self.bind.prepare(self.unit.name)
+        self.bind.setup(self.unit.name)
 
     def _on_leader_elected(self, _: ops.LeaderElectedEvent) -> None:
         """Handle leader-elected event."""

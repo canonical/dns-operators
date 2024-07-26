@@ -195,7 +195,10 @@ class BindCharm(ops.CharmBase):
         Returns:
             True if the charm is effectively the active unit.
         """
-        return self._active_unit_ip() == self._unit_ip()
+        try:
+            return self._active_unit_ip() == self._unit_ip()
+        except exceptions.PeerRelationUnavailableError:
+            return False
 
     def _active_unit_ip(self) -> str:
         """Get current active unit ip.

@@ -49,6 +49,7 @@ class BindCharm(ops.CharmBase):
         self.framework.observe(
             self.on[constants.PEER].relation_departed, self._on_peer_relation_departed
         )
+        self.peer_relation = self.model.get_relation(constants.PEER)
 
     def _on_reload_bind(self, _: events.ReloadBindEvent) -> None:
         """Handle periodic reload bind event."""
@@ -84,7 +85,7 @@ class BindCharm(ops.CharmBase):
         Args:
             event: Event triggering the collect-status hook
         """
-        if self._is_active():
+        if self._is_active_unit():
             event.add_status(ops.ActiveStatus("active"))
         try:
             relation_requirer_data = self.dns_record.get_remote_relation_data()
@@ -116,7 +117,52 @@ class BindCharm(ops.CharmBase):
         self.unit.status = ops.MaintenanceStatus("Upgrading dependencies")
         self.bind.prepare(self.unit.name)
 
-    async def dig_query(self, cmd: str, retry: bool = False, wait: int = 5) -> str:
+    def _on_leader_elected(self, _: ops.LeaderElectedEvent) -> None:
+        """Handle leader-elected event."""
+        # We check that we are still the leader when starting to process this event
+        if self.unit.is_leader():
+            self._become_active()
+
+    def _on_peer_relation_departed(self, _: ops.RelationDepartedEvent) -> None:
+        """Handle the peer relation departed event."""
+        # We check that we are still the leader when starting to process this event
+        if self.unit.is_leader():
+            self._become_active()
+
+    def _become_active(self) -> bool:
+        """Set the current unit as the active unit of the charm.
+
+        Returns:
+            True if the charm is effectively the new active unit.
+
+        Raises:
+            PeerRelationUnavailableError: when the peer relation does not exist
+        """
+        if not self.peer_relation:
+            raise exceptions.PeerRelationUnavailableError(
+                "Peer relation not available when trying to get unit IP."
+            )
+
+        active_unit_ip = self._active_unit_ip()
+
+        if not active_unit_ip:
+            self.peer_relation.data[self.app].update({"active-unit": self._unit_ip()})
+            return True
+
+        if active_unit_ip != self._unit_ip():
+            status = self._dig_query(
+                f"@{active_unit_ip} service.{constants.ZONE_SERVICE_NAME} TXT +short",
+                retry=True,
+                wait=1,
+            )
+            if status != "ok":
+                self.peer_relation.data[self.app].update({"active-unit": self._unit_ip()})
+                return True
+            return False
+
+        return True
+
+    async def _dig_query(self, cmd: str, retry: bool = False, wait: int = 5) -> str:
         """Query a DnsEntry with dig.
 
         Args:
@@ -143,61 +189,39 @@ class BindCharm(ops.CharmBase):
 
         return result
 
-    def _is_active(self) -> bool:
+    def _is_active_unit(self) -> bool:
         """Check if the charm is the active unit.
 
         Returns:
             True if the charm is effectively the active unit.
         """
-        peer_relation = self.model.get_relation(constants.PEER)
-        if not peer_relation:
-            return False
-        return peer_relation.data[self.app].get("active-unit") == self._unit_ip
+        return self._active_unit_ip() == self._unit_ip()
 
-    def _become_active(self) -> bool:
-        """Activate the charm.
+    def _active_unit_ip(self) -> str:
+        """Get current active unit ip.
 
         Returns:
-            True if the charm is effectively the new active unit.
+            The IP of the active unit
+
+        Raises:
+            PeerRelationUnavailableError: when the peer relation does not exist
         """
-        peer_relation = self.model.get_relation(constants.PEER)
-        if not peer_relation:
-            return False
-
-        active_unit_ip = peer_relation.data[self.app].get("active-unit")
-
-        if not active_unit_ip:
-            peer_relation.data[self.app].update({"active-unit": self._unit_ip})
-            return True
-
-        if active_unit_ip != self._unit_ip:
-            status = self.dig_query(
-                f"@{active_unit_ip} service.{constants.ZONE_SERVICE_NAME} TXT +short",
-                retry=True,
-                wait=1,
+        if not self.peer_relation:
+            raise exceptions.PeerRelationUnavailableError(
+                "Peer relation not available when trying to get unit IP."
             )
-            if status != "ok":
-                peer_relation.data[self.app].update({"active-unit": self._unit_ip})
-                return True
-            return False
+        return self.peer_relation.data[self.app].get("active-unit", "")
 
-        return True
-
-    def _on_leader_elected(self, _: ops.LeaderElectedEvent) -> None:
-        """Handle leader-elected event."""
-        # We check that we are still the leader when starting to process this event
-        if self.unit.is_leader():
-            self._become_active()
-
-    def _on_peer_relation_departed(self, _: ops.RelationDepartedEvent) -> None:
-        """Handle the peer relation departed event."""
-        # We check that we are still the leader when starting to process this event
-        if self.unit.is_leader():
-            self._become_active()
-
-    @property
     def _unit_ip(self) -> str:
-        """Current unit ip."""
+        """Get current unit ip.
+
+        Returns:
+            The IP of the current unit
+
+        Raises:
+            PeerRelationUnavailableError: when the peer relation does not exist
+            PeerRelationNetworkUnavailableError: when the network property does not exist
+        """
         if (binding := self.model.get_binding(constants.PEER)) is not None:
             if (network := binding.network) is not None:
                 logger.debug(str(network.bind_address))

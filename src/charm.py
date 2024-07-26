@@ -139,7 +139,7 @@ class BindCharm(ops.CharmBase):
         """
         active_unit_ip = self._active_unit_ip()
 
-        assert self.peer_relation is not None
+        assert self.peer_relation is not None  # nosec
         if not active_unit_ip:
             self.peer_relation.data[self.app].update({"active-unit": self._unit_ip()})
             return True

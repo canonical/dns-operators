@@ -136,9 +136,6 @@ class BindCharm(ops.CharmBase):
 
         Returns:
             True if the charm is effectively the new active unit.
-
-        Raises:
-            PeerRelationUnavailableError: when the peer relation does not exist
         """
         active_unit_ip = self._active_unit_ip()
 

@@ -20,6 +20,14 @@ from bind import BindService
 logger = logging.getLogger(__name__)
 
 
+class PeerRelationUnavailableError(exceptions.BindCharmError):
+    """Exception raised when the peer relation is unavailable."""
+
+
+class PeerRelationNetworkUnavailableError(exceptions.BindCharmError):
+    """Exception raised when the peer relation network is unavailable."""
+
+
 class BindCharm(ops.CharmBase):
     """Charm the service."""
 
@@ -88,7 +96,7 @@ class BindCharm(ops.CharmBase):
         try:
             if self._is_active_unit():
                 event.add_status(ops.ActiveStatus("active"))
-        except exceptions.PeerRelationUnavailableError:
+        except PeerRelationUnavailableError:
             event.add_status(ops.WaitingStatus("Peer relation is not available"))
         try:
             relation_requirer_data = self.dns_record.get_remote_relation_data()
@@ -209,7 +217,7 @@ class BindCharm(ops.CharmBase):
             PeerRelationUnavailableError: when the peer relation does not exist
         """
         if not self.peer_relation:
-            raise exceptions.PeerRelationUnavailableError(
+            raise PeerRelationUnavailableError(
                 "Peer relation not available when trying to get unit IP."
             )
         return self.peer_relation.data[self.app].get("active-unit", "")
@@ -228,10 +236,10 @@ class BindCharm(ops.CharmBase):
             if (network := binding.network) is not None:
                 logger.debug(str(network.bind_address))
                 return str(network.bind_address)
-            raise exceptions.PeerRelationNetworkUnavailableError(
+            raise PeerRelationNetworkUnavailableError(
                 "Peer relation network not available when trying to get unit IP."
             )
-        raise exceptions.PeerRelationUnavailableError(
+        raise PeerRelationUnavailableError(
             "Peer relation not available when trying to get unit IP."
         )
 

@@ -28,19 +28,35 @@ from models import DnsEntry, Zone, create_dns_entry_from_requirer_entry
 logger = logging.getLogger(__name__)
 
 
-class ReloadError(exceptions.SnapError):
+class SnapError(exceptions.BindCharmError):
+    """Exception raised when an action on the snap fails."""
+
+
+class InvalidZoneFileMetadataError(exceptions.BindCharmError):
+    """Exception raised when a zonefile has invalid metadata."""
+
+
+class EmptyZoneFileMetadataError(exceptions.BindCharmError):
+    """Exception raised when a zonefile has no metadata."""
+
+
+class DuplicateMetadataEntryError(exceptions.BindCharmError):
+    """Exception raised when a zonefile has metadata with duplicate entries."""
+
+
+class ReloadError(SnapError):
     """Exception raised when unable to reload the service."""
 
 
-class StartError(exceptions.SnapError):
+class StartError(SnapError):
     """Exception raised when unable to start the service."""
 
 
-class StopError(exceptions.SnapError):
+class StopError(SnapError):
     """Exception raised when unable to stop the service."""
 
 
-class InstallError(exceptions.SnapError):
+class InstallError(SnapError):
     """Exception raised when unable to install dependencies for the service."""
 
 
@@ -257,8 +273,8 @@ class BindService:
                 ).read_text(encoding="utf-8")
                 metadata = self._get_zonefile_metadata(zonefile_content)
             except (
-                exceptions.InvalidZoneFileMetadataError,
-                exceptions.EmptyZoneFileMetadataError,
+                InvalidZoneFileMetadataError,
+                EmptyZoneFileMetadataError,
                 FileNotFoundError,
             ):
                 return True
@@ -443,14 +459,12 @@ class BindService:
                 for token in line.split(";")[1].split():
                     k, v = token.split(":")
                     if k in metadata:
-                        raise exceptions.DuplicateMetadataEntryError(
-                            f"Duplicate metadata entry '{k}'"
-                        )
+                        raise DuplicateMetadataEntryError(f"Duplicate metadata entry '{k}'")
                     metadata[k] = v
                 logger.debug("%s", metadata)
         except (IndexError, ValueError) as err:
-            raise exceptions.InvalidZoneFileMetadataError(err) from err
+            raise InvalidZoneFileMetadataError(err) from err
 
         if metadata:
             return metadata
-        raise exceptions.EmptyZoneFileMetadataError("No metadata found !")
+        raise EmptyZoneFileMetadataError("No metadata found !")

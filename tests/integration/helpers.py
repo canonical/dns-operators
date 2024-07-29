@@ -24,7 +24,7 @@ import models
 class ExecutionError(Exception):
     """Exception raised when execution fails.
 
-    Attrs:
+    Attributes:
         msg (str): Explanation of the error.
     """
 
@@ -218,12 +218,12 @@ async def get_active_unit(app: ops.model.Application, ops_test: OpsTest) -> ops.
     Returns:
         The current active unit if it exists, None otherwise
     """
-    for u in app.units:  # type: ignore
-        data = json.loads((await ops_test.juju("show-unit", u.name, "--format", "json"))[1])
-        relations = data[u.name]["relation-info"]
-        for r in relations:
-            if r["endpoint"] == "bind-peers":
-                peer_relation = r
+    for unit in app.units:  # type: ignore
+        data = json.loads((await ops_test.juju("show-unit", unit.name, "--format", "json"))[1])
+        relations = data[unit.name]["relation-info"]
+        for relation in relations:
+            if relation["endpoint"] == "bind-peers":
+                peer_relation = relation
                 break
         if peer_relation is None:
             continue
@@ -233,7 +233,7 @@ async def get_active_unit(app: ops.model.Application, ops_test: OpsTest) -> ops.
             peer_relation["local-unit"]["data"]["ingress-address"]
             == peer_relation["application-data"]["active-unit"]
         ):
-            return u
+            return unit
     return None
 
 
@@ -251,9 +251,9 @@ async def check_if_active_unit_exists(app: ops.model.Application, ops_test: OpsT
     unit = app.units[0]  # type: ignore
     data = json.loads((await ops_test.juju("show-unit", unit.name, "--format", "json"))[1])
     relations = data[unit.name]["relation-info"]
-    for r in relations:
-        if r["endpoint"] == "bind-peers":
-            peer_relation = r
+    for relation in relations:
+        if relation["endpoint"] == "bind-peers":
+            peer_relation = relation
             break
     if peer_relation is None:
         return False

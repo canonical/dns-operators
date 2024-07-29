@@ -89,7 +89,7 @@ class BindCharm(ops.CharmBase):
             if self._is_active_unit():
                 event.add_status(ops.ActiveStatus("active"))
         except exceptions.PeerRelationUnavailableError:
-            event.add_status(ops.BlockedStatus("Peer relation is not available"))
+            event.add_status(ops.WaitingStatus("Peer relation is not available"))
         try:
             relation_requirer_data = self.dns_record.get_remote_relation_data()
         except ValueError as err:
@@ -157,7 +157,7 @@ class BindCharm(ops.CharmBase):
 
         return True
 
-    async def _dig_query(self, cmd: str, retry: bool = False, wait: int = 5) -> str:
+    def _dig_query(self, cmd: str, retry: bool = False, wait: int = 5) -> str:
         """Query a DnsEntry with dig.
 
         This function was created for simplicity's sake. If we need to make more DNS requests
@@ -173,14 +173,18 @@ class BindCharm(ops.CharmBase):
         result: str = ""
         retry = False
         for _ in range(5):
-            result = str(
-                subprocess.run(
-                    ["dig"] + cmd.split(" "),  # nosec
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
-            ).strip()
+            try:
+                result = str(
+                    subprocess.run(
+                        ["dig"] + cmd.split(" "),  # nosec
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                    )
+                ).strip()
+            except subprocess.CalledProcessError as exc:
+                logger.warning("%s", exc)
+                result = ""
             if result != "" or not retry:
                 break
             time.sleep(wait)

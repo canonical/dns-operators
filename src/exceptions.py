@@ -7,7 +7,7 @@
 class SnapError(Exception):
     """Exception raised when an action on the snap fails.
 
-    Attrs:
+    Attributes:
         msg (str): Explanation of the error.
     """
 
@@ -23,7 +23,7 @@ class SnapError(Exception):
 class InvalidZoneFileMetadataError(Exception):
     """Exception raised when a zonefile has invalid metadata.
 
-    Attrs:
+    Attributes:
         msg (str): Explanation of the error.
     """
 
@@ -39,7 +39,7 @@ class InvalidZoneFileMetadataError(Exception):
 class EmptyZoneFileMetadataError(Exception):
     """Exception raised when a zonefile has no metadata.
 
-    Attrs:
+    Attributes:
         msg (str): Explanation of the error.
     """
 
@@ -55,7 +55,7 @@ class EmptyZoneFileMetadataError(Exception):
 class DuplicateMetadataEntryError(Exception):
     """Exception raised when a zonefile has metadata with duplicate entries.
 
-    Attrs:
+    Attributes:
         msg (str): Explanation of the error.
     """
 
@@ -71,7 +71,7 @@ class DuplicateMetadataEntryError(Exception):
 class PeerRelationUnavailableError(Exception):
     """Exception raised when the peer relation is unavailable.
 
-    Attrs:
+    Attributes:
         msg (str): Explanation of the error.
     """
 
@@ -87,7 +87,7 @@ class PeerRelationUnavailableError(Exception):
 class PeerRelationNetworkUnavailableError(Exception):
     """Exception raised when the peer relation network is unavailable.
 
-    Attrs:
+    Attributes:
         msg (str): Explanation of the error.
     """
 

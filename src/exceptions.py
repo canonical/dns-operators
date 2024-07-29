@@ -4,15 +4,11 @@
 """Exceptions used by the bind charm."""
 
 
-class SnapError(Exception):
-    """Exception raised when an action on the snap fails.
-
-    Attributes:
-        msg (str): Explanation of the error.
-    """
+class BindCharmError(Exception):
+    """Base exception for the bind charm."""
 
     def __init__(self, msg: str):
-        """Initialize a new instance of the SnapError exception.
+        """Initialize a new instance of the exception.
 
         Args:
             msg (str): Explanation of the error.
@@ -20,81 +16,25 @@ class SnapError(Exception):
         self.msg = msg
 
 
-class InvalidZoneFileMetadataError(Exception):
-    """Exception raised when a zonefile has invalid metadata.
-
-    Attributes:
-        msg (str): Explanation of the error.
-    """
-
-    def __init__(self, msg: str):
-        """Initialize a new instance of the InvalidZoneFileMetadataError exception.
-
-        Args:
-            msg (str): Explanation of the error.
-        """
-        self.msg = msg
+class SnapError(BindCharmError):
+    """Exception raised when an action on the snap fails."""
 
 
-class EmptyZoneFileMetadataError(Exception):
-    """Exception raised when a zonefile has no metadata.
-
-    Attributes:
-        msg (str): Explanation of the error.
-    """
-
-    def __init__(self, msg: str):
-        """Initialize a new instance of the EmptyZoneFileMetadataError exception.
-
-        Args:
-            msg (str): Explanation of the error.
-        """
-        self.msg = msg
+class InvalidZoneFileMetadataError(BindCharmError):
+    """Exception raised when a zonefile has invalid metadata."""
 
 
-class DuplicateMetadataEntryError(Exception):
-    """Exception raised when a zonefile has metadata with duplicate entries.
-
-    Attributes:
-        msg (str): Explanation of the error.
-    """
-
-    def __init__(self, msg: str):
-        """Initialize a new instance of the DuplicateMetadataEntryError exception.
-
-        Args:
-            msg (str): Explanation of the error.
-        """
-        self.msg = msg
+class EmptyZoneFileMetadataError(BindCharmError):
+    """Exception raised when a zonefile has no metadata."""
 
 
-class PeerRelationUnavailableError(Exception):
-    """Exception raised when the peer relation is unavailable.
-
-    Attributes:
-        msg (str): Explanation of the error.
-    """
-
-    def __init__(self, msg: str):
-        """Initialize a new instance of the PeerRelationUnavailableError exception.
-
-        Args:
-            msg (str): Explanation of the error.
-        """
-        self.msg = msg
+class DuplicateMetadataEntryError(BindCharmError):
+    """Exception raised when a zonefile has metadata with duplicate entries."""
 
 
-class PeerRelationNetworkUnavailableError(Exception):
-    """Exception raised when the peer relation network is unavailable.
+class PeerRelationUnavailableError(BindCharmError):
+    """Exception raised when the peer relation is unavailable."""
 
-    Attributes:
-        msg (str): Explanation of the error.
-    """
 
-    def __init__(self, msg: str):
-        """Initialize a new instance of the PeerRelationNetworkUnavailableError exception.
-
-        Args:
-            msg (str): Explanation of the error.
-        """
-        self.msg = msg
+class PeerRelationNetworkUnavailableError(BindCharmError):
+    """Exception raised when the peer relation network is unavailable."""

@@ -219,6 +219,7 @@ async def get_active_unit(app: ops.model.Application, ops_test: OpsTest) -> ops.
         The current active unit if it exists, None otherwise
     """
     for unit in app.units:  # type: ignore
+        # We take `[1]` because `[0]` is the return code of the process
         data = json.loads((await ops_test.juju("show-unit", unit.name, "--format", "json"))[1])
         relations = data[unit.name]["relation-info"]
         for relation in relations:
@@ -249,6 +250,7 @@ async def check_if_active_unit_exists(app: ops.model.Application, ops_test: OpsT
     """
     # Application actually does have units
     unit = app.units[0]  # type: ignore
+    # We take `[1]` because `[0]` is the return code of the process
     data = json.loads((await ops_test.juju("show-unit", unit.name, "--format", "json"))[1])
     relations = data[unit.name]["relation-info"]
     for relation in relations:

@@ -133,8 +133,15 @@ class BindCharm(ops.CharmBase):
         if self.unit.is_leader():
             self._become_active()
 
-    def _on_peer_relation_departed(self, _: ops.RelationDepartedEvent) -> None:
-        """Handle the peer relation departed event."""
+    def _on_peer_relation_departed(self, event: ops.RelationDepartedEvent) -> None:
+        """Handle the peer relation departed event.
+
+        Args:
+            event: Event triggering the relation-departed hook
+        """
+        # If we are a departing unit, we don't want to interfere with electing a new active one
+        if event.departing_unit == self.model.unit:
+            return
         # We check that we are still the leader when starting to process this event
         if self.unit.is_leader():
             self._become_active()

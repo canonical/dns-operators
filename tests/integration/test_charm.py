@@ -32,6 +32,15 @@ async def test_lifecycle(app: ops.model.Application, ops_test: OpsTest):
     # Mypy has difficulty with ActiveStatus
     assert unit.workload_status == ops.model.ActiveStatus.name  # type: ignore
 
+    status = await tests.integration.helpers.dig_query(
+        ops_test,
+        app,
+        f"@127.0.0.1 status.{constants.ZONE_SERVICE_NAME} TXT +short",
+        retry=True,
+        wait=5,
+    )
+    assert status == '"ok"'
+
     await tests.integration.helpers.dispatch_to_unit(ops_test, unit, "stop")
     time.sleep(5)
     _, service_status, _ = await ops_test.juju(
@@ -239,7 +248,7 @@ async def test_dns_record_relation(
 
     await model.wait_for_idle()
 
-    # wait for the bind-reload event to happen
+    # Force reload bind
     restart_cmd = f"sudo snap restart --reload {constants.DNS_SNAP_NAME}"
     # Application actually does have units
     unit = app.units[0]  # type: ignore
@@ -247,13 +256,7 @@ async def test_dns_record_relation(
     await model.wait_for_idle()
 
     # Test the status of the bind-operator instance
-    # Application actually does have units
-    unit = app.units[0]  # type: ignore
     assert unit.workload_status == status.name
-
-    # Force reload bind
-    restart_cmd = f"sudo snap restart --reload {constants.DNS_SNAP_NAME}"
-    await tests.integration.helpers.run_on_unit(ops_test, unit.name, restart_cmd)
 
     # Test if the records give the correct results
     # Do that only if we have an active status
@@ -262,9 +265,43 @@ async def test_dns_record_relation(
             for entry in integration_data:
 
                 result = await tests.integration.helpers.dig_query(
-                    ops_test, app.name, entry, retry=True, wait=5
+                    ops_test,
+                    app,
+                    f"@127.0.0.1 {entry.host_label}.{entry.domain} {entry.record_type} +short",
+                    retry=True,
+                    wait=5,
                 )
                 assert result == str(entry.record_data), (
                     f"{entry.host_label}.{entry.domain}"
                     f" {entry.record_type} {entry.record_data}"
                 )
+
+
+@pytest.mark.asyncio
+@pytest.mark.abort_on_fail
+async def test_active_election(
+    app: ops.model.Application,
+    ops_test: OpsTest,
+    model: Model,
+):
+    """
+    arrange: given deployed bind-operator
+    act: change the number of units
+    assert: there always is an active unit
+    """
+    assert await tests.integration.helpers.check_if_active_unit_exists(app, ops_test)
+
+    assert ops_test.model is not None
+    add_unit_cmd = f"add-unit {app.name} --model={ops_test.model.info.name}"
+    await ops_test.juju(*(add_unit_cmd.split(" ")))
+    await model.wait_for_idle()
+    assert await tests.integration.helpers.check_if_active_unit_exists(app, ops_test)
+
+    active_unit = await tests.integration.helpers.get_active_unit(app, ops_test)
+    assert active_unit is not None
+    remove_unit_cmd = (
+        f"remove-unit {active_unit.name} --model={ops_test.model.info.name} --no-prompt"
+    )
+    await ops_test.juju(*(remove_unit_cmd.split(" ")))
+    await model.wait_for_idle()
+    assert await tests.integration.helpers.check_if_active_unit_exists(app, ops_test)

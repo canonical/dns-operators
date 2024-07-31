@@ -28,19 +28,35 @@ from models import DnsEntry, Zone, create_dns_entry_from_requirer_entry
 logger = logging.getLogger(__name__)
 
 
-class ReloadError(exceptions.SnapError):
+class SnapError(exceptions.BindCharmError):
+    """Exception raised when an action on the snap fails."""
+
+
+class InvalidZoneFileMetadataError(exceptions.BindCharmError):
+    """Exception raised when a zonefile has invalid metadata."""
+
+
+class EmptyZoneFileMetadataError(exceptions.BindCharmError):
+    """Exception raised when a zonefile has no metadata."""
+
+
+class DuplicateMetadataEntryError(exceptions.BindCharmError):
+    """Exception raised when a zonefile has metadata with duplicate entries."""
+
+
+class ReloadError(SnapError):
     """Exception raised when unable to reload the service."""
 
 
-class StartError(exceptions.SnapError):
+class StartError(SnapError):
     """Exception raised when unable to start the service."""
 
 
-class StopError(exceptions.SnapError):
+class StopError(SnapError):
     """Exception raised when unable to stop the service."""
 
 
-class InstallError(exceptions.SnapError):
+class InstallError(SnapError):
     """Exception raised when unable to install dependencies for the service."""
 
 
@@ -56,6 +72,7 @@ class BindService:
         Raises:
             ReloadError: when encountering a SnapError
         """
+        logger.debug("Reloading charmed bind")
         try:
             cache = snap.SnapCache()
             charmed_bind = cache[constants.DNS_SNAP_NAME]
@@ -103,7 +120,7 @@ class BindService:
             logger.error(error_msg)
             raise StopError(error_msg) from e
 
-    def prepare(self, unit_name: str) -> None:
+    def setup(self, unit_name: str) -> None:
         """Prepare the machine.
 
         Args:
@@ -114,6 +131,7 @@ class BindService:
             snap_channel=constants.SNAP_PACKAGES[constants.DNS_SNAP_NAME]["channel"],
         )
         self._install_bind_reload_service(unit_name)
+        self.update_zonefiles_and_reload([])
 
     def _install_bind_reload_service(self, unit_name: str) -> None:
         """Install the bind reload service.
@@ -175,6 +193,15 @@ class BindService:
 
         # Create staging area
         with tempfile.TemporaryDirectory() as tempdir:
+
+            # Write the service.test file
+            pathlib.Path(constants.DNS_CONFIG_DIR, f"db.{constants.ZONE_SERVICE_NAME}").write_text(
+                constants.ZONE_SERVICE.format(
+                    serial=int(time.time() / 60),
+                ),
+                encoding="utf-8",
+            )
+
             # Write zone files
             zone_files: dict[str, str] = self._zones_to_files_content(zones)
             for domain, content in zone_files.items():
@@ -240,14 +267,15 @@ class BindService:
         """
         zones = self._dns_record_relations_data_to_zones(relation_data)
         for zone in zones:
-            zonefile_content = pathlib.Path(
-                constants.DNS_CONFIG_DIR, f"db.{zone.domain}"
-            ).read_text(encoding="utf-8")
             try:
+                zonefile_content = pathlib.Path(
+                    constants.DNS_CONFIG_DIR, f"db.{zone.domain}"
+                ).read_text(encoding="utf-8")
                 metadata = self._get_zonefile_metadata(zonefile_content)
             except (
-                exceptions.InvalidZoneFileMetadataError,
-                exceptions.EmptyZoneFileMetadataError,
+                InvalidZoneFileMetadataError,
+                EmptyZoneFileMetadataError,
+                FileNotFoundError,
             ):
                 return True
             if "HASH" in metadata and hash(zone) != int(metadata["HASH"]):
@@ -359,6 +387,7 @@ class BindService:
                     record_data=entry.record_data,
                 )
             zone_files[zone.domain] = content
+
         return zone_files
 
     def _generate_named_conf_local(self, zones: list[str]) -> str:
@@ -372,6 +401,11 @@ class BindService:
         """
         # It's good practice to include rfc1918
         content: str = f'include "{constants.DNS_CONFIG_DIR}/zones.rfc1918";\n'
+        # Include a zone specifically used for some services tests
+        content += constants.NAMED_CONF_ZONE_DEF_TEMPLATE.format(
+            name=f"{constants.ZONE_SERVICE_NAME}",
+            absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{constants.ZONE_SERVICE_NAME}",
+        )
         for name in zones:
             content += constants.NAMED_CONF_ZONE_DEF_TEMPLATE.format(
                 name=name, absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{name}"
@@ -425,14 +459,12 @@ class BindService:
                 for token in line.split(";")[1].split():
                     k, v = token.split(":")
                     if k in metadata:
-                        raise exceptions.DuplicateMetadataEntryError(
-                            f"Duplicate metadata entry '{k}'"
-                        )
+                        raise DuplicateMetadataEntryError(f"Duplicate metadata entry '{k}'")
                     metadata[k] = v
                 logger.debug("%s", metadata)
         except (IndexError, ValueError) as err:
-            raise exceptions.InvalidZoneFileMetadataError(err) from err
+            raise InvalidZoneFileMetadataError(err) from err
 
         if metadata:
             return metadata
-        raise exceptions.EmptyZoneFileMetadataError("No metadata found !")
+        raise EmptyZoneFileMetadataError("No metadata found !")

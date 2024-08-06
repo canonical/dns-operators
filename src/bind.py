@@ -528,11 +528,8 @@ class BindService:
         )
         for line in named_conf_content.splitlines():
             if "allow-transfer" in line:
-                match = re.search(r"allow-transfer\s*\{([^}]+)\}", line)
-                ips_string = match.group(1) if match else ""
-                logger.debug(ips_string)
-                ips = [ip.strip() for ip in ips_string.split(";") if ip.strip() != ""]
-                logger.debug(ips)
+                if match := re.search(r"allow-transfer\s*\{([^}]+)\}", line):
+                    return [ip.strip() for ip in match.group(1).split(";") if ip.strip() != ""]
         return []
 
     def _bind_config_ip_list(self, ips: list[pydantic.IPvAnyAddress]) -> str:

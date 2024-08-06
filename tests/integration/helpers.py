@@ -91,7 +91,7 @@ async def push_to_unit(
     group: str = "root",
     mode: str = "644",
 ) -> None:
-    """Push a source file to the chosen unit
+    """Push a source file to the chosen unit.
 
     Args:
         ops_test: The ops test framework instance
@@ -183,13 +183,13 @@ async def generate_anycharm_relation(
 
 
 async def dig_query(
-    ops_test: OpsTest, app: ops.model.Application, cmd: str, retry: bool = False, wait: int = 5
+    ops_test: OpsTest, unit: ops.model.Unit, cmd: str, retry: bool = False, wait: int = 5
 ) -> str:
     """Query a DnsEntry with dig.
 
     Args:
         ops_test: The ops test framework instance
-        app: Application to be used to launch the command
+        unit: Unit to be used to launch the command
         cmd: Dig command to perform
         retry: If the dig request should be retried
         wait: duration in seconds to wait between retries
@@ -197,8 +197,6 @@ async def dig_query(
     Returns: the result of the DNS query
     """
     result: str = ""
-    # Application actually does have units
-    unit = app.units[0]  # type: ignore
     for _ in range(5):
         result = (await run_on_unit(ops_test, unit.name, f"dig {cmd}")).strip()
         if (result.strip() != "" and "timed out" not in result) or not retry:
@@ -209,7 +207,7 @@ async def dig_query(
 
 
 async def get_active_unit(app: ops.model.Application, ops_test: OpsTest) -> ops.model.Unit | None:
-    """Get the current active unit if it exists
+    """Get the current active unit if it exists.
 
     Args:
         app: Application to search for an active unit
@@ -239,7 +237,7 @@ async def get_active_unit(app: ops.model.Application, ops_test: OpsTest) -> ops.
 
 
 async def check_if_active_unit_exists(app: ops.model.Application, ops_test: OpsTest) -> bool:
-    """Check if an active unit exists and is reachable
+    """Check if an active unit exists and is reachable.
 
     Args:
         app: Application to search for an active unit
@@ -267,7 +265,7 @@ async def check_if_active_unit_exists(app: ops.model.Application, ops_test: OpsT
 
     status = await dig_query(
         ops_test,
-        app,
+        unit,
         f"@{active_unit} status.{constants.ZONE_SERVICE_NAME} TXT +short",
         retry=True,
         wait=5,

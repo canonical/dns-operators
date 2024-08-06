@@ -15,6 +15,7 @@ from charms.bind.v0.dns_record import DNSRecordProvides
 import constants
 import events
 import exceptions
+import models
 from bind import BindService
 
 logger = logging.getLogger(__name__)
@@ -57,17 +58,36 @@ class BindCharm(ops.CharmBase):
         self.framework.observe(
             self.on[constants.PEER].relation_departed, self._on_peer_relation_departed
         )
-        self.peer_relation = self.model.get_relation(constants.PEER)
+        self.framework.observe(
+            self.on[constants.PEER].relation_joined, self._on_peer_relation_joined
+        )
 
     def _on_reload_bind(self, _: events.ReloadBindEvent) -> None:
         """Handle periodic reload bind event."""
+        # Reloading is used to take new configuration into account
         try:
             relation_data = self.dns_record.get_remote_relation_data()
         except ValueError as err:
             logger.info("Validation error of the relation data: %s", err)
             return
-        if self.bind.has_a_zone_changed(relation_data):
-            self.bind.update_zonefiles_and_reload(relation_data)
+        topology = self._topology()
+        if self.bind.has_a_zone_changed(relation_data, topology):
+            self.bind.update_zonefiles_and_reload(relation_data, topology)
+
+    def _on_peer_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
+        """Handle peer relation joined event."""
+        # Reloading is used to take new configuration into account
+        try:
+            relation_data = self.dns_record.get_remote_relation_data()
+        except ValueError as err:
+            logger.info("Validation error of the relation data: %s", err)
+            return
+        try:
+            topology = self._topology()
+            self.bind.update_zonefiles_and_reload(relation_data, topology)
+        except (PeerRelationUnavailableError, PeerRelationNetworkUnavailableError) as err:
+            logger.info("Could not retrieve network topology: %s", err)
+            return
 
     def _on_dns_record_relation_changed(self, event: ops.RelationChangedEvent) -> None:
         """Handle dns_record relation changed.
@@ -94,8 +114,11 @@ class BindCharm(ops.CharmBase):
             event: Event triggering the collect-status hook
         """
         try:
-            if self._is_active_unit():
+            topology = self._topology()
+            if topology.is_current_unit_active:
                 event.add_status(ops.ActiveStatus("active"))
+            else:
+                event.add_status(ops.ActiveStatus())
         except PeerRelationUnavailableError:
             event.add_status(ops.WaitingStatus("Peer relation is not available"))
         try:
@@ -130,8 +153,9 @@ class BindCharm(ops.CharmBase):
     def _on_leader_elected(self, _: ops.LeaderElectedEvent) -> None:
         """Handle leader-elected event."""
         # We check that we are still the leader when starting to process this event
-        if self.unit.is_leader():
-            self._become_active()
+        topology = self._topology()
+        if self.unit.is_leader() and not topology.is_current_unit_active:
+            self._become_active(topology)
 
     def _on_peer_relation_departed(self, event: ops.RelationDepartedEvent) -> None:
         """Handle the peer relation departed event.
@@ -142,35 +166,49 @@ class BindCharm(ops.CharmBase):
         # If we are a departing unit, we don't want to interfere with electing a new active one
         if event.departing_unit == self.model.unit:
             return
-        # We check that we are still the leader when starting to process this event
-        if self.unit.is_leader():
-            self._become_active()
 
-    def _become_active(self) -> bool:
+        try:
+            topology = self._topology()
+        except (PeerRelationUnavailableError, PeerRelationNetworkUnavailableError) as err:
+            logger.info("Could not retrieve network topology: %s", err)
+            return
+
+        # We check that we are still the leader when starting to process this event
+        if not topology.is_current_unit_active:
+            if self.unit.is_leader():
+                self._become_active(topology)
+        else:
+            try:
+                relation_data = self.dns_record.get_remote_relation_data()
+            except ValueError as err:
+                logger.info("Validation error of the relation data: %s", err)
+                return
+            self.bind.update_zonefiles_and_reload(relation_data, topology)
+
+    def _become_active(self, topology: models.Topology) -> bool:
         """Set the current unit as the active unit of the charm.
+
+        Args:
+            topology: Topology of the current deployment
 
         Returns:
             True if the charm is effectively the new active unit.
         """
-        active_unit_ip = self._active_unit_ip()
-
-        assert self.peer_relation is not None  # nosec
-        if not active_unit_ip:
-            self.peer_relation.data[self.app].update({"active-unit": self._unit_ip()})
+        relation = self.model.get_relation(constants.PEER)
+        assert relation is not None  # nosec
+        if not topology.active_unit_ip:
+            relation.data[self.app].update({"active-unit": str(topology.current_unit_ip)})
             return True
 
-        if active_unit_ip != self._unit_ip():
-            status = self._dig_query(
-                f"@{active_unit_ip} service.{constants.ZONE_SERVICE_NAME} TXT +short",
-                retry=True,
-                wait=1,
-            )
-            if status != "ok":
-                self.peer_relation.data[self.app].update({"active-unit": self._unit_ip()})
-                return True
-            return False
-
-        return True
+        status = self._dig_query(
+            f"@{topology.active_unit_ip} service.{constants.ZONE_SERVICE_NAME} TXT +short",
+            retry=True,
+            wait=1,
+        )
+        if status != "ok":
+            relation.data[self.app].update({"active-unit": str(topology.current_unit_ip)})
+            return True
+        return False
 
     def _dig_query(self, cmd: str, retry: bool = False, wait: int = 5) -> str:
         """Query a DnsEntry with dig.
@@ -206,48 +244,45 @@ class BindCharm(ops.CharmBase):
 
         return result
 
-    def _is_active_unit(self) -> bool:
-        """Check if the charm is the active unit.
+    def _topology(self) -> models.Topology:
+        """Create a network topology of the current deployment.
 
         Returns:
-            True if the charm is effectively the active unit.
-        """
-        return self._active_unit_ip() == self._unit_ip()
-
-    def _active_unit_ip(self) -> str:
-        """Get current active unit ip.
-
-        Returns:
-            The IP of the active unit
-
-        Raises:
-            PeerRelationUnavailableError: when the peer relation does not exist
-        """
-        if not self.peer_relation:
-            raise PeerRelationUnavailableError(
-                "Peer relation not available when trying to get unit IP."
-            )
-        return self.peer_relation.data[self.app].get("active-unit", "")
-
-    def _unit_ip(self) -> str:
-        """Get current unit ip.
-
-        Returns:
-            The IP of the current unit
+            A topology of the current deployment
 
         Raises:
             PeerRelationUnavailableError: when the peer relation does not exist
             PeerRelationNetworkUnavailableError: when the network property does not exist
         """
-        if (binding := self.model.get_binding(constants.PEER)) is not None:
-            if (network := binding.network) is not None:
-                logger.debug(str(network.bind_address))
-                return str(network.bind_address)
+        relation = self.model.get_relation(constants.PEER)
+        binding = self.model.get_binding(constants.PEER)
+        if not relation or not binding:
+            raise PeerRelationUnavailableError(
+                "Peer relation not available when trying to get topology."
+            )
+        if binding.network is None:
             raise PeerRelationNetworkUnavailableError(
                 "Peer relation network not available when trying to get unit IP."
             )
-        raise PeerRelationUnavailableError(
-            "Peer relation not available when trying to get unit IP."
+
+        units_ip: list[str] = [
+            unit_data.get("private-address", "")
+            for _, unit_data in relation.data.items()
+            if unit_data.get("private-address", "") != ""
+        ]
+
+        current_unit_ip = str(binding.network.bind_address)
+        active_unit_ip = relation.data[self.app].get("active-unit")
+
+        logger.debug("active_unit_ip: %s", active_unit_ip)
+        logger.debug("current_unit_ip: %s", current_unit_ip)
+        logger.debug("units_ip: %s", units_ip)
+
+        return models.Topology(
+            active_unit_ip=active_unit_ip,
+            units_ip=units_ip,
+            standby_units_ip=[ip for ip in units_ip if ip != active_unit_ip],
+            current_unit_ip=current_unit_ip,
         )
 
 

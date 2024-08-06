@@ -36,8 +36,8 @@ NAMED_CONF_PRIMARY_ZONE_DEF_TEMPLATE = (
 NAMED_CONF_SECONDARY_ZONE_DEF_TEMPLATE = (
     'zone "{name}" IN {{ '
     'type secondary; file "{absolute_path}"; '
-    'masterfile-format text; '
-    'masterfile-style full; '
+    "masterfile-format text; "
+    "masterfile-style full; "
     "primaries {{ {primary_ip} }}; }};\n"
 )
 

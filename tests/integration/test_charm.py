@@ -110,7 +110,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
 
     assert (
         await tests.integration.helpers.run_on_unit(
-            ops_test, f"{app.name}/{0}", "dig @127.0.0.1 dns.test TXT +short"
+            ops_test, unit.name, "dig @127.0.0.1 dns.test TXT +short"
         )
     ).strip() == '"this-is-a-test"'
 
@@ -252,7 +252,7 @@ async def test_dns_record_relation(
     restart_cmd = f"sudo snap restart --reload {constants.DNS_SNAP_NAME}"
     # Application actually does have units
     unit = app.units[0]  # type: ignore
-    await tests.integration.helpers.run_on_unit(ops_test, unit, restart_cmd)
+    await tests.integration.helpers.run_on_unit(ops_test, unit.name, restart_cmd)
     await model.wait_for_idle()
 
     # Test the status of the bind-operator instance

@@ -133,6 +133,8 @@ class BindService:
             snap_channel=constants.SNAP_PACKAGES[constants.DNS_SNAP_NAME]["channel"],
         )
         self._install_bind_reload_service(unit_name)
+        # We need to put the service zone in place so we call
+        # the following with an empty relation and topology.
         self.update_zonefiles_and_reload([], None)
 
     def _install_bind_reload_service(self, unit_name: str) -> None:
@@ -198,6 +200,7 @@ class BindService:
             return
 
         # Create staging area
+        # This is done to avoid having a partial configuration remaining if something goes wrong.
         with tempfile.TemporaryDirectory() as tempdir:
 
             # Write the service.test file
@@ -220,14 +223,17 @@ class BindService:
                 encoding="utf-8",
             )
 
-            # Move the valid staging area files to the config dir
+            # Move the staging area files to the config dir
             for file_name in os.listdir(tempdir):
                 shutil.move(
                     pathlib.Path(tempdir, file_name),
                     pathlib.Path(constants.DNS_CONFIG_DIR, file_name),
                 )
 
-        # Reload charmed-bind config (only if already started)
+        # Reload charmed-bind config (only if already started).
+        # When stopped, we assume this was on purpose.
+        # We can be here following a regular reload-bind event
+        # and we don't want to interfere with another operation.
         self.reload(force_start=False)
 
     def create_dns_record_provider_data(
@@ -235,6 +241,9 @@ class BindService:
         relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
     ) -> DNSRecordProviderData:
         """Create dns record provider data from relation data.
+
+        The result of this function should be used to update the relation.
+        It contains statuses for each DNS record request.
 
         Args:
             relation_data: input relation data
@@ -267,6 +276,8 @@ class BindService:
         topology: models.Topology | None,
     ) -> bool:
         """Check if a zone definition has changed.
+
+        The zone definition is checked from a custom hash constructed from its DNS records.
 
         Args:
             relation_data: input relation data
@@ -411,19 +422,6 @@ class BindService:
 
         return zone_files
 
-    def _bind_config_ip_list(self, ips: list[pydantic.IPvAnyAddress]) -> str:
-        """Generate a string with a list of IPs that can be used in bind's config.
-
-        Args:
-            ips: A list of IPs
-
-        Returns:
-            A ";" separated list of ips
-        """
-        if not ips:
-            return ""
-        return f"{';'.join([str(ip) for ip in ips])};"
-
     def _generate_named_conf_local(
         self, zones: list[str], topology: models.Topology | None
     ) -> str:
@@ -519,6 +517,9 @@ class BindService:
     def _get_secondaries_ip_from_conf(self) -> list[str]:
         """Get the secondaries IP addresses from the named.conf.local file.
 
+        This is useful to check if we need to regenerate
+        the file after a change in the network topology.
+
         Returns:
             A list of IPs as strings
         """
@@ -533,3 +534,18 @@ class BindService:
                 ips = [ip.strip() for ip in ips_string.split(";") if ip.strip() != ""]
                 logger.debug(ips)
         return []
+
+    def _bind_config_ip_list(self, ips: list[pydantic.IPvAnyAddress]) -> str:
+        """Generate a string with a list of IPs that can be used in bind's config.
+
+        This is just a helper function to keep things clean in `_generate_named_conf_local`.
+
+        Args:
+            ips: A list of IPs
+
+        Returns:
+            A ";" separated list of ips
+        """
+        if not ips:
+            return ""
+        return f"{';'.join([str(ip) for ip in ips])};"

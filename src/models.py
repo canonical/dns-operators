@@ -72,7 +72,10 @@ class Zone(pydantic.BaseModel):
             A hash for the current object.
         """
         h = hashlib.blake2b()
-        for entry_hash in (hash(e) for e in self.entries):
+        # We sort the list of entries to make sure that the elements are always in the same order
+        # This is true because `sorted()` is guaranteed to be stable
+        # https://docs.python.org/3/library/functions.html#sorted
+        for entry_hash in sorted([hash(e) for e in self.entries]):
             h.update(entry_hash.to_bytes((entry_hash.bit_length() + 7) // 8, byteorder="big"))
         return int.from_bytes(h.digest(), byteorder="big")
 

@@ -155,7 +155,7 @@ class BindCharm(ops.CharmBase):
         # We check that we are still the leader when starting to process this event
         topology = self._topology()
         if self.unit.is_leader() and not topology.is_current_unit_active:
-            self._become_active(topology)
+            self._check_and_may_become_active(topology)
 
     def _on_peer_relation_departed(self, event: ops.RelationDepartedEvent) -> None:
         """Handle the peer relation departed event.
@@ -176,7 +176,7 @@ class BindCharm(ops.CharmBase):
         # We check that we are still the leader when starting to process this event
         if not topology.is_current_unit_active:
             if self.unit.is_leader():
-                self._become_active(topology)
+                self._check_and_may_become_active(topology)
         else:
             try:
                 relation_data = self.dns_record.get_remote_relation_data()
@@ -185,8 +185,8 @@ class BindCharm(ops.CharmBase):
                 return
             self.bind.update_zonefiles_and_reload(relation_data, topology)
 
-    def _become_active(self, topology: models.Topology) -> bool:
-        """Set the current unit as the active unit of the charm.
+    def _check_and_may_become_active(self, topology: models.Topology) -> bool:
+        """Check the active unit status and may become active if need be.
 
         Args:
             topology: Topology of the current deployment

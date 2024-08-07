@@ -207,3 +207,54 @@ def test_get_zonefile_metadata(zonefile_content: str, metadata: dict[str, str], 
         assert metadata == bind_service._get_zonefile_metadata(  # pylint: disable=protected-access
             zonefile_content
         )
+
+
+@pytest.mark.parametrize(
+    "named_conf_content, wanted",
+    (
+        (
+            # pylint: disable=line-too-long
+            """
+            include "/some/path/zones.rfc1918";
+            zone "service.test" IN { type primary; file "/some/path/db.service.test"; allow-update { none; }; allow-transfer {  }; };
+            """,
+            [],
+        ),
+        (
+            # pylint: disable=line-too-long
+            """
+            include "/some/path/zones.rfc1918";
+            zone "service.test" IN { type primary; file "/some/path/db.service.test"; allow-update { none; }; allow-transfer { 42.42.42.42; }; };
+            """,
+            ["42.42.42.42"],
+        ),
+        (
+            # pylint: disable=line-too-long
+            """
+            include "/some/path/zones.rfc1918";
+            zone "service.test" IN { type primary; file "/some/path/db.service.test"; allow-update { none; }; allow-transfer { 42.42.42.42; 42.42.42.43; }; };
+            """,
+            ["42.42.42.42", "42.42.42.43"],
+        ),
+        (
+            # pylint: disable=line-too-long
+            """
+            include "/some/path/zones.rfc1918";
+            zone "service.test" IN { type primary; file "/some/path/db.service.test"; allow-update { none; }; allow-transfer { 42.42.42.42; }; };
+            zone "service2.test" IN { type primary; file "/some/path/db.service.test"; allow-update { none; }; allow-transfer { 42.42.42.43; }; };
+            """,
+            ["42.42.42.42"],
+        ),
+    ),
+)
+def test_get_secondaries_ip_from_conf(named_conf_content: str, wanted: list[str]):
+    """
+    arrange: nothing
+    act: get the IPs from named_conf_content
+    assert: the correct IPs should be found
+    """
+    bind_service = bind.BindService()
+    result = bind_service._get_secondaries_ip_from_conf(  # pylint: disable=protected-access
+        named_conf_content
+    )
+    assert wanted == result

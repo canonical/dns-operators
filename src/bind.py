@@ -305,8 +305,14 @@ class BindService:
                 return True
 
         if topology is not None and topology.is_current_unit_active:
+            try:
+                named_conf_content = pathlib.Path(
+                    constants.DNS_CONFIG_DIR, "named.conf.local"
+                ).read_text(encoding="utf-8")
+            except FileNotFoundError:
+                return True
             return (
-                self._get_secondaries_ip_from_conf().sort()
+                self._get_secondaries_ip_from_conf(named_conf_content).sort()
                 != [str(ip) for ip in topology.standby_units_ip].sort()
             )
 
@@ -514,18 +520,24 @@ class BindService:
             return metadata
         raise EmptyZoneFileMetadataError("No metadata found !")
 
-    def _get_secondaries_ip_from_conf(self) -> list[str]:
+    def _get_secondaries_ip_from_conf(self, named_conf_content: str) -> list[str]:
         """Get the secondaries IP addresses from the named.conf.local file.
 
         This is useful to check if we need to regenerate
         the file after a change in the network topology.
 
+        This function is only taking the first line of named.conf.local with a zone-transfer
+        into account. It works when the charm is writing the config files but is a bit
+        brittle if those are modified by a human.
+        TODO: This should be reworked (along with the metadata system) in something more durable
+        like an external json file to store that information.
+
+        Args:
+            named_conf_content: content of the named.conf.local file
+
         Returns:
             A list of IPs as strings
         """
-        named_conf_content = pathlib.Path(constants.DNS_CONFIG_DIR, "named.conf.local").read_text(
-            encoding="utf-8"
-        )
         for line in named_conf_content.splitlines():
             if "allow-transfer" in line:
                 if match := re.search(r"allow-transfer\s*\{([^}]+)\}", line):

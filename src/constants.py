@@ -27,8 +27,18 @@ $TTL 600
 
 ZONE_RECORD_TEMPLATE = "{host_label} {record_class} {record_type} {record_data}\n"
 
-NAMED_CONF_ZONE_DEF_TEMPLATE = (
-    'zone "{name}" IN {{ type primary; file "{absolute_path}"; allow-update {{ none; }}; }};\n'
+NAMED_CONF_PRIMARY_ZONE_DEF_TEMPLATE = (
+    'zone "{name}" IN {{ '
+    'type primary; file "{absolute_path}"; allow-update {{ none; }}; '
+    "allow-transfer {{ {zone_transfer_ips} }}; }};\n"
+)
+
+NAMED_CONF_SECONDARY_ZONE_DEF_TEMPLATE = (
+    'zone "{name}" IN {{ '
+    'type secondary; file "{absolute_path}"; '
+    "masterfile-format text; "
+    "masterfile-style full; "
+    "primaries {{ {primary_ip} }}; }};\n"
 )
 
 SYSTEMD_SERVICES_PATH = "/etc/systemd/system/"

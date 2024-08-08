@@ -6,11 +6,13 @@
 import logging
 import os
 import pathlib
+import re
 import shutil
 import tempfile
 import time
 
 import ops
+import pydantic
 from charms.bind.v0.dns_record import (
     DNSProviderData,
     DNSRecordProviderData,
@@ -23,7 +25,7 @@ from charms.operator_libs_linux.v2 import snap
 
 import constants
 import exceptions
-from models import DnsEntry, Zone, create_dns_entry_from_requirer_entry
+import models
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +133,9 @@ class BindService:
             snap_channel=constants.SNAP_PACKAGES[constants.DNS_SNAP_NAME]["channel"],
         )
         self._install_bind_reload_service(unit_name)
-        self.update_zonefiles_and_reload([])
+        # We need to put the service zone in place so we call
+        # the following with an empty relation and topology.
+        self.update_zonefiles_and_reload([], None)
 
     def _install_bind_reload_service(self, unit_name: str) -> None:
         """Install the bind reload service.
@@ -167,7 +171,7 @@ class BindService:
             event: Event triggering the collect-status hook
             relation_data: data coming from the relation databag
         """
-        zones: list[Zone] = []
+        zones: list[models.Zone] = []
         for record_requirer_data, _ in relation_data:
             zones.extend(self._record_requirer_data_to_zones(record_requirer_data))
         _, conflicting = self._get_conflicts(zones)
@@ -178,13 +182,17 @@ class BindService:
     def update_zonefiles_and_reload(
         self,
         relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+        topology: models.Topology | None,
     ) -> None:
         """Update the zonefiles from bind's config and reload bind.
 
         Args:
             relation_data: input relation data
+            topology: Topology of the current deployment
         """
+        logger.debug("Starting update of zonefiles")
         zones = self._dns_record_relations_data_to_zones(relation_data)
+        logger.debug("Zones: %s", [z.domain for z in zones])
 
         # Check for conflicts
         _, conflicting = self._get_conflicts(zones)
@@ -192,6 +200,7 @@ class BindService:
             return
 
         # Create staging area
+        # This is done to avoid having a partial configuration remaining if something goes wrong.
         with tempfile.TemporaryDirectory() as tempdir:
 
             # Write the service.test file
@@ -202,24 +211,29 @@ class BindService:
                 encoding="utf-8",
             )
 
-            # Write zone files
-            zone_files: dict[str, str] = self._zones_to_files_content(zones)
-            for domain, content in zone_files.items():
-                pathlib.Path(tempdir, f"db.{domain}").write_text(content, encoding="utf-8")
+            if topology is not None and topology.is_current_unit_active:
+                # Write zone files
+                zone_files: dict[str, str] = self._zones_to_files_content(zones)
+                for domain, content in zone_files.items():
+                    pathlib.Path(tempdir, f"db.{domain}").write_text(content, encoding="utf-8")
 
             # Write the named.conf file
             pathlib.Path(tempdir, "named.conf.local").write_text(
-                self._generate_named_conf_local([z.domain for z in zones]), encoding="utf-8"
+                self._generate_named_conf_local([z.domain for z in zones], topology),
+                encoding="utf-8",
             )
 
-            # Move the valid staging area files to the config dir
+            # Move the staging area files to the config dir
             for file_name in os.listdir(tempdir):
                 shutil.move(
                     pathlib.Path(tempdir, file_name),
                     pathlib.Path(constants.DNS_CONFIG_DIR, file_name),
                 )
 
-        # Reload charmed-bind config (only if already started)
+        # Reload charmed-bind config (only if already started).
+        # When stopped, we assume this was on purpose.
+        # We can be here following a regular reload-bind event
+        # and we don't want to interfere with another operation.
         self.reload(force_start=False)
 
     def create_dns_record_provider_data(
@@ -227,6 +241,9 @@ class BindService:
         relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
     ) -> DNSRecordProviderData:
         """Create dns record provider data from relation data.
+
+        The result of this function should be used to update the relation.
+        It contains statuses for each DNS record request.
 
         Args:
             relation_data: input relation data
@@ -239,7 +256,7 @@ class BindService:
         statuses = []
         for record_requirer_data, _ in relation_data:
             for requirer_entry in record_requirer_data.dns_entries:
-                dns_entry = create_dns_entry_from_requirer_entry(requirer_entry)
+                dns_entry = models.create_dns_entry_from_requirer_entry(requirer_entry)
                 if dns_entry in nonconflicting:
                     statuses.append(
                         DNSProviderData(uuid=requirer_entry.uuid, status=Status.APPROVED)
@@ -256,16 +273,21 @@ class BindService:
     def has_a_zone_changed(
         self,
         relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
+        topology: models.Topology | None,
     ) -> bool:
         """Check if a zone definition has changed.
 
+        The zone definition is checked from a custom hash constructed from its DNS records.
+
         Args:
             relation_data: input relation data
+            topology: Topology of the current deployment
 
         Returns:
             True if a zone has changed, False otherwise.
         """
         zones = self._dns_record_relations_data_to_zones(relation_data)
+        logger.debug("Zones: %s", [z.domain for z in zones])
         for zone in zones:
             try:
                 zonefile_content = pathlib.Path(
@@ -279,7 +301,21 @@ class BindService:
             ):
                 return True
             if "HASH" in metadata and hash(zone) != int(metadata["HASH"]):
+                logger.debug("Config hash has changed !")
                 return True
+
+        if topology is not None and topology.is_current_unit_active:
+            try:
+                named_conf_content = pathlib.Path(
+                    constants.DNS_CONFIG_DIR, "named.conf.local"
+                ).read_text(encoding="utf-8")
+            except FileNotFoundError:
+                return True
+            return (
+                self._get_secondaries_ip_from_conf(named_conf_content).sort()
+                != [str(ip) for ip in topology.standby_units_ip].sort()
+            )
+
         return False
 
     def _install_snap_package(
@@ -309,7 +345,7 @@ class BindService:
 
     def _record_requirer_data_to_zones(
         self, record_requirer_data: DNSRecordRequirerData
-    ) -> list[Zone]:
+    ) -> list[models.Zone]:
         """Convert DNSRecordRequirerData to zone files.
 
         Args:
@@ -324,15 +360,17 @@ class BindService:
                 zones_entries[entry.domain] = []
             zones_entries[entry.domain].append(entry)
 
-        zones: list[Zone] = []
+        zones: list[models.Zone] = []
         for domain, entries in zones_entries.items():
-            zone = Zone(domain=domain, entries=[])
+            zone = models.Zone(domain=domain, entries=[])
             for entry in entries:
-                zone.entries.add(create_dns_entry_from_requirer_entry(entry))
+                zone.entries.add(models.create_dns_entry_from_requirer_entry(entry))
             zones.append(zone)
         return zones
 
-    def _get_conflicts(self, zones: list[Zone]) -> tuple[set[DnsEntry], set[DnsEntry]]:
+    def _get_conflicts(
+        self, zones: list[models.Zone]
+    ) -> tuple[set[models.DnsEntry], set[models.DnsEntry]]:
         """Return conflicting and non-conflicting entries.
 
         Args:
@@ -342,8 +380,8 @@ class BindService:
             A tuple containing the non-conflicting and conflicting entries
         """
         entries = [e for z in zones for e in z.entries]
-        nonconflicting_entries: set[DnsEntry] = set()
-        conflicting_entries: set[DnsEntry] = set()
+        nonconflicting_entries: set[models.DnsEntry] = set()
+        conflicting_entries: set[models.DnsEntry] = set()
         while entries:
             entry = entries.pop()
             found_conflict = False
@@ -360,7 +398,7 @@ class BindService:
 
         return (nonconflicting_entries, conflicting_entries)
 
-    def _zones_to_files_content(self, zones: list[Zone]) -> dict[str, str]:
+    def _zones_to_files_content(self, zones: list[models.Zone]) -> dict[str, str]:
         """Return zone files and their content.
 
         Args:
@@ -390,11 +428,14 @@ class BindService:
 
         return zone_files
 
-    def _generate_named_conf_local(self, zones: list[str]) -> str:
+    def _generate_named_conf_local(
+        self, zones: list[str], topology: models.Topology | None
+    ) -> str:
         """Generate the content of `named.conf.local`.
 
         Args:
             zones: A list of all the zones names
+            topology: Topology of the current deployment
 
         Returns:
             The content of `named.conf.local`
@@ -402,20 +443,32 @@ class BindService:
         # It's good practice to include rfc1918
         content: str = f'include "{constants.DNS_CONFIG_DIR}/zones.rfc1918";\n'
         # Include a zone specifically used for some services tests
-        content += constants.NAMED_CONF_ZONE_DEF_TEMPLATE.format(
+        content += constants.NAMED_CONF_PRIMARY_ZONE_DEF_TEMPLATE.format(
             name=f"{constants.ZONE_SERVICE_NAME}",
             absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{constants.ZONE_SERVICE_NAME}",
+            zone_transfer_ips="",
         )
         for name in zones:
-            content += constants.NAMED_CONF_ZONE_DEF_TEMPLATE.format(
-                name=name, absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{name}"
-            )
+            if topology is None:
+                pass
+            elif topology.is_current_unit_active:
+                content += constants.NAMED_CONF_PRIMARY_ZONE_DEF_TEMPLATE.format(
+                    name=name,
+                    absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{name}",
+                    zone_transfer_ips=self._bind_config_ip_list(topology.standby_units_ip),
+                )
+            else:
+                content += constants.NAMED_CONF_SECONDARY_ZONE_DEF_TEMPLATE.format(
+                    name=name,
+                    absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{name}",
+                    primary_ip=self._bind_config_ip_list([topology.active_unit_ip]),
+                )
         return content
 
     def _dns_record_relations_data_to_zones(
         self,
         relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
-    ) -> list[Zone]:
+    ) -> list[models.Zone]:
         """Return zones from all the dns_record relations data.
 
         Args:
@@ -424,7 +477,7 @@ class BindService:
         Returns:
             The zones from the record_requirer_data
         """
-        zones: dict[str, Zone] = {}
+        zones: dict[str, models.Zone] = {}
         for record_requirer_data, _ in relation_data:
             for new_zone in self._record_requirer_data_to_zones(record_requirer_data):
                 if new_zone.domain in zones:
@@ -455,16 +508,53 @@ class BindService:
                 # We only take the $ORIGIN line into account
                 if not line.startswith("$ORIGIN"):
                     continue
-                logger.debug("%s", line)
                 for token in line.split(";")[1].split():
                     k, v = token.split(":")
                     if k in metadata:
                         raise DuplicateMetadataEntryError(f"Duplicate metadata entry '{k}'")
                     metadata[k] = v
-                logger.debug("%s", metadata)
         except (IndexError, ValueError) as err:
             raise InvalidZoneFileMetadataError(err) from err
 
         if metadata:
             return metadata
         raise EmptyZoneFileMetadataError("No metadata found !")
+
+    def _get_secondaries_ip_from_conf(self, named_conf_content: str) -> list[str]:
+        """Get the secondaries IP addresses from the named.conf.local file.
+
+        This is useful to check if we need to regenerate
+        the file after a change in the network topology.
+
+        This function is only taking the first line of named.conf.local with a zone-transfer
+        into account. It works when the charm is writing the config files but is a bit
+        brittle if those are modified by a human.
+        TODO: This should be reworked (along with the metadata system) in something more durable
+        like an external json file to store that information.
+
+        Args:
+            named_conf_content: content of the named.conf.local file
+
+        Returns:
+            A list of IPs as strings
+        """
+        for line in named_conf_content.splitlines():
+            if "allow-transfer" in line:
+                if match := re.search(r"allow-transfer\s*\{([^}]+)\}", line):
+                    return [ip.strip() for ip in match.group(1).split(";") if ip.strip() != ""]
+        return []
+
+    def _bind_config_ip_list(self, ips: list[pydantic.IPvAnyAddress]) -> str:
+        """Generate a string with a list of IPs that can be used in bind's config.
+
+        This is just a helper function to keep things clean in `_generate_named_conf_local`.
+
+        Args:
+            ips: A list of IPs
+
+        Returns:
+            A ";" separated list of ips
+        """
+        if not ips:
+            return ""
+        return f"{';'.join([str(ip) for ip in ips])};"

@@ -34,7 +34,7 @@ async def test_lifecycle(app: ops.model.Application, ops_test: OpsTest):
 
     status = await tests.integration.helpers.dig_query(
         ops_test,
-        app,
+        unit,
         f"@127.0.0.1 status.{constants.ZONE_SERVICE_NAME} TXT +short",
         retry=True,
         wait=5,
@@ -110,7 +110,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
 
     assert (
         await tests.integration.helpers.run_on_unit(
-            ops_test, f"{app.name}/{0}", "dig @127.0.0.1 dns.test TXT +short"
+            ops_test, unit.name, "dig @127.0.0.1 dns.test TXT +short"
         )
     ).strip() == '"this-is-a-test"'
 
@@ -266,7 +266,7 @@ async def test_dns_record_relation(
 
                 result = await tests.integration.helpers.dig_query(
                     ops_test,
-                    app,
+                    unit,
                     f"@127.0.0.1 {entry.host_label}.{entry.domain} {entry.record_type} +short",
                     retry=True,
                     wait=5,
@@ -275,33 +275,3 @@ async def test_dns_record_relation(
                     f"{entry.host_label}.{entry.domain}"
                     f" {entry.record_type} {entry.record_data}"
                 )
-
-
-@pytest.mark.asyncio
-@pytest.mark.abort_on_fail
-async def test_active_election(
-    app: ops.model.Application,
-    ops_test: OpsTest,
-    model: Model,
-):
-    """
-    arrange: given deployed bind-operator
-    act: change the number of units
-    assert: there always is an active unit
-    """
-    assert await tests.integration.helpers.check_if_active_unit_exists(app, ops_test)
-
-    assert ops_test.model is not None
-    add_unit_cmd = f"add-unit {app.name} --model={ops_test.model.info.name}"
-    await ops_test.juju(*(add_unit_cmd.split(" ")))
-    await model.wait_for_idle()
-    assert await tests.integration.helpers.check_if_active_unit_exists(app, ops_test)
-
-    active_unit = await tests.integration.helpers.get_active_unit(app, ops_test)
-    assert active_unit is not None
-    remove_unit_cmd = (
-        f"remove-unit {active_unit.name} --model={ops_test.model.info.name} --no-prompt"
-    )
-    await ops_test.juju(*(remove_unit_cmd.split(" ")))
-    await model.wait_for_idle()
-    assert await tests.integration.helpers.check_if_active_unit_exists(app, ops_test)

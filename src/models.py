@@ -72,7 +72,10 @@ class Zone(pydantic.BaseModel):
             A hash for the current object.
         """
         h = hashlib.blake2b()
-        for entry_hash in (hash(e) for e in self.entries):
+        # We sort the list of entries to make sure that the elements are always in the same order
+        # This is true because `sorted()` is guaranteed to be stable
+        # https://docs.python.org/3/library/functions.html#sorted
+        for entry_hash in sorted([hash(e) for e in self.entries]):
             h.update(entry_hash.to_bytes((entry_hash.bit_length() + 7) // 8, byteorder="big"))
         return int.from_bytes(h.digest(), byteorder="big")
 
@@ -94,3 +97,29 @@ def create_dns_entry_from_requirer_entry(requirer_entry: RequirerEntry) -> DnsEn
         record_data=requirer_entry.record_data,
         ttl=requirer_entry.ttl,
     )
+
+
+class Topology(pydantic.BaseModel):
+    """Class used to represent the current units topology.
+
+    Attributes:
+        units_ip: IPs of all the units
+        active_unit_ip: IP of the active unit
+        standby_units_ip: IPs of the standby units
+        current_unit_ip: IP of the current unit
+        is_current_unit_active: Is the current unit active ?
+    """
+
+    units_ip: list[pydantic.IPvAnyAddress]
+    active_unit_ip: pydantic.IPvAnyAddress | None
+    standby_units_ip: list[pydantic.IPvAnyAddress]
+    current_unit_ip: pydantic.IPvAnyAddress
+
+    @property
+    def is_current_unit_active(self) -> bool:
+        """Check if the current unit is the active unit.
+
+        Returns:
+            True if the current unit is effectively the active unit.
+        """
+        return self.current_unit_ip == self.active_unit_ip

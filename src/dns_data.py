@@ -147,24 +147,14 @@ def get_conflicts(zones: list[models.Zone]) -> tuple[set[models.DnsEntry], set[m
     Returns:
         A tuple containing the non-conflicting and conflicting entries
     """
-    entries = [e for z in zones for e in z.entries]
-    nonconflicting_entries: set[models.DnsEntry] = set()
+    entries: set[models.DnsEntry] = {e for z in zones for e in z.entries}
     conflicting_entries: set[models.DnsEntry] = set()
-    while entries:
-        entry = entries.pop()
-        found_conflict = False
-        if entry in conflicting_entries:
-            continue
+    for entry in entries:
         for e in entries:
             if entry.conflicts(e) and entry != e:
-                found_conflict = True
                 conflicting_entries.add(entry)
-                conflicting_entries.add(e)
 
-        if not found_conflict:
-            nonconflicting_entries.add(entry)
-
-    return (nonconflicting_entries, conflicting_entries)
+    return (entries - conflicting_entries, conflicting_entries)
 
 
 def dns_record_relations_data_to_zones(

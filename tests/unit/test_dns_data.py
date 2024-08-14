@@ -1,14 +1,14 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Unit tests for the bind module."""
+"""Unit tests for the dns_data module."""
 
 import uuid
 
 import pytest
 from charms.bind.v0 import dns_record
 
-import bind
+import dns_data
 import models
 
 
@@ -149,14 +149,12 @@ def test_get_conflicts(integration_datasets, zones_name, nonconflicting, conflic
         )
         record_requirers_data.append(record_requirer_data)
 
-    bind_service = bind.BindService()
-
-    zones = bind_service._dns_record_relations_data_to_zones(  # pylint: disable=protected-access
+    zones = dns_data.dns_record_relations_data_to_zones(  # pylint: disable=protected-access
         [(record_requirer_data, None) for record_requirer_data in record_requirers_data]
     )
     assert zones_name == {zone.domain for zone in zones}
 
-    output = bind_service._get_conflicts(zones)  # pylint: disable=protected-access
+    output = dns_data.get_conflicts(zones)  # pylint: disable=protected-access
     assert nonconflicting == {f"{e.host_label}.{e.domain}" for e in output[0]}
     assert conflicting == {f"{e.host_label}.{e.domain}" for e in output[1]}
 
@@ -164,8 +162,8 @@ def test_get_conflicts(integration_datasets, zones_name, nonconflicting, conflic
 @pytest.mark.parametrize(
     "zonefile_content, metadata, error",
     (
-        ("", {}, bind.EmptyZoneFileMetadataError),
-        ("sometext; someothertext", {}, bind.EmptyZoneFileMetadataError),
+        ("", {}, dns_data.EmptyZoneFileMetadataError),
+        ("sometext; someothertext", {}, dns_data.EmptyZoneFileMetadataError),
         ("$ORIGIN test.dns.test.; HASH:1234", {"HASH": "1234"}, None),
         (
             "$ORIGIN test.dns.test.; HASH:1234\n$ORIGIN test2.dns.test.; PLOP:plop",
@@ -175,15 +173,15 @@ def test_get_conflicts(integration_datasets, zones_name, nonconflicting, conflic
         (
             "$ORIGIN test.dns.test.; HASH:1234 HASH:4567",
             {},
-            bind.DuplicateMetadataEntryError,
+            dns_data.DuplicateMetadataEntryError,
         ),
         (
             "$ORIGIN test.dns.test.; HASH:1234\n$ORIGIN test2.dns.test.; HASH:4567",
             {},
-            bind.DuplicateMetadataEntryError,
+            dns_data.DuplicateMetadataEntryError,
         ),
-        ("$ORIGIN test.dns.test.; HASH::", None, bind.InvalidZoneFileMetadataError),
-        ("$ORIGIN test.dns.test.;    ", {"HASH": "1234"}, bind.EmptyZoneFileMetadataError),
+        ("$ORIGIN test.dns.test.; HASH::", None, dns_data.InvalidZoneFileMetadataError),
+        ("$ORIGIN test.dns.test.;    ", {"HASH": "1234"}, dns_data.EmptyZoneFileMetadataError),
         (
             "\n\nsometext\n\n$ORIGIN test.dns.test.; HASH:1234 PLOP:plop\nsomeothertext",
             {"HASH": "1234", "PLOP": "plop"},
@@ -197,14 +195,11 @@ def test_get_zonefile_metadata(zonefile_content: str, metadata: dict[str, str], 
     act: get the metadata from the zonefile_content
     assert: the correct metadata should be found or the correct exception raised
     """
-    bind_service = bind.BindService()
     if error is not None:
         with pytest.raises(error):
-            bind_service._get_zonefile_metadata(  # pylint: disable=protected-access
-                zonefile_content
-            )
+            dns_data._get_zonefile_metadata(zonefile_content)  # pylint: disable=protected-access
     else:
-        assert metadata == bind_service._get_zonefile_metadata(  # pylint: disable=protected-access
+        assert metadata == dns_data._get_zonefile_metadata(  # pylint: disable=protected-access
             zonefile_content
         )
 
@@ -253,8 +248,7 @@ def test_get_secondaries_ip_from_conf(named_conf_content: str, wanted: list[str]
     act: get the IPs from named_conf_content
     assert: the correct IPs should be found
     """
-    bind_service = bind.BindService()
-    result = bind_service._get_secondaries_ip_from_conf(  # pylint: disable=protected-access
+    result = dns_data._get_secondaries_ip_from_conf(  # pylint: disable=protected-access
         named_conf_content
     )
     assert wanted == result

@@ -13,6 +13,7 @@ import ops
 from charms.bind.v0.dns_record import DNSRecordProvides
 
 import constants
+import dns_data
 import events
 import exceptions
 import models
@@ -65,29 +66,34 @@ class BindCharm(ops.CharmBase):
     def _on_reload_bind(self, _: events.ReloadBindEvent) -> None:
         """Handle periodic reload bind event."""
         # Reloading is used to take new configuration into account
+        start_time = time.time_ns()
         try:
             relation_data = self.dns_record.get_remote_relation_data()
         except ValueError as err:
             logger.info("Validation error of the relation data: %s", err)
             return
+        logger.debug("reldata retrieval duration (ms): %s", (time.time_ns() - start_time) / 1e6)
         topology = self._topology()
-        if self.bind.has_a_zone_changed(relation_data, topology):
+        if dns_data.has_a_zone_changed(relation_data, topology):
             self.bind.update_zonefiles_and_reload(relation_data, topology)
 
     def _on_peer_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
         """Handle peer relation joined event."""
+        try:
+            topology = self._topology()
+        except (PeerRelationUnavailableError, PeerRelationNetworkUnavailableError) as err:
+            logger.info("Could not retrieve network topology: %s", err)
+            return
+        # If we are not the active unit, there's nothing to do
+        if not topology.is_current_unit_active:
+            return
         # Reloading is used to take new configuration into account
         try:
             relation_data = self.dns_record.get_remote_relation_data()
         except ValueError as err:
             logger.info("Validation error of the relation data: %s", err)
             return
-        try:
-            topology = self._topology()
-            self.bind.update_zonefiles_and_reload(relation_data, topology)
-        except (PeerRelationUnavailableError, PeerRelationNetworkUnavailableError) as err:
-            logger.info("Could not retrieve network topology: %s", err)
-            return
+        self.bind.update_zonefiles_and_reload(relation_data, topology)
 
     def _on_dns_record_relation_changed(self, event: ops.RelationChangedEvent) -> None:
         """Handle dns_record relation changed.
@@ -102,7 +108,7 @@ class BindCharm(ops.CharmBase):
             logger.info("Validation error of the relation data: %s", err)
             return
         self.unit.status = ops.MaintenanceStatus("Handling new relation requests")
-        dns_record_provider_data = self.bind.create_dns_record_provider_data(relation_data)
+        dns_record_provider_data = dns_data.create_dns_record_provider_data(relation_data)
         relation = self.model.get_relation(self.dns_record.relation_name, event.relation.id)
         if self.unit.is_leader():
             self.dns_record.update_relation_data(relation, dns_record_provider_data)
@@ -254,6 +260,7 @@ class BindCharm(ops.CharmBase):
             PeerRelationUnavailableError: when the peer relation does not exist
             PeerRelationNetworkUnavailableError: when the network property does not exist
         """
+        start_time = time.time_ns()
         relation = self.model.get_relation(constants.PEER)
         binding = self.model.get_binding(constants.PEER)
         if not relation or not binding:
@@ -277,6 +284,7 @@ class BindCharm(ops.CharmBase):
         logger.debug("active_unit_ip: %s", active_unit_ip)
         logger.debug("current_unit_ip: %s", current_unit_ip)
         logger.debug("units_ip: %s", units_ip)
+        logger.debug("topology retrieval duration (ms): %s", (time.time_ns() - start_time) / 1e6)
 
         return models.Topology(
             active_unit_ip=active_unit_ip,

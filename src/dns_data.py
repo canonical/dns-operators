@@ -3,6 +3,7 @@
 
 """DNS data logic."""
 
+import json
 import logging
 import typing
 
@@ -71,13 +72,15 @@ def has_changed(
     """
     zones = dns_record_relations_data_to_zones(relation_data)
 
-    if "zones" not in last_valid_state or {models.Zone(**z) for z in last_valid_state["zones"]} != set(zones):
+    if "zones" not in last_valid_state or {
+        models.Zone(**z) for z in last_valid_state["zones"]
+    } != set(zones):
         return True
 
     if (
         topology is not None
         and "topology" in last_valid_state
-        and hash(topology) != hash(last_valid_state["topology"])
+        and topology != models.Topology(**last_valid_state["topology"])
     ):
         return True
 
@@ -148,3 +151,43 @@ def dns_record_relations_data_to_zones(
             else:
                 zones[new_zone.domain] = new_zone
     return list(zones.values())
+
+
+def dump_state(zones: list[models.Zone], topology: models.Topology) -> str:
+    """Dump the current state.
+
+    We need this cumbersome way of serializing the state because
+    we want the zones and the topology.
+    Also, a Zone has a set of DNSEntry that is dumped as a dict() when using mode="python".
+    See more about this issue here: https://github.com/pydantic/pydantic/issues/4186
+
+    Args:
+        zones: list of the zones
+        topology: Topology of the current deployment
+
+    Returns:
+        The dumped state as a string
+    """
+    to_dump = {
+        "topology": topology.model_dump(mode="json") if topology is not None else None,
+        "zones": [zone.model_dump(mode="json") for zone in zones if zone is not None],
+    }
+    return json.dumps(to_dump)
+
+
+def load_state(serialized_state: str) -> dict[str, typing.Any]:
+    """Load the serialized state.
+
+    The serialized state is assumed to have been produced by dump_state()
+
+    Args:
+        serialized_state:json string of the previously dumped state
+
+    Returns:
+        The loaded state
+    """
+    state = json.loads(serialized_state)
+    if state["topology"] is not None:
+        state["topology"] = models.Topology(**state["topology"])
+    state["zones"] = [models.Zone(**zone) for zone in state["zones"]]
+    return state

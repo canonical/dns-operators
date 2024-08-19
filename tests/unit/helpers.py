@@ -58,6 +58,21 @@ RECORDS = {
     ),
 }
 
+TOPOLOGIES = {
+    "3_units_current_not_active": {
+        "units_ip": ["1.1.1.1", "2.2.2.2", "3.3.3.3"],
+        "active_unit_ip": "1.1.1.1",
+        "standby_units_ip": ["2.2.2.2", "3.3.3.3"],
+        "current_unit_ip": "2.2.2.2",
+    },
+    "4_units_current_not_active": {
+        "units_ip": ["1.1.1.1", "2.2.2.2", "3.3.3.3", "4.4.4.4"],
+        "active_unit_ip": "1.1.1.1",
+        "standby_units_ip": ["2.2.2.2", "3.3.3.3", "4.4.4.4"],
+        "current_unit_ip": "2.2.2.2",
+    },
+}
+
 
 def dns_record_requirers_data_from_integration_datasets(
     integration_datasets,

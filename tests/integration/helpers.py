@@ -178,6 +178,7 @@ async def generate_anycharm_relation(
     await ops_test.model.add_relation(f"{any_charm.name}", f"{app.name}")
     await ops_test.model.wait_for_idle(apps=[any_charm.name])
     await change_anycharm_relation(ops_test, any_charm.units[0], dns_entries)
+    await ops_test.model.wait_for_idle(apps=[any_charm.name])
 
 
 async def change_anycharm_relation(

@@ -8,6 +8,7 @@ import json
 import pytest
 
 import dns_data
+import models
 import tests.unit.helpers
 
 
@@ -81,7 +82,13 @@ def test_get_conflicts(integration_datasets, zones_name, nonconflicting, conflic
 
 
 @pytest.mark.parametrize(
-    "integration_datasets_before, integration_datasets_after, expected_has_changed",
+    (
+        "integration_datasets_before, "
+        "integration_datasets_after, "
+        "topology_data_before, "
+        "topology_data_after, "
+        "expected_has_changed"
+    ),
     (
         (
             [
@@ -103,6 +110,8 @@ def test_get_conflicts(integration_datasets, zones_name, nonconflicting, conflic
                     tests.unit.helpers.RECORDS["admin.dns2.test_43"],
                 ],
             ],
+            tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
+            tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
             False,
         ),
         (
@@ -117,6 +126,8 @@ def test_get_conflicts(integration_datasets, zones_name, nonconflicting, conflic
                     tests.unit.helpers.RECORDS["admin.dns.test_42"],
                 ],
             ],
+            tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
+            tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
             True,
         ),
         (
@@ -131,6 +142,31 @@ def test_get_conflicts(integration_datasets, zones_name, nonconflicting, conflic
                     tests.unit.helpers.RECORDS["admin.dns2.test_43"],
                 ],
             ],
+            tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
+            tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
+            True,
+        ),
+        (
+            [
+                [
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                ],
+                [
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                    tests.unit.helpers.RECORDS["admin.dns2.test_43"],
+                ],
+            ],
+            [
+                [
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                ],
+                [
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                    tests.unit.helpers.RECORDS["admin.dns2.test_43"],
+                ],
+            ],
+            tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
+            tests.unit.helpers.TOPOLOGIES["4_units_current_not_active"],
             True,
         ),
     ),
@@ -138,10 +174,15 @@ def test_get_conflicts(integration_datasets, zones_name, nonconflicting, conflic
         "Removed duplicate entry",
         "Removed entry",
         "Added entry",
+        "Simple topology change",
     ),
 )
 def test_has_changed(
-    integration_datasets_before, integration_datasets_after, expected_has_changed
+    integration_datasets_before,
+    integration_datasets_after,
+    topology_data_before,
+    topology_data_after,
+    expected_has_changed,
 ):
     """
     arrange: prepare some integration datasets
@@ -156,7 +197,13 @@ def test_has_changed(
     zones = dns_data.dns_record_relations_data_to_zones(
         [(record_requirer_data, None) for record_requirer_data in record_requirers_data_before]
     )
-    serialized_zones = json.dumps({"topology": "", "zones":[z.model_dump(mode="json") for z in zones]})
+    topology_before = models.Topology(**topology_data_before)
+    serialized_zones = json.dumps(
+        {
+            "topology": topology_before.model_dump(mode="json"),
+            "zones": [z.model_dump(mode="json") for z in zones],
+        }
+    )
 
     record_requirers_data_after = (
         tests.unit.helpers.dns_record_requirers_data_from_integration_datasets(
@@ -166,6 +213,58 @@ def test_has_changed(
 
     assert expected_has_changed == dns_data.has_changed(
         [(record_requirer_data, None) for record_requirer_data in record_requirers_data_after],
-        None,
+        models.Topology(**topology_data_after),
         json.loads(serialized_zones),
     )
+
+
+@pytest.mark.parametrize(
+    "integration_datasets, topology_data",
+    (
+        (
+            [
+                [
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                ],
+                [
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                    tests.unit.helpers.RECORDS["admin.dns2.test_43"],
+                ],
+            ],
+            tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
+        ),
+        (
+            [
+                [
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                ],
+            ],
+            None,
+        ),
+        (
+            [
+                [],
+            ],
+            None,
+        ),
+    ),
+)
+def test_load_dump_state(integration_datasets, topology_data):
+    """
+    arrange: prepare some integration datasets and network topology
+    act: create state
+    assert: it should be intact after dumpig/reloading
+    """
+    record_requirers_data = tests.unit.helpers.dns_record_requirers_data_from_integration_datasets(
+        integration_datasets
+    )
+    zones = dns_data.dns_record_relations_data_to_zones(  # pylint: disable=protected-access
+        [(record_requirer_data, None) for record_requirer_data in record_requirers_data]
+    )
+    topology = models.Topology(**topology_data) if topology_data is not None else None
+
+    serialized = dns_data.dump_state(zones, topology)
+    state = dns_data.load_state(serialized)
+
+    assert state == {"zones": zones, "topology": topology}

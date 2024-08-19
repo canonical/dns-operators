@@ -4,7 +4,6 @@
 
 """Charm for bind."""
 
-import json
 import logging
 import pathlib
 import subprocess  # nosec
@@ -79,7 +78,7 @@ class BindCharm(ops.CharmBase):
 
         # Load the last valid state
         try:
-            last_valid_state = json.loads(
+            last_valid_state = dns_data.load_state(
                 pathlib.Path(constants.DNS_CONFIG_DIR, "state.json").read_text(encoding="utf-8")
             )
         except FileNotFoundError:

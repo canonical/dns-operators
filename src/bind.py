@@ -3,7 +3,6 @@
 
 """Bind charm business logic."""
 
-import json
 import logging
 import os
 import pathlib
@@ -187,12 +186,8 @@ class BindService:
         with tempfile.TemporaryDirectory() as tempdir:
 
             # Write the serialized state to a json file for future comparison
-            to_dump = {
-                "topology": topology.model_dump(mode="json") if topology is not None else "",
-                "zones": [zone.model_dump(mode="json") for zone in zones],
-            }
             pathlib.Path(constants.DNS_CONFIG_DIR, "state.json").write_text(
-                json.dumps(to_dump),
+                dns_data.dump_state(zones, topology),
                 encoding="utf-8",
             )
 

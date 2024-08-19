@@ -169,12 +169,28 @@ def test_get_conflicts(integration_datasets, zones_name, nonconflicting, conflic
             tests.unit.helpers.TOPOLOGIES["4_units_current_not_active"],
             True,
         ),
+        (
+            [
+                [
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                ],
+            ],
+            [
+                [
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                ],
+            ],
+            None,
+            None,
+            False,
+        ),
     ),
     ids=(
         "Removed duplicate entry",
         "Removed entry",
         "Added entry",
         "Simple topology change",
+        "No topology",
     ),
 )
 def test_has_changed(
@@ -197,13 +213,10 @@ def test_has_changed(
     zones = dns_data.dns_record_relations_data_to_zones(
         [(record_requirer_data, None) for record_requirer_data in record_requirers_data_before]
     )
-    topology_before = models.Topology(**topology_data_before)
-    serialized_zones = json.dumps(
-        {
-            "topology": topology_before.model_dump(mode="json"),
-            "zones": [z.model_dump(mode="json") for z in zones],
-        }
+    topology_before = (
+        models.Topology(**topology_data_before) if topology_data_before is not None else None
     )
+    serialized_state = dns_data.dump_state(zones, topology_before)
 
     record_requirers_data_after = (
         tests.unit.helpers.dns_record_requirers_data_from_integration_datasets(
@@ -213,8 +226,8 @@ def test_has_changed(
 
     assert expected_has_changed == dns_data.has_changed(
         [(record_requirer_data, None) for record_requirer_data in record_requirers_data_after],
-        models.Topology(**topology_data_after),
-        json.loads(serialized_zones),
+        models.Topology(**topology_data_after) if topology_data_after is not None else None,
+        dns_data.load_state(serialized_state),
     )
 
 

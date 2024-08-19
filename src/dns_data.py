@@ -72,17 +72,14 @@ def has_changed(
     """
     zones = dns_record_relations_data_to_zones(relation_data)
 
-    if "zones" not in last_valid_state or {
-        models.Zone(**z) for z in last_valid_state["zones"]
-    } != set(zones):
+    if "zones" not in last_valid_state or last_valid_state["zones"] != zones:
         return True
 
-    if (
-        topology is not None
-        and "topology" in last_valid_state
-        and topology != models.Topology(**last_valid_state["topology"])
-    ):
-        return True
+    if topology is not None and "topology" in last_valid_state:
+        if last_valid_state["topology"] is None and topology is not None:
+            return True
+        if last_valid_state["topology"] is not None and topology != last_valid_state["topology"]:
+            return True
 
     return False
 

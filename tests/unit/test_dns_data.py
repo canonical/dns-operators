@@ -3,8 +3,6 @@
 
 """Unit tests for the dns_data module."""
 
-import json
-
 import pytest
 
 import dns_data

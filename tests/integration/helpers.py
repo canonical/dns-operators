@@ -208,6 +208,7 @@ async def change_anycharm_relation(
         f"JUJU_UNIT_NAME={anyapp_unit.name} ./dispatch"
     )
     await run_on_unit(ops_test, anyapp_unit.name, cmd)
+    await ops_test.model.wait_for_idle()
 
 
 async def dig_query(

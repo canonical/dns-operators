@@ -3,13 +3,12 @@
 
 """Unit tests for the dns_data module."""
 
-import uuid
+import json
 
 import pytest
-from charms.bind.v0 import dns_record
 
 import dns_data
-import models
+import tests.unit.helpers
 
 
 @pytest.mark.parametrize(
@@ -18,40 +17,12 @@ import models
         (
             [
                 [
-                    models.DnsEntry(
-                        domain="dns.test",
-                        host_label="admin",
-                        ttl=600,
-                        record_class="IN",
-                        record_type="A",
-                        record_data="42.42.42.42",
-                    ),
-                    models.DnsEntry(
-                        domain="dns.test",
-                        host_label="admin",
-                        ttl=600,
-                        record_class="IN",
-                        record_type="A",
-                        record_data="42.42.42.42",
-                    ),
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
                 ],
                 [
-                    models.DnsEntry(
-                        domain="dns.test",
-                        host_label="admin",
-                        ttl=600,
-                        record_class="IN",
-                        record_type="A",
-                        record_data="42.42.42.42",
-                    ),
-                    models.DnsEntry(
-                        domain="dns2.test",
-                        host_label="admin",
-                        ttl=600,
-                        record_class="IN",
-                        record_type="A",
-                        record_data="42.42.42.43",
-                    ),
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                    tests.unit.helpers.RECORDS["admin.dns2.test_43"],
                 ],
             ],
             {"dns.test", "dns2.test"},
@@ -61,30 +32,9 @@ import models
         (
             [
                 [
-                    models.DnsEntry(
-                        domain="dns.test",
-                        host_label="admin",
-                        ttl=600,
-                        record_class="IN",
-                        record_type="A",
-                        record_data="42.42.42.42",
-                    ),
-                    models.DnsEntry(
-                        domain="dns2.test",
-                        host_label="admin",
-                        ttl=600,
-                        record_class="IN",
-                        record_type="A",
-                        record_data="41.41.41.41",
-                    ),
-                    models.DnsEntry(
-                        domain="dns.test",
-                        host_label="admin2",
-                        ttl=600,
-                        record_class="IN",
-                        record_type="A",
-                        record_data="40.40.40.40",
-                    ),
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                    tests.unit.helpers.RECORDS["admin.dns2.test_41"],
+                    tests.unit.helpers.RECORDS["admin2.dns.test_40"],
                 ],
             ],
             {"dns.test", "dns2.test"},
@@ -94,22 +44,8 @@ import models
         (
             [
                 [
-                    models.DnsEntry(
-                        domain="dns.test",
-                        host_label="admin",
-                        ttl=600,
-                        record_class="IN",
-                        record_type="A",
-                        record_data="42.42.42.42",
-                    ),
-                    models.DnsEntry(
-                        domain="dns.test",
-                        host_label="admin",
-                        ttl=600,
-                        record_class="IN",
-                        record_type="A",
-                        record_data="41.41.41.41",
-                    ),
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                    tests.unit.helpers.RECORDS["admin.dns.test_41"],
                 ],
             ],
             {"dns.test"},
@@ -129,29 +65,14 @@ def test_get_conflicts(integration_datasets, zones_name, nonconflicting, conflic
     act: generate conflicting sets of DnsEntries
     assert: that the generate set is what we expected
     """
-    record_requirers_data = []
-    for requirer in integration_datasets:
-        requirer_entries = [
-            dns_record.RequirerEntry(
-                domain=e.domain,
-                host_label=e.host_label,
-                ttl=e.ttl,
-                record_class=e.record_class,
-                record_type=e.record_type,
-                record_data=e.record_data,
-                uuid=uuid.uuid4(),
-            )
-            for e in requirer
-        ]
-        record_requirer_data = dns_record.DNSRecordRequirerData(
-            dns_entries=requirer_entries,
-            service_account="fakeserviceaccount",
-        )
-        record_requirers_data.append(record_requirer_data)
+    record_requirers_data = tests.unit.helpers.dns_record_requirers_data_from_integration_datasets(
+        integration_datasets
+    )
 
     zones = dns_data.dns_record_relations_data_to_zones(  # pylint: disable=protected-access
         [(record_requirer_data, None) for record_requirer_data in record_requirers_data]
     )
+
     assert zones_name == {zone.domain for zone in zones}
 
     output = dns_data.get_conflicts(zones)  # pylint: disable=protected-access
@@ -160,95 +81,91 @@ def test_get_conflicts(integration_datasets, zones_name, nonconflicting, conflic
 
 
 @pytest.mark.parametrize(
-    "zonefile_content, metadata, error",
+    "integration_datasets_before, integration_datasets_after, expected_has_changed",
     (
-        ("", {}, dns_data.EmptyZoneFileMetadataError),
-        ("sometext; someothertext", {}, dns_data.EmptyZoneFileMetadataError),
-        ("$ORIGIN test.dns.test.; HASH:1234", {"HASH": "1234"}, None),
         (
-            "$ORIGIN test.dns.test.; HASH:1234\n$ORIGIN test2.dns.test.; PLOP:plop",
-            {"HASH": "1234", "PLOP": "plop"},
-            None,
+            [
+                [
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                ],
+                [
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                    tests.unit.helpers.RECORDS["admin.dns2.test_43"],
+                ],
+            ],
+            [
+                [
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                ],
+                [
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                    tests.unit.helpers.RECORDS["admin.dns2.test_43"],
+                ],
+            ],
+            False,
         ),
         (
-            "$ORIGIN test.dns.test.; HASH:1234 HASH:4567",
-            {},
-            dns_data.DuplicateMetadataEntryError,
+            [
+                [
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                    tests.unit.helpers.RECORDS["admin.dns2.test_43"],
+                ],
+            ],
+            [
+                [
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                ],
+            ],
+            True,
         ),
         (
-            "$ORIGIN test.dns.test.; HASH:1234\n$ORIGIN test2.dns.test.; HASH:4567",
-            {},
-            dns_data.DuplicateMetadataEntryError,
-        ),
-        ("$ORIGIN test.dns.test.; HASH::", None, dns_data.InvalidZoneFileMetadataError),
-        ("$ORIGIN test.dns.test.;    ", {"HASH": "1234"}, dns_data.EmptyZoneFileMetadataError),
-        (
-            "\n\nsometext\n\n$ORIGIN test.dns.test.; HASH:1234 PLOP:plop\nsomeothertext",
-            {"HASH": "1234", "PLOP": "plop"},
-            None,
+            [
+                [
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                ],
+            ],
+            [
+                [
+                    tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                    tests.unit.helpers.RECORDS["admin.dns2.test_43"],
+                ],
+            ],
+            True,
         ),
     ),
+    ids=(
+        "Removed duplicate entry",
+        "Removed entry",
+        "Added entry",
+    ),
 )
-def test_get_zonefile_metadata(zonefile_content: str, metadata: dict[str, str], error):
+def test_has_changed(
+    integration_datasets_before, integration_datasets_after, expected_has_changed
+):
     """
-    arrange: nothing
-    act: get the metadata from the zonefile_content
-    assert: the correct metadata should be found or the correct exception raised
+    arrange: prepare some integration datasets
+    act: Serialize the 'before' dataset
+    assert: check if the comparison of the before dataset with the after is what we expected
     """
-    if error is not None:
-        with pytest.raises(error):
-            dns_data._get_zonefile_metadata(zonefile_content)  # pylint: disable=protected-access
-    else:
-        assert metadata == dns_data._get_zonefile_metadata(  # pylint: disable=protected-access
-            zonefile_content
+    record_requirers_data_before = (
+        tests.unit.helpers.dns_record_requirers_data_from_integration_datasets(
+            integration_datasets_before
         )
-
-
-@pytest.mark.parametrize(
-    "named_conf_content, wanted",
-    (
-        (
-            # pylint: disable=line-too-long
-            """
-            include "/some/path/zones.rfc1918";
-            zone "service.test" IN { type primary; file "/some/path/db.service.test"; allow-update { none; }; allow-transfer {  }; };
-            """,
-            [],
-        ),
-        (
-            # pylint: disable=line-too-long
-            """
-            include "/some/path/zones.rfc1918";
-            zone "service.test" IN { type primary; file "/some/path/db.service.test"; allow-update { none; }; allow-transfer { 42.42.42.42; }; };
-            """,
-            ["42.42.42.42"],
-        ),
-        (
-            # pylint: disable=line-too-long
-            """
-            include "/some/path/zones.rfc1918";
-            zone "service.test" IN { type primary; file "/some/path/db.service.test"; allow-update { none; }; allow-transfer { 42.42.42.42; 42.42.42.43; }; };
-            """,
-            ["42.42.42.42", "42.42.42.43"],
-        ),
-        (
-            # pylint: disable=line-too-long
-            """
-            include "/some/path/zones.rfc1918";
-            zone "service.test" IN { type primary; file "/some/path/db.service.test"; allow-update { none; }; allow-transfer { 42.42.42.42; }; };
-            zone "service2.test" IN { type primary; file "/some/path/db.service.test"; allow-update { none; }; allow-transfer { 42.42.42.43; }; };
-            """,
-            ["42.42.42.42"],
-        ),
-    ),
-)
-def test_get_secondaries_ip_from_conf(named_conf_content: str, wanted: list[str]):
-    """
-    arrange: nothing
-    act: get the IPs from named_conf_content
-    assert: the correct IPs should be found
-    """
-    result = dns_data._get_secondaries_ip_from_conf(  # pylint: disable=protected-access
-        named_conf_content
     )
-    assert wanted == result
+    zones = dns_data.dns_record_relations_data_to_zones(
+        [(record_requirer_data, None) for record_requirer_data in record_requirers_data_before]
+    )
+    serialized_zones = json.dumps({"topology": "", "zones":[z.model_dump(mode="json") for z in zones]})
+
+    record_requirers_data_after = (
+        tests.unit.helpers.dns_record_requirers_data_from_integration_datasets(
+            integration_datasets_after
+        )
+    )
+
+    assert expected_has_changed == dns_data.has_changed(
+        [(record_requirer_data, None) for record_requirer_data in record_requirers_data_after],
+        None,
+        json.loads(serialized_zones),
+    )

@@ -4,8 +4,7 @@
 """DNS data logic."""
 
 import logging
-import pathlib
-import re
+import typing
 
 from charms.bind.v0.dns_record import (
     DNSProviderData,
@@ -15,23 +14,9 @@ from charms.bind.v0.dns_record import (
     Status,
 )
 
-import constants
-import exceptions
 import models
 
 logger = logging.getLogger(__name__)
-
-
-class InvalidZoneFileMetadataError(exceptions.BindCharmError):
-    """Exception raised when a zonefile has invalid metadata."""
-
-
-class EmptyZoneFileMetadataError(exceptions.BindCharmError):
-    """Exception raised when a zonefile has no metadata."""
-
-
-class DuplicateMetadataEntryError(exceptions.BindCharmError):
-    """Exception raised when a zonefile has metadata with duplicate entries."""
 
 
 def create_dns_record_provider_data(
@@ -64,50 +49,37 @@ def create_dns_record_provider_data(
     return DNSRecordProviderData(dns_entries=statuses)
 
 
-def has_a_zone_changed(
+def has_changed(
     relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
     topology: models.Topology | None,
+    last_valid_state: dict[str, typing.Any],
 ) -> bool:
-    """Check if a zone definition has changed.
+    """Check if the dns data has changed.
 
-    The zone definition is checked from a custom hash constructed from its DNS records.
+    This could be a change in a zone, or a removal/addition of a zone,
+    or a change in the topology.
+    We use the state.json file to compare the state when
+    the last configuration was minted to the current one.
 
     Args:
         relation_data: input relation data
         topology: Topology of the current deployment
+        last_valid_state: The last valid state, deserialized from a state.json file
 
     Returns:
         True if a zone has changed, False otherwise.
     """
     zones = dns_record_relations_data_to_zones(relation_data)
-    logger.debug("Zones: %s", [z.domain for z in zones])
-    for zone in zones:
-        try:
-            zonefile_content = pathlib.Path(
-                constants.DNS_CONFIG_DIR, f"db.{zone.domain}"
-            ).read_text(encoding="utf-8")
-            metadata = _get_zonefile_metadata(zonefile_content)
-        except (
-            InvalidZoneFileMetadataError,
-            EmptyZoneFileMetadataError,
-            FileNotFoundError,
-        ):
-            return True
-        if "HASH" in metadata and hash(zone) != int(metadata["HASH"]):
-            logger.debug("Config hash has changed !")
-            return True
 
-    if topology is not None and topology.is_current_unit_active:
-        try:
-            named_conf_content = pathlib.Path(
-                constants.DNS_CONFIG_DIR, "named.conf.local"
-            ).read_text(encoding="utf-8")
-        except FileNotFoundError:
-            return True
-        return (
-            _get_secondaries_ip_from_conf(named_conf_content).sort()
-            != [str(ip) for ip in topology.standby_units_ip].sort()
-        )
+    if "zones" not in last_valid_state or {models.Zone(**z) for z in last_valid_state["zones"]} != set(zones):
+        return True
+
+    if (
+        topology is not None
+        and "topology" in last_valid_state
+        and hash(topology) != hash(last_valid_state["topology"])
+    ):
+        return True
 
     return False
 
@@ -131,7 +103,7 @@ def record_requirer_data_to_zones(
 
     zones: list[models.Zone] = []
     for domain, entries in zones_entries.items():
-        zone = models.Zone(domain=domain, entries=[])
+        zone = models.Zone(domain=domain, entries=set())
         for entry in entries:
             zone.entries.add(models.create_dns_entry_from_requirer_entry(entry))
         zones.append(zone)
@@ -176,63 +148,3 @@ def dns_record_relations_data_to_zones(
             else:
                 zones[new_zone.domain] = new_zone
     return list(zones.values())
-
-
-def _get_secondaries_ip_from_conf(named_conf_content: str) -> list[str]:
-    """Get the secondaries IP addresses from the named.conf.local file.
-
-    This is useful to check if we need to regenerate
-    the file after a change in the network topology.
-
-    This function is only taking the first line of named.conf.local with a zone-transfer
-    into account. It works when the charm is writing the config files but is a bit
-    brittle if those are modified by a human.
-    TODO: This should be reworked (along with the metadata system) in something more durable
-    like an external json file to store that information.
-
-    Args:
-        named_conf_content: content of the named.conf.local file
-
-    Returns:
-        A list of IPs as strings
-    """
-    for line in named_conf_content.splitlines():
-        if "allow-transfer" in line:
-            if match := re.search(r"allow-transfer\s*\{([^}]+)\}", line):
-                return [ip.strip() for ip in match.group(1).split(";") if ip.strip() != ""]
-    return []
-
-
-def _get_zonefile_metadata(zonefile_content: str) -> dict[str, str]:
-    """Get the metadata of a zonefile.
-
-    Args:
-        zonefile_content: The content of the zonefile.
-
-    Returns:
-        The hash of the corresponding zonefile.
-
-    Raises:
-        InvalidZoneFileMetadataError: when the metadata of the zonefile could not be parsed.
-        EmptyZoneFileMetadataError: when the metadata of the zonefile is empty.
-        DuplicateMetadataEntryError: when the metadata of the zonefile has duplicate entries.
-    """
-    # This assumes that the file was generated with the constants.ZONE_HEADER_TEMPLATE template
-    metadata = {}
-    try:
-        lines = zonefile_content.split("\n")
-        for line in lines:
-            # We only take the $ORIGIN line into account
-            if not line.startswith("$ORIGIN"):
-                continue
-            for token in line.split(";")[1].split():
-                k, v = token.split(":")
-                if k in metadata:
-                    raise DuplicateMetadataEntryError(f"Duplicate metadata entry '{k}'")
-                metadata[k] = v
-    except (IndexError, ValueError) as err:
-        raise InvalidZoneFileMetadataError(err) from err
-
-    if metadata:
-        return metadata
-    raise EmptyZoneFileMetadataError("No metadata found !")

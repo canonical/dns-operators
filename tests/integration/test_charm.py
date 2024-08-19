@@ -248,15 +248,11 @@ async def test_dns_record_relation(
 
     await model.wait_for_idle()
 
-    # Force reload bind
-    restart_cmd = f"sudo snap restart --reload {constants.DNS_SNAP_NAME}"
-    # Application actually does have units
-    unit = app.units[0]  # type: ignore
-    await tests.integration.helpers.run_on_unit(ops_test, unit.name, restart_cmd)
+    await tests.integration.helpers.force_reload_bind(ops_test, app.units[0])  # type: ignore
     await model.wait_for_idle()
 
     # Test the status of the bind-operator instance
-    assert unit.workload_status == status.name
+    assert app.units[0].workload_status == status.name  # type: ignore
 
     # Test if the records give the correct results
     # Do that only if we have an active status
@@ -266,7 +262,7 @@ async def test_dns_record_relation(
 
                 result = await tests.integration.helpers.dig_query(
                     ops_test,
-                    unit,
+                    app.units[0],  # type: ignore
                     f"@127.0.0.1 {entry.host_label}.{entry.domain} {entry.record_type} +short",
                     retry=True,
                     wait=5,

@@ -4,7 +4,9 @@
 
 """Charm for bind."""
 
+import json
 import logging
+import pathlib
 import subprocess  # nosec
 import time
 import typing
@@ -74,7 +76,17 @@ class BindCharm(ops.CharmBase):
             return
         logger.debug("reldata retrieval duration (ms): %s", (time.time_ns() - start_time) / 1e6)
         topology = self._topology()
-        if dns_data.has_a_zone_changed(relation_data, topology):
+
+        # Load the last valid state
+        try:
+            last_valid_state = json.loads(
+                pathlib.Path(constants.DNS_CONFIG_DIR, "state.json").read_text(encoding="utf-8")
+            )
+        except FileNotFoundError:
+            # If we can't load the previous state,
+            # we assume that we need to regenerate the configuration
+            return
+        if dns_data.has_changed(relation_data, topology, last_valid_state):
             self.bind.update_zonefiles_and_reload(relation_data, topology)
 
     def _on_peer_relation_joined(self, _: ops.RelationJoinedEvent) -> None:

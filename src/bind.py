@@ -3,6 +3,7 @@
 
 """Bind charm business logic."""
 
+import json
 import logging
 import os
 import pathlib
@@ -185,6 +186,16 @@ class BindService:
         # This is done to avoid having a partial configuration remaining if something goes wrong.
         with tempfile.TemporaryDirectory() as tempdir:
 
+            # Write the serialized state to a json file for future comparison
+            to_dump = {
+                "topology": topology.model_dump(mode="json") if topology is not None else "",
+                "zones": [zone.model_dump(mode="json") for zone in zones],
+            }
+            pathlib.Path(constants.DNS_CONFIG_DIR, "state.json").write_text(
+                json.dumps(to_dump),
+                encoding="utf-8",
+            )
+
             # Write the service.test file
             pathlib.Path(constants.DNS_CONFIG_DIR, f"db.{constants.ZONE_SERVICE_NAME}").write_text(
                 constants.ZONE_SERVICE.format(
@@ -260,7 +271,6 @@ class BindService:
                 # The serial is the timestamp divided by 60.
                 # We only need precision to the minute and want to avoid overflows
                 serial=int(time.time() / 60),
-                hash=hash(zone),
             )
             for entry in zone.entries:
                 content += constants.ZONE_RECORD_TEMPLATE.format(
@@ -293,21 +303,20 @@ class BindService:
             absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{constants.ZONE_SERVICE_NAME}",
             zone_transfer_ips="",
         )
-        for name in zones:
-            if topology is None:
-                pass
-            elif topology.is_current_unit_active:
-                content += constants.NAMED_CONF_PRIMARY_ZONE_DEF_TEMPLATE.format(
-                    name=name,
-                    absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{name}",
-                    zone_transfer_ips=self._bind_config_ip_list(topology.standby_units_ip),
-                )
-            else:
-                content += constants.NAMED_CONF_SECONDARY_ZONE_DEF_TEMPLATE.format(
-                    name=name,
-                    absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{name}",
-                    primary_ip=self._bind_config_ip_list([topology.active_unit_ip]),
-                )
+        if topology is not None:
+            for name in zones:
+                if topology.is_current_unit_active:
+                    content += constants.NAMED_CONF_PRIMARY_ZONE_DEF_TEMPLATE.format(
+                        name=name,
+                        absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{name}",
+                        zone_transfer_ips=self._bind_config_ip_list(topology.standby_units_ip),
+                    )
+                else:
+                    content += constants.NAMED_CONF_SECONDARY_ZONE_DEF_TEMPLATE.format(
+                        name=name,
+                        absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{name}",
+                        primary_ip=self._bind_config_ip_list([topology.active_unit_ip]),
+                    )
         return content
 
     def _bind_config_ip_list(self, ips: list[pydantic.IPvAnyAddress]) -> str:

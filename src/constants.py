@@ -19,7 +19,7 @@ $TTL 600
 status IN TXT "ok"
 """
 
-ZONE_HEADER_TEMPLATE = """$ORIGIN {zone}.; HASH:{hash}
+ZONE_HEADER_TEMPLATE = """$ORIGIN {zone}.
 $TTL 600
 @ IN SOA {zone}. mail.{zone}. ( {serial} 1d 1h 1h 10m )
 @ IN NS localhost.

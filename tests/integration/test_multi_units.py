@@ -43,7 +43,7 @@ async def test_multi_units(
             models.DnsEntry(
                 domain="dns.test",
                 host_label="admin",
-                ttl=600,
+                ttl=5,
                 record_class="IN",
                 record_type="A",
                 record_data="42.42.42.42",
@@ -100,7 +100,7 @@ async def test_multi_units(
             models.DnsEntry(
                 domain="dns.test",
                 host_label="admin",
-                ttl=600,
+                ttl=5,
                 record_class="IN",
                 record_type="A",
                 record_data="43.43.43.43",

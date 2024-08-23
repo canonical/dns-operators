@@ -3,11 +3,15 @@
 
 """Unit tests for the dns_data module."""
 
+import logging
+
 import pytest
 
 import dns_data
 import models
 import tests.unit.helpers
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.parametrize(

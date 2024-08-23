@@ -11,7 +11,7 @@ import time
 import typing
 
 import ops
-from charms.bind.v0.dns_record import DNSRecordProvides
+from charms.bind.v0 import dns_record
 
 import constants
 import dns_data
@@ -42,7 +42,7 @@ class BindCharm(ops.CharmBase):
         """
         super().__init__(*args)
         self.bind = BindService()
-        self.dns_record = DNSRecordProvides(self)
+        self.dns_record = dns_record.DNSRecordProvides(self)
 
         self.on.define_event("reload_bind", events.ReloadBindEvent)
 
@@ -65,15 +65,14 @@ class BindCharm(ops.CharmBase):
         )
 
     def _on_reload_bind(self, _: events.ReloadBindEvent) -> None:
-        """Handle periodic reload bind event."""
-        # Reloading is used to take new configuration into account
-        start_time = time.time_ns()
-        try:
-            relation_data = self.dns_record.get_remote_relation_data()
-        except ValueError as err:
-            logger.info("Validation error of the relation data: %s", err)
+        """Handle periodic reload bind event.
+
+        Reloading is used to take new configuration into account.
+
+        """
+        relation_data = self._get_remote_relation_data()
+        if relation_data is None:
             return
-        logger.debug("reldata retrieval duration (ms): %s", (time.time_ns() - start_time) / 1e6)
         topology = self._topology()
 
         # Load the last valid state
@@ -98,11 +97,8 @@ class BindCharm(ops.CharmBase):
         # If we are not the active unit, there's nothing to do
         if not topology.is_current_unit_active:
             return
-        # Reloading is used to take new configuration into account
-        try:
-            relation_data = self.dns_record.get_remote_relation_data()
-        except ValueError as err:
-            logger.info("Validation error of the relation data: %s", err)
+        relation_data = self._get_remote_relation_data()
+        if relation_data is None:
             return
         self.bind.update_zonefiles_and_reload(relation_data, topology)
 
@@ -113,10 +109,8 @@ class BindCharm(ops.CharmBase):
             event: Event triggering the relation changed handler.
 
         """
-        try:
-            relation_data = self.dns_record.get_remote_relation_data()
-        except ValueError as err:
-            logger.info("Validation error of the relation data: %s", err)
+        relation_data = self._get_remote_relation_data()
+        if relation_data is None:
             return
         self.unit.status = ops.MaintenanceStatus("Handling new relation requests")
         dns_record_provider_data = dns_data.create_dns_record_provider_data(relation_data)
@@ -138,13 +132,11 @@ class BindCharm(ops.CharmBase):
                 event.add_status(ops.ActiveStatus())
         except PeerRelationUnavailableError:
             event.add_status(ops.WaitingStatus("Peer relation is not available"))
-        try:
-            relation_requirer_data = self.dns_record.get_remote_relation_data()
-        except ValueError as err:
-            logger.info("Validation error of the relation data: %s", err)
-            event.add_status(ops.BlockedStatus(f"Validation error of the relation data: {err}"))
+        relation_data = self._get_remote_relation_data()
+        if relation_data is None:
+            event.add_status(ops.BlockedStatus("Non valid DNS requests"))
             return
-        self.bind.collect_status(event, relation_requirer_data)
+        self.bind.collect_status(event, relation_data)
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle changed configuration event."""
@@ -303,6 +295,25 @@ class BindCharm(ops.CharmBase):
             standby_units_ip=[ip for ip in units_ip if ip != active_unit_ip],
             current_unit_ip=current_unit_ip,
         )
+
+    def _get_remote_relation_data(self) -> dns_record.DNSRecordProviderData | None:
+        """Get the dns_record remote relation data.
+
+        This function is used to get performance statistics on the remote relation data retrieval.
+
+        Returns:
+            the dns_record remote relation data
+        """
+        start_time = time.time_ns()
+        try:
+            relation_data = self.dns_record.get_remote_relation_data()
+        except ValueError as err:
+            logger.info("Validation error of the relation data: %s", err)
+            return None
+        logger.debug(
+            "Relation data retrieval duration (ms): %s", (time.time_ns() - start_time) / 1e6
+        )
+        return relation_data
 
 
 if __name__ == "__main__":  # pragma: nocover

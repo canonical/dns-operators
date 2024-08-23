@@ -49,6 +49,7 @@ async def test_multi_units(
                 record_data="42.42.42.42",
             ),
         ],
+        None,
     )
     await model.wait_for_idle()
 

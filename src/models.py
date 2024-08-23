@@ -28,20 +28,6 @@ class DnsEntry(pydantic.BaseModel):
     record_type: RecordType
     record_data: pydantic.IPvAnyAddress
 
-    def conflicts(self, other: "DnsEntry") -> bool:
-        """Check if it conflicts with another DnsEntry.
-
-        Args:
-            other: DnsEntry to check conflicts with.
-
-        Returns:
-            True if they conflict, False otherwise.
-        """
-        key_attributes: set[str] = {"domain", "host_label", "record_class", "record_type"}
-        return hash(tuple(getattr(self, k) for k in key_attributes)) == hash(
-            tuple(getattr(other, k) for k in key_attributes)
-        )
-
     def __hash__(self) -> int:
         """Get a hash of a DnsEntry based on its attributes.
 

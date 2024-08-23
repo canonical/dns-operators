@@ -632,7 +632,17 @@ class DNSRecordProvides(ops.Object):
         """
         relations_data: List[Tuple[DNSRecordRequirerData, DNSRecordProviderData]] = []
         for relation in self.model.relations[self.relation_name]:
-            relations_data.append(self._get_remote_relation_data(self.model, relation))
+            try:
+                data = self._get_remote_relation_data(self.model, relation)
+            except ValueError:
+                # This can happen if the relation is empty
+                logger.debug("Incorrect relation data for %s", relation.id)
+                continue
+            except ops.model.ModelError:
+                # This can happen with phantom relations
+                logger.debug("ModelError for %s", relation.id)
+                continue
+            relations_data.append(data)
         return relations_data
 
     def _get_remote_relation_data(

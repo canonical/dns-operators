@@ -17,6 +17,10 @@ from dns_record import DNSRecordRequirerData, DNSRecordRequires, RequirerEntry
 logger = logging.getLogger(__name__)
 
 
+class ReloadDataEvent(ops.charm.EventBase):
+    """Event representing a reload-data event."""
+
+
 class AnyCharm(AnyCharmBase):
     """Execute a simple charm to test the relation."""
 
@@ -28,10 +32,14 @@ class AnyCharm(AnyCharmBase):
             kwargs: Variable list of positional keyword arguments passed to the parent constructor.
         """
         super().__init__(*args, **kwargs)
+        self.on.define_event("reload_data", ReloadDataEvent)
         self.dns_record = DNSRecordRequires(self)
-        self.framework.observe(
-            self.on.dns_record_relation_joined, self._on_dns_record_relation_joined
-        )
+        self.framework.observe(self.on.reload_data, self._on_reload_data)
+
+    def _on_reload_data(self, _: ReloadDataEvent) -> None:
+        """Handle reload-data events."""
+        relation = self.model.get_relation(self.dns_record.relation_name)
+        self.dns_record.update_relation_data(relation, self._test_record_data())
 
     def _test_record_data(self) -> DNSRecordRequirerData:
         """Create test record data.
@@ -40,9 +48,8 @@ class AnyCharm(AnyCharmBase):
             test record data
         """
         # We read the dns entries from a known json file
-        # It's okay to write to /tmp for these tests, so # nosec is used
         json_entries = json.loads(
-            pathlib.Path("/tmp/dns_entries.json").read_text(encoding="utf-8")  # nosec
+            pathlib.Path("/srv/dns_entries.json").read_text(encoding="utf-8")
         )
 
         dns_entries = [
@@ -63,11 +70,3 @@ class AnyCharm(AnyCharmBase):
             service_account="fakeserviceaccount",
         )
         return dns_record_requirer_data
-
-    def _on_dns_record_relation_joined(self, event: ops.RelationEvent) -> None:
-        """Handle dns_record relation joined.
-
-        Args:
-            event: dns_record relation joined event
-        """
-        self.dns_record.update_relation_data(event.relation, self._test_record_data())

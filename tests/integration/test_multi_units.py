@@ -43,7 +43,7 @@ async def test_multi_units(
             models.DnsEntry(
                 domain="dns.test",
                 host_label="admin",
-                ttl=600,
+                ttl=5,
                 record_class="IN",
                 record_type="A",
                 record_data="42.42.42.42",
@@ -52,27 +52,22 @@ async def test_multi_units(
     )
     await model.wait_for_idle()
 
-    # Define the test that we're going to make multiple times
-    async def assert_has_dns_record(unit: ops.model.Unit):
-        """Test if the unit exposes the target DNS record.
-
-        Args:
-            unit: Unit to test
-        """
-        result = await tests.integration.helpers.dig_query(
-            ops_test,
-            unit,
-            "@127.0.0.1 admin.dns.test A +short",
-            retry=True,
-            wait=5,
-        )
-        assert result == "42.42.42.42", f"Issue with {unit.name}"
-
     # Start by testing that everything is fine
     assert await tests.integration.helpers.check_if_active_unit_exists(app, ops_test)
     # Application actually does have units
     for unit in app.units:  # type: ignore
-        await assert_has_dns_record(unit)
+        await tests.integration.helpers.force_reload_bind(ops_test, unit)
+        await model.wait_for_idle()
+        assert (
+            await tests.integration.helpers.dig_query(
+                ops_test,
+                unit,
+                "@127.0.0.1 admin.dns.test A +short",
+                retry=True,
+                wait=5,
+            )
+            == "42.42.42.42"
+        ), "Initial test failed"
 
     # add a unit and verify that everything goes well
     assert ops_test.model is not None
@@ -82,7 +77,51 @@ async def test_multi_units(
     assert await tests.integration.helpers.check_if_active_unit_exists(app, ops_test)
     # Application actually does have units
     for unit in app.units:  # type: ignore
-        await assert_has_dns_record(unit)
+        await tests.integration.helpers.force_reload_bind(ops_test, unit)
+        await model.wait_for_idle()
+        assert (
+            await tests.integration.helpers.dig_query(
+                ops_test,
+                unit,
+                "@127.0.0.1 admin.dns.test A +short",
+                retry=True,
+                wait=5,
+            )
+            == "42.42.42.42"
+        ), "Failed after adding one unit"
+
+    # Change the domain requested by any-app
+    anyapp_name = "anyapp-t1"
+    anyapp = model.applications[anyapp_name]
+    await tests.integration.helpers.change_anycharm_relation(
+        ops_test,
+        anyapp.units[0],
+        [
+            models.DnsEntry(
+                domain="dns.test",
+                host_label="admin",
+                ttl=5,
+                record_class="IN",
+                record_type="A",
+                record_data="43.43.43.43",
+            ),
+        ],
+    )
+    await model.wait_for_idle()
+    # Application actually does have units
+    for unit in app.units:  # type: ignore
+        await tests.integration.helpers.force_reload_bind(ops_test, unit)
+        await model.wait_for_idle()
+        assert (
+            await tests.integration.helpers.dig_query(
+                ops_test,
+                unit,
+                "@127.0.0.1 admin.dns.test A +short",
+                retry=True,
+                wait=5,
+            )
+            == "43.43.43.43"
+        ), "Failed after changing DNS request"
 
     # remove the active unit and check that we're still all right
     active_unit = await tests.integration.helpers.get_active_unit(app, ops_test)
@@ -95,4 +134,15 @@ async def test_multi_units(
     assert await tests.integration.helpers.check_if_active_unit_exists(app, ops_test)
     # Application actually does have units
     for unit in app.units:  # type: ignore
-        await assert_has_dns_record(unit)
+        await tests.integration.helpers.force_reload_bind(ops_test, unit)
+        await model.wait_for_idle()
+        assert (
+            await tests.integration.helpers.dig_query(
+                ops_test,
+                unit,
+                "@127.0.0.1 admin.dns.test A +short",
+                retry=True,
+                wait=5,
+            )
+            == "43.43.43.43"
+        ), "Failed after removing one bind unit"

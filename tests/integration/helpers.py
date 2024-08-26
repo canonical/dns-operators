@@ -109,11 +109,11 @@ async def push_to_unit(
     temp_filename_on_workload = _generate_random_filename()
     # unit does have scp_to
     await unit.scp_to(source=temp_path, destination=temp_filename_on_workload)  # type: ignore
-    mv_cmd = f"mv /home/ubuntu/{temp_filename_on_workload} {destination}"
+    mv_cmd = f"sudo mv -f /home/ubuntu/{temp_filename_on_workload} {destination}"
     await run_on_unit(ops_test, unit.name, mv_cmd)
-    chown_cmd = f"chown {user}:{group} {destination}"
+    chown_cmd = f"sudo chown {user}:{group} {destination}"
     await run_on_unit(ops_test, unit.name, chown_cmd)
-    chmod_cmd = f"chmod {mode} {destination}"
+    chmod_cmd = f"sudo chmod {mode} {destination}"
     await run_on_unit(ops_test, unit.name, chmod_cmd)
 
 
@@ -161,10 +161,6 @@ async def generate_anycharm_relation(
     any_charm_src_overwrite = {
         "any_charm.py": any_charm_content,
         "dns_record.py": dns_record_content,
-        # It's okay to write to /tmp for these tests, so # nosec is used
-        "/tmp/dns_entries.json": json.dumps(
-            [e.model_dump(mode="json") for e in dns_entries]
-        ),  # nosec
     }
 
     # We deploy https://charmhub.io/any-charm and inject the any_charm.py behavior
@@ -180,6 +176,39 @@ async def generate_anycharm_relation(
         },
     )
     await ops_test.model.add_relation(f"{any_charm.name}", f"{app.name}")
+    await ops_test.model.wait_for_idle(apps=[any_charm.name])
+    await change_anycharm_relation(ops_test, any_charm.units[0], dns_entries)
+    await ops_test.model.wait_for_idle(apps=[any_charm.name])
+
+
+async def change_anycharm_relation(
+    ops_test: OpsTest,
+    anyapp_unit: ops.model.Unit,
+    dns_entries: list[models.DnsEntry],
+):
+    """Change the relation of a anyapp_unit with the bind operator.
+
+    Args:
+        ops_test: The ops test framework instance
+        anyapp_unit: anyapp unit who's relation will change
+        dns_entries: List of DNS entries for any-charm
+    """
+    await push_to_unit(
+        ops_test,
+        anyapp_unit,
+        json.dumps([e.model_dump(mode="json") for e in dns_entries]),
+        "/srv/dns_entries.json",
+    )
+
+    # fire reload-data event
+    assert ops_test.model
+    cmd = (
+        "JUJU_DISPATCH_PATH=hooks/reload-data "
+        f"JUJU_MODEL_NAME={ops_test.model.name} "
+        f"JUJU_UNIT_NAME={anyapp_unit.name} ./dispatch"
+    )
+    await run_on_unit(ops_test, anyapp_unit.name, cmd)
+    await ops_test.model.wait_for_idle()
 
 
 async def dig_query(
@@ -273,3 +302,14 @@ async def check_if_active_unit_exists(app: ops.model.Application, ops_test: OpsT
     if status != '"ok"':
         return False
     return True
+
+
+async def force_reload_bind(ops_test: OpsTest, unit: ops.model.Unit):
+    """Force reload bind.
+
+    Args:
+        ops_test: The ops test framework instance
+        unit: the bind unit to force reload
+    """
+    restart_cmd = f"sudo snap restart --reload {constants.DNS_SNAP_NAME}"
+    await run_on_unit(ops_test, unit.name, restart_cmd)

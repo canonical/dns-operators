@@ -19,7 +19,7 @@ $TTL 600
 status IN TXT "ok"
 """
 
-ZONE_HEADER_TEMPLATE = """$ORIGIN {zone}.; HASH:{hash}
+ZONE_HEADER_TEMPLATE = """$ORIGIN {zone}.
 $TTL 600
 @ IN SOA {zone}. mail.{zone}. ( {serial} 1d 1h 1h 10m )
 @ IN NS localhost.
@@ -30,6 +30,7 @@ ZONE_RECORD_TEMPLATE = "{host_label} {record_class} {record_type} {record_data}\
 NAMED_CONF_PRIMARY_ZONE_DEF_TEMPLATE = (
     'zone "{name}" IN {{ '
     'type primary; file "{absolute_path}"; allow-update {{ none; }}; '
+    "also-notify {{ {zone_transfer_ips} }}; "
     "allow-transfer {{ {zone_transfer_ips} }}; }};\n"
 )
 

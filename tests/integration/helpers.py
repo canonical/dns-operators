@@ -197,7 +197,6 @@ async def change_anycharm_relation(
         anyapp_unit: anyapp unit who's relation will change
         dns_entries: List of DNS entries for any-charm
     """
-    assert anyapp_unit is not None
     await push_to_unit(
         ops_test,
         anyapp_unit,
@@ -213,6 +212,7 @@ async def change_anycharm_relation(
         f"JUJU_UNIT_NAME={anyapp_unit.name} ./dispatch"
     )
     await run_on_unit(ops_test, anyapp_unit.name, cmd)
+    await ops_test.model.wait_for_idle()
 
 
 async def dig_query(

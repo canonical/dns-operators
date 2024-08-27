@@ -305,11 +305,7 @@ class BindCharm(ops.CharmBase):
             the dns_record remote relation data
         """
         start_time = time.time_ns()
-        try:
-            relation_data = self.dns_record.get_remote_relation_data()
-        except ValueError as err:
-            logger.info("Validation error of the relation data: %s", err)
-            return None
+        relation_data = self.dns_record.get_remote_relation_data()
         logger.debug(
             "Relation data retrieval duration (ms): %s", (time.time_ns() - start_time) / 1e6
         )

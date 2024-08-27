@@ -102,6 +102,7 @@ async def push_to_unit(
         group: the group that owns the file
         mode: the mode of the file
     """
+    assert unit is not None
     _, temp_path = tempfile.mkstemp()
     with open(temp_path, "w", encoding="utf-8") as fd:
         fd.writelines(source)
@@ -143,6 +144,7 @@ async def generate_anycharm_relation(
     ops_test: OpsTest,
     any_charm_name: str,
     dns_entries: list[models.DnsEntry],
+    machine: str | None,
 ):
     """Deploy any-charm with a wanted DNS entries config and integrate it to the bind app.
 
@@ -151,6 +153,7 @@ async def generate_anycharm_relation(
         ops_test: The ops test framework instance
         any_charm_name: Name of the to be deployed any-charm
         dns_entries: List of DNS entries for any-charm
+        machine: The machine to deploy the any-charm onto
     """
     any_app_name = any_charm_name
     any_charm_content = pathlib.Path("tests/integration/any_charm.py").read_text(encoding="utf-8")
@@ -166,19 +169,20 @@ async def generate_anycharm_relation(
     # We deploy https://charmhub.io/any-charm and inject the any_charm.py behavior
     # See https://github.com/canonical/any-charm on how to use any-charm
     assert ops_test.model
-    any_charm = await ops_test.model.deploy(
-        "any-charm",
-        application_name=any_app_name,
-        channel="beta",
-        config={
+    args = {
+        "application_name": any_app_name,
+        "channel": "beta",
+        "config": {
             "src-overwrite": json.dumps(any_charm_src_overwrite),
             "python-packages": "pydantic==2.7.1\n",
         },
-    )
+    }
+    if machine is not None:
+        args["to"] = machine
+    any_charm = await ops_test.model.deploy("any-charm", **args)
+    await ops_test.model.wait_for_idle(apps=[any_charm.name])
     await ops_test.model.add_relation(f"{any_charm.name}", f"{app.name}")
-    await ops_test.model.wait_for_idle(apps=[any_charm.name])
     await change_anycharm_relation(ops_test, any_charm.units[0], dns_entries)
-    await ops_test.model.wait_for_idle(apps=[any_charm.name])
 
 
 async def change_anycharm_relation(

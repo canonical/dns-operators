@@ -3,6 +3,7 @@
 
 """DNS data logic."""
 
+import collections
 import json
 import logging
 import typing
@@ -119,14 +120,23 @@ def get_conflicts(zones: list[models.Zone]) -> tuple[set[models.DnsEntry], set[m
     Returns:
         A tuple containing the non-conflicting and conflicting entries
     """
-    entries: set[models.DnsEntry] = {e for z in zones for e in z.entries}
-    conflicting_entries: set[models.DnsEntry] = set()
-    for entry in entries:
-        for e in entries:
-            if entry.conflicts(e) and entry != e:
-                conflicting_entries.add(entry)
+    look_alikes = collections.defaultdict(list)
 
-    return (entries - conflicting_entries, conflicting_entries)
+    for z in zones:
+        for e in z.entries:
+            look_alikes[f"{e.domain},{e.host_label},{e.record_class},{e.record_type}"].append(e)
+
+    conflicting = set()
+    non_conflicting = set()
+
+    for entries in look_alikes.values():
+        if len(entries) > 1:
+            for e in entries:
+                conflicting.add(e)
+        else:
+            non_conflicting.add(entries[0])
+
+    return (non_conflicting, conflicting)
 
 
 def dns_record_relations_data_to_zones(

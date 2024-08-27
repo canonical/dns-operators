@@ -243,6 +243,7 @@ async def test_dns_record_relation(
             ops_test,
             anyapp_name,
             integration_data,
+            None,
         )
         any_app_number += 1
 

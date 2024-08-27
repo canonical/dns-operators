@@ -172,6 +172,7 @@ class BindService:
             relation_data: input relation data
             topology: Topology of the current deployment
         """
+        start_time = time.time_ns()
         logger.debug("Starting update of zonefiles")
         zones = dns_data.dns_record_relations_data_to_zones(relation_data)
         logger.debug("Zones: %s", [z.domain for z in zones])
@@ -223,6 +224,7 @@ class BindService:
         # We can be here following a regular reload-bind event
         # and we don't want to interfere with another operation.
         self.reload(force_start=False)
+        logger.debug("Update and reload duration (ms): %s", (time.time_ns() - start_time) / 1e6)
 
     def _install_snap_package(
         self, snap_name: str, snap_channel: str, refresh: bool = False

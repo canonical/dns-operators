@@ -72,8 +72,8 @@ async def test_lots_of_applications(
     status = await ops_test.juju("status", "--format", "json")
     data = json.loads(status[1])
     machines_available = (
-        len(
-            machine
+        sum(
+            1
             for machine in data["machines"].values()
             if machine["machine-status"]["current"] == "running"
         )
@@ -84,8 +84,8 @@ async def test_lots_of_applications(
         status = await ops_test.juju("status", "--format", "json")
         data = json.loads(status[1])
         machines_available = (
-            len(
-                machine
+            sum(
+                1
                 for machine in data["machines"].values()
                 if machine["machine-status"]["current"] == "running"
             )

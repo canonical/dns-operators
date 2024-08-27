@@ -73,9 +73,11 @@ async def test_lots_of_applications(
     data = json.loads(status[1])
     machines_available = (
         len(
-            machine for machine in data["machines"].values()
+            machine
+            for machine in data["machines"].values()
             if machine["machine-status"]["current"] == "running"
-        ) - 1
+        )
+        - 1
     )
     while machines_available < machines_number:
         await ops_test.juju("add-machine")
@@ -83,9 +85,11 @@ async def test_lots_of_applications(
         data = json.loads(status[1])
         machines_available = (
             len(
-                machine for machine in data["machines"].values()
+                machine
+                for machine in data["machines"].values()
                 if machine["machine-status"]["current"] == "running"
-            ) - 1
+            )
+            - 1
         )
         print("Available machines:", machines_available)
         time.sleep(10)

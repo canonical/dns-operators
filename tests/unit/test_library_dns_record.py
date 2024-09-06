@@ -9,7 +9,6 @@ import uuid
 import ops
 from charms.bind.v0 import dns_record
 from ops.testing import Harness
-from pydantic import IPvAnyAddress
 
 REQUIRER_METADATA = """
 name: dns-record-consumer
@@ -149,13 +148,13 @@ def get_dns_record_requirer_data(secret_id_password_user: str) -> dns_record.DNS
                 ttl=600,
                 record_class=dns_record.RecordClass.IN,
                 record_type=dns_record.RecordType.A,
-                record_data=IPvAnyAddress("91.189.91.48"),
+                record_data="91.189.91.48",
             ),
             dns_record.RequirerEntry(
                 uuid=UUID4,
                 domain="staging.ubuntu.com",
                 host_label="www",
-                record_data=IPvAnyAddress("91.189.91.47"),
+                record_data="91.189.91.47",
             ),
         ],
     )

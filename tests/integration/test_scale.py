@@ -4,6 +4,9 @@
 
 """Integration tests."""
 
+# Ignore functions having too many arguments (will be removed in the future)
+# pylint: too-many-positional-arguments
+
 import asyncio
 import json
 import logging

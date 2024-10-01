@@ -6,13 +6,11 @@
 # Bind Operator
 
 A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
-deploying and managing a DNS server Integrator on Kubernetes and bare metal.
+deploying and managing a DNS server Integrator and bare metal.
 
 This charm simplifies configuration of a DNS server client by providing a single point
 of configuration for all the requirers using the same DNS server. It can be
-deployed on many different Kubernetes platforms, from [MicroK8s](https://microk8s.io)
-to [Charmed Kubernetes](https://ubuntu.com/kubernetes), public cloud Kubernetes
-offerings and virtual machines or bare metal.
+deployed on virtual machines or bare metal.
 
 As such, the charm makes it easy to manage and propagate DNS configuration, while
 giving the freedom to deploy on the substrate of their choice.

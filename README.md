@@ -6,7 +6,7 @@
 # Bind Operator
 
 A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
-deploying and managing a DNS server Integrator and bare metal.
+deploying and managing a DNS server Integrator on bare metal.
 
 This charm simplifies configuration of a DNS server client by providing a single point
 of configuration for all the requirers using the same DNS server. It can be

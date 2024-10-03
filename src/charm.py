@@ -313,4 +313,4 @@ class BindCharm(ops.CharmBase):
 
 
 if __name__ == "__main__":  # pragma: nocover
-    ops.main.main(BindCharm)
+    ops.main(BindCharm)

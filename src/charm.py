@@ -63,6 +63,9 @@ class BindCharm(ops.CharmBase):
         self.framework.observe(
             self.on[constants.PEER].relation_joined, self._on_peer_relation_joined
         )
+        self.unit.open_port("tcp", 8080)  # ACL API
+        self.unit.open_port("tcp", 53)  # Bind DNS
+        self.unit.open_port("udp", 53)  # Bind DNS
 
     def _on_reload_bind(self, _: events.ReloadBindEvent) -> None:
         """Handle periodic reload bind event.

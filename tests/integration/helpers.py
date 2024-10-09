@@ -7,6 +7,9 @@
 # Ignore duplicate code from the helpers (they can be in the charm also)
 # pylint: disable=duplicate-code
 
+# Ignore too many args warning. I NEED THEM OKAY ?!
+# pylint: disable=too-many-arguments
+
 import json
 import pathlib
 import random
@@ -81,8 +84,8 @@ async def run_on_unit(ops_test: OpsTest, unit_name: str, command: str) -> str:
     return stdout
 
 
-# pylint: disable=too-many-arguments
 async def push_to_unit(
+    *,
     ops_test: OpsTest,
     unit: ops.model.Unit,
     source: str,
@@ -198,10 +201,10 @@ async def change_anycharm_relation(
         dns_entries: List of DNS entries for any-charm
     """
     await push_to_unit(
-        ops_test,
-        anyapp_unit,
-        json.dumps([e.model_dump(mode="json") for e in dns_entries]),
-        "/srv/dns_entries.json",
+        ops_test=ops_test,
+        unit=anyapp_unit,
+        source=json.dumps([e.model_dump(mode="json") for e in dns_entries]),
+        destination="/srv/dns_entries.json",
     )
 
     # fire reload-data event

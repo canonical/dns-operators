@@ -86,7 +86,10 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
     await tests.integration.helpers.run_on_unit(ops_test, unit.name, stop_timer_cmd)
 
     await tests.integration.helpers.push_to_unit(
-        ops_test, unit, test_zone_def, f"{constants.DNS_CONFIG_DIR}/named.conf.local"
+        ops_test=ops_test,
+        unit=unit,
+        source=test_zone_def,
+        destination=f"{constants.DNS_CONFIG_DIR}/named.conf.local",
     )
 
     test_zone = """$TTL    604800
@@ -102,7 +105,10 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
 @       IN      TXT     "this-is-a-test"
     """
     await tests.integration.helpers.push_to_unit(
-        ops_test, unit, test_zone, f"{constants.DNS_CONFIG_DIR}/db.dns.test"
+        ops_test=ops_test,
+        unit=unit,
+        source=test_zone,
+        destination=f"{constants.DNS_CONFIG_DIR}/db.dns.test",
     )
 
     restart_cmd = f"sudo snap restart --reload {constants.DNS_SNAP_NAME}"

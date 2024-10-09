@@ -63,6 +63,74 @@ class BindCharm(ops.CharmBase):
         self.framework.observe(
             self.on[constants.PEER].relation_joined, self._on_peer_relation_joined
         )
+        self.framework.observe(self.on.create_acl_action, self._on_create_acl_action)
+        self.framework.observe(self.on.delete_acl_action, self._on_delete_acl_action)
+        self.framework.observe(self.on.check_acl_action, self._on_check_acl_action)
+        self.framework.observe(self.on.list_acl_action, self._on_list_acl_action)
+
+        # Try to check if the `charmed-bind-snap` resource is defined.
+        # Using this can be useful when debugging locally
+        # More information about resources:
+        # https://juju.is/docs/sdk/resources#heading--add-a-resource-to-a-charm
+        self.snap_path: str = ""
+        try:
+            self.snap_path = str(self.model.resources.fetch("charmed-bind-snap"))
+        except ops.ModelError as e:
+            self.unit.status = ops.BlockedStatus(
+                "Something went wrong when claiming resource 'charmed-bind-snap; "
+                "run `juju debug-log` for more info'"
+            )
+            logger.error(e)
+
+    def _on_create_acl_action(self, event: ops.charm.ActionEvent) -> None:
+        """Handle the create ACL ActionEvent.
+
+        Args:
+            event: Event triggering this action handler.
+        """
+        event.set_results(
+            {
+                "result": self.bind.command(
+                    f"create_acl {event.params['service-account']} {event.params['zone']}"
+                )
+            }
+        )
+
+    def _on_delete_acl_action(self, event: ops.charm.ActionEvent) -> None:
+        """Handle the create ACL ActionEvent.
+
+        Args:
+            event: Event triggering this action handler.
+        """
+        event.set_results(
+            {
+                "result": self.bind.command(
+                    f"delete_acl {event.params['service-account']} {event.params['zone']}"
+                )
+            }
+        )
+
+    def _on_check_acl_action(self, event: ops.charm.ActionEvent) -> None:
+        """Handle the create ACL ActionEvent.
+
+        Args:
+            event: Event triggering this action handler.
+        """
+        event.set_results(
+            {
+                "result": self.bind.command(
+                    f"check_acl {event.params['service-account']} {event.params['zone']}"
+                )
+            }
+        )
+
+    def _on_list_acl_action(self, event: ops.charm.ActionEvent) -> None:
+        """Handle the create ACL ActionEvent.
+
+        Args:
+            event: Event triggering this action handler.
+        """
+        event.set_results({"result": self.bind.command("list_acl")})
 
     def _on_reload_bind(self, _: events.ReloadBindEvent) -> None:
         """Handle periodic reload bind event.
@@ -140,11 +208,18 @@ class BindCharm(ops.CharmBase):
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle changed configuration event."""
+        self.unit.status = ops.MaintenanceStatus("Configuring workload")
+        self.bind.configure(
+            {
+                "django-debug": "true" if self.config["django_debug"] else "false",
+                "django-allowed-hosts": self.config["django_allowed_hosts"],
+            }
+        )
 
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install."""
         self.unit.status = ops.MaintenanceStatus("Preparing bind")
-        self.bind.setup(self.unit.name)
+        self.bind.setup(self.unit.name, self.snap_path)
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start."""
@@ -157,7 +232,7 @@ class BindCharm(ops.CharmBase):
     def _on_upgrade_charm(self, _: ops.UpgradeCharmEvent) -> None:
         """Handle upgrade-charm."""
         self.unit.status = ops.MaintenanceStatus("Upgrading dependencies")
-        self.bind.setup(self.unit.name)
+        self.bind.setup(self.unit.name, self.snap_path)
 
     def _on_leader_elected(self, _: ops.LeaderElectedEvent) -> None:
         """Handle leader-elected event."""

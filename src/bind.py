@@ -7,7 +7,7 @@ import logging
 import os
 import pathlib
 import shutil
-import subprocess
+import subprocess  # nosec
 import tempfile
 import time
 
@@ -124,7 +124,11 @@ class BindService:
             )
         else:
             if pathlib.Path(snap_path).is_file():
-                subprocess.check_output(["sudo", "snap", "install", snap_path, "--dangerous"])
+                # Installing the charm via subprocess.
+                # Calling subprocess here is not a security issue.
+                subprocess.check_output(
+                    ["sudo", "snap", "install", snap_path, "--dangerous"]
+                )  # nosec
 
         self._install_bind_reload_service(unit_name)
         # We need to put the service zone in place so we call
@@ -372,6 +376,10 @@ class BindService:
         Returns:
             The resulting output of the command's execution
         """
-        return subprocess.check_output(["sudo", "snap", "run", "charmed-bind.manage", cmd]).decode(
+        # We ignore security issues with this subprocess call
+        # as it can only be done from the operator of the charm
+        return subprocess.check_output(
+            ["sudo", "snap", "run", "charmed-bind.manage", cmd]
+        ).decode(  # nosec
             "utf-8"
         )

@@ -63,6 +63,9 @@ class BindCharm(ops.CharmBase):
         self.framework.observe(
             self.on[constants.PEER].relation_joined, self._on_peer_relation_joined
         )
+        self.unit.open_port("tcp", 8080)  # ACL API
+        self.unit.open_port("tcp", 53)  # Bind DNS
+        self.unit.open_port("udp", 53)  # Bind DNS
         self.framework.observe(self.on.create_acl_action, self._on_create_acl_action)
         self.framework.observe(self.on.delete_acl_action, self._on_delete_acl_action)
         self.framework.observe(self.on.check_acl_action, self._on_check_acl_action)
@@ -388,4 +391,4 @@ class BindCharm(ops.CharmBase):
 
 
 if __name__ == "__main__":  # pragma: nocover
-    ops.main.main(BindCharm)
+    ops.main(BindCharm)

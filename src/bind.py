@@ -122,13 +122,15 @@ class BindService:
                 snap_name=constants.DNS_SNAP_NAME,
                 snap_channel=constants.SNAP_PACKAGES[constants.DNS_SNAP_NAME]["channel"],
             )
+        elif pathlib.Path(snap_path).is_file():
+            # Installing the charm via subprocess.
+            # Calling subprocess here is not a security issue.
+            subprocess.check_output(["sudo", "snap", "install", snap_path, "--dangerous"])  # nosec
         else:
-            if pathlib.Path(snap_path).is_file():
-                # Installing the charm via subprocess.
-                # Calling subprocess here is not a security issue.
-                subprocess.check_output(
-                    ["sudo", "snap", "install", snap_path, "--dangerous"]
-                )  # nosec
+            logger.warning(
+                "Custom snap workload path defined but no file found at this location: %s",
+                snap_path,
+            )
 
         self._install_bind_reload_service(unit_name)
         # We need to put the service zone in place so we call

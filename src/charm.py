@@ -13,6 +13,7 @@ import typing
 import ops
 from charms.bind.v0 import dns_record
 
+import actions_mixin
 import constants
 import dns_data
 import events
@@ -31,7 +32,7 @@ class PeerRelationNetworkUnavailableError(exceptions.BindCharmError):
     """Exception raised when the peer relation network is unavailable."""
 
 
-class BindCharm(ops.CharmBase):
+class BindCharm(actions_mixin.ActionsMixin, ops.CharmBase):
     """Charm the service."""
 
     def __init__(self, *args: typing.Any):
@@ -66,10 +67,7 @@ class BindCharm(ops.CharmBase):
         self.unit.open_port("tcp", 8080)  # ACL API
         self.unit.open_port("tcp", 53)  # Bind DNS
         self.unit.open_port("udp", 53)  # Bind DNS
-        self.framework.observe(self.on.create_acl_action, self._on_create_acl_action)
-        self.framework.observe(self.on.delete_acl_action, self._on_delete_acl_action)
-        self.framework.observe(self.on.check_acl_action, self._on_check_acl_action)
-        self.framework.observe(self.on.list_acl_action, self._on_list_acl_action)
+        actions_mixin.ActionsMixin.hooks(self)
 
         # Try to check if the `charmed-bind-snap` resource is defined.
         # Using this can be useful when debugging locally
@@ -84,56 +82,6 @@ class BindCharm(ops.CharmBase):
                 "run `juju debug-log` for more info'"
             )
             logger.error(e)
-
-    def _on_create_acl_action(self, event: ops.charm.ActionEvent) -> None:
-        """Handle the create ACL ActionEvent.
-
-        Args:
-            event: Event triggering this action handler.
-        """
-        event.set_results(
-            {
-                "result": self.bind.command(
-                    f"create_acl {event.params['service-account']} {event.params['zone']}"
-                )
-            }
-        )
-
-    def _on_delete_acl_action(self, event: ops.charm.ActionEvent) -> None:
-        """Handle the create ACL ActionEvent.
-
-        Args:
-            event: Event triggering this action handler.
-        """
-        event.set_results(
-            {
-                "result": self.bind.command(
-                    f"delete_acl {event.params['service-account']} {event.params['zone']}"
-                )
-            }
-        )
-
-    def _on_check_acl_action(self, event: ops.charm.ActionEvent) -> None:
-        """Handle the create ACL ActionEvent.
-
-        Args:
-            event: Event triggering this action handler.
-        """
-        event.set_results(
-            {
-                "result": self.bind.command(
-                    f"check_acl {event.params['service-account']} {event.params['zone']}"
-                )
-            }
-        )
-
-    def _on_list_acl_action(self, event: ops.charm.ActionEvent) -> None:
-        """Handle the create ACL ActionEvent.
-
-        Args:
-            event: Event triggering this action handler.
-        """
-        event.set_results({"result": self.bind.command("list_acl")})
 
     def _on_reload_bind(self, _: events.ReloadBindEvent) -> None:
         """Handle periodic reload bind event.

@@ -13,6 +13,7 @@
 # pylint: disable=too-many-arguments
 
 import json
+import logging
 import pathlib
 import random
 import string
@@ -24,6 +25,8 @@ from pytest_operator.plugin import OpsTest
 
 import constants
 import models
+
+logger = logging.getLogger(__name__)
 
 
 class ExecutionError(Exception):
@@ -322,3 +325,22 @@ async def force_reload_bind(ops_test: OpsTest, unit: ops.model.Unit):
     """
     restart_cmd = f"sudo snap restart --reload {constants.DNS_SNAP_NAME}"
     await run_on_unit(ops_test, unit.name, restart_cmd)
+
+
+async def get_unit_ips(ops_test: OpsTest, unit: ops.model.Unit) -> list[str]:
+    """Retrieve unit ip addresses.
+
+    Args:
+        ops_test: The ops test framework instance
+        unit: the bind unit to force reload
+
+    Returns:
+        list of units ip addresses.
+    """
+    _, status, _ = await ops_test.juju("status", "--format", "json")
+    status = json.loads(status)
+    units = status["applications"][unit.name.split("/")[0]]["units"]
+    ip_list = []
+    for key in sorted(units.keys(), key=lambda n: int(n.split("/")[-1])):
+        ip_list.append(units[key]["public-address"])
+    return ip_list

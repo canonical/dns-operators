@@ -36,14 +36,9 @@ async def test_admin_reachable(app: ops.model.Application, ops_test: OpsTest):
 
     for _, unit_ip in enumerate(await tests.integration.helpers.get_unit_ips(ops_test, unit)):
         url = f"http://{unit_ip}:8080/static/admin/css/base.css"
-        try:
-            response = requests.head(url, timeout=5)
-            response.raise_for_status()
-            logger.info("File found at %s", url)
-        except requests.exceptions.HTTPError as e:
-            logger.info("HTTP Error: %s", e)
-        except requests.exceptions.RequestException as e:
-            logger.info("Error: %s", e)
+        response = requests.head(url, timeout=5)
+        response.raise_for_status()
+        logger.info("File found at %s", url)
 
 
 @pytest.mark.asyncio

@@ -34,8 +34,28 @@ async def test_admin_reachable(app: ops.model.Application, ops_test: OpsTest):
     # Mypy has difficulty with ActiveStatus
     assert unit.workload_status == ops.model.ActiveStatus.name  # type: ignore
 
+    await app.set_config({"django_allowed_hosts": ""})
+    time.sleep(10)
+
+    # Test that the admin is not reachable
     for _, unit_ip in enumerate(await tests.integration.helpers.get_unit_ips(ops_test, unit)):
-        url = f"http://{unit_ip}:8080/static/admin/css/base.css"
+        url = f"http://{unit_ip}:8080/admin/"
+        try:
+            response = requests.head(url, timeout=5)
+            response.raise_for_status()
+            assert False, f"Asset unexpectedly accessible at {url} after config change"
+            # Consider using assert False here instead of logger.error
+        except requests.exceptions.HTTPError:
+            logger.info("Asset inaccessible at %s as expected after config change", url)
+        except requests.RequestException as e:
+            logger.error("Unexpected error after config change: %s", e)
+
+    await app.set_config({"django_allowed_hosts": "*"})
+    time.sleep(10)
+
+    # Test that the admin is reachable
+    for _, unit_ip in enumerate(await tests.integration.helpers.get_unit_ips(ops_test, unit)):
+        url = f"http://{unit_ip}:8080/admin/"
         response = requests.head(url, timeout=5)
         response.raise_for_status()
         logger.info("File found at %s", url)

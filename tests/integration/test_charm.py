@@ -34,7 +34,8 @@ async def test_admin_reachable(app: ops.model.Application, ops_test: OpsTest):
     # Mypy has difficulty with ActiveStatus
     assert unit.workload_status == ops.model.ActiveStatus.name  # type: ignore
 
-    await app.set_config({"django_allowed_hosts": ""})
+    # Mypy doesn't know that Application has set_config()
+    await app.set_config({"django_allowed_hosts": ""})  # type: ignore
     time.sleep(10)
 
     # Test that the admin is not reachable
@@ -50,7 +51,8 @@ async def test_admin_reachable(app: ops.model.Application, ops_test: OpsTest):
         except requests.RequestException as e:
             logger.error("Unexpected error after config change: %s", e)
 
-    await app.set_config({"django_allowed_hosts": "*"})
+    # Mypy doesn't know that Application has set_config()
+    await app.set_config({"django_allowed_hosts": "*"})  # type: ignore
     time.sleep(10)
 
     # Test that the admin is reachable

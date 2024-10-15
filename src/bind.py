@@ -378,10 +378,13 @@ class BindService:
         Returns:
             The resulting output of the command's execution
         """
-        # We ignore security issues with this subprocess call
-        # as it can only be done from the operator of the charm
-        return subprocess.check_output(
-            ["sudo", "snap", "run", "charmed-bind.manage", cmd]
-        ).decode(  # nosec
-            "utf-8"
-        )
+        try:
+            # We ignore security issues with this subprocess call
+            # as it can only be done from the operator of the charm
+            return subprocess.check_output(
+                ["sudo", "snap", "run", "charmed-bind.manage", cmd]
+            ).decode(  # nosec
+                "utf-8"
+            )
+        except subprocess.SubprocessError as e:
+            return f"Error: {e}"

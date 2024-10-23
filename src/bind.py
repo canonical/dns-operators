@@ -116,22 +116,11 @@ class BindService:
             unit_name: The name of the current unit
             snap_path: The path to the snap to install, can be blank.
         """
-        # If a snap resource was not given, install the snap as published on snapcraft
-        if snap_path == "":
-            self._install_snap_package(
-                snap_name=constants.DNS_SNAP_NAME,
-                snap_channel=constants.SNAP_PACKAGES[constants.DNS_SNAP_NAME]["channel"],
-            )
-        elif pathlib.Path(snap_path).is_file():
-            # Installing the charm via subprocess.
-            # Calling subprocess here is not a security issue.
-            subprocess.check_output(["sudo", "snap", "install", snap_path, "--dangerous"])  # nosec
-        else:
-            logger.warning(
-                "Custom snap workload path defined but no file found at this location: %s",
-                snap_path,
-            )
-
+        self._install_snap_package(
+            snap_name=constants.DNS_SNAP_NAME,
+            snap_channel=constants.SNAP_PACKAGES[constants.DNS_SNAP_NAME]["channel"],
+            snap_path=snap_path,
+        )
         self._install_bind_reload_service(unit_name)
         # We need to put the service zone in place so we call
         # the following with an empty relation and topology.
@@ -245,25 +234,38 @@ class BindService:
         logger.debug("Update and reload duration (ms): %s", (time.time_ns() - start_time) / 1e6)
 
     def _install_snap_package(
-        self, snap_name: str, snap_channel: str, refresh: bool = False
+        self, snap_name: str, snap_channel: str, snap_path: str, refresh: bool = False
     ) -> None:
         """Installs snap package.
 
         Args:
             snap_name: the snap package to install
             snap_channel: the snap package channel
+            snap_path: The path to the snap to install, can be blank.
             refresh: whether to refresh the snap if it's already present.
 
         Raises:
             InstallError: when encountering a SnapError or a SnapNotFoundError
         """
         try:
-            snap_cache = snap.SnapCache()
-            snap_package = snap_cache[snap_name]
+            # If a snap resource was not given, install the snap as published on snapcraft
+            if snap_path == "":
+                snap_cache = snap.SnapCache()
+                snap_package = snap_cache[snap_name]
 
-            if not snap_package.present or refresh:
-                snap_package.ensure(snap.SnapState.Latest, channel=snap_channel)
-
+                if not snap_package.present or refresh:
+                    snap_package.ensure(snap.SnapState.Latest, channel=snap_channel)
+            elif pathlib.Path(snap_path).is_file():
+                # Installing the charm via subprocess.
+                # Calling subprocess here is not a security issue.
+                subprocess.check_output(
+                    ["sudo", "snap", "install", snap_path, "--dangerous"]
+                )  # nosec
+            else:
+                logger.warning(
+                    "Custom snap workload path defined but no file found at this location: %s",
+                    snap_path,
+                )
         except (snap.SnapError, snap.SnapNotFoundError) as e:
             error_msg = f"An exception occurred when installing {snap_name}. Reason: {e}"
             logger.error(error_msg)

@@ -7,6 +7,7 @@
 import logging
 import time
 
+import juju
 import ops
 import pytest
 import requests
@@ -22,20 +23,18 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
-async def test_admin_reachable(app: ops.model.Application, ops_test: OpsTest):
+async def test_admin_reachable(app: juju.application.Application, ops_test: OpsTest):
     """
     arrange: build and deploy the charm.
     act: nothing.
     assert: that the admin of the API is reachable.
     """
-    # Application actually does have units
-    unit = app.units[0]  # type: ignore
+    unit = app.units[0]
 
     # Mypy has difficulty with ActiveStatus
-    assert unit.workload_status == ops.model.ActiveStatus.name  # type: ignore
+    assert unit.workload_status == ops.model.ActiveStatus.name
 
-    # Mypy doesn't know that Application has set_config()
-    await app.set_config({"django_allowed_hosts": ""})  # type: ignore
+    await app.set_config({"django_allowed_hosts": ""})
     time.sleep(10)
 
     # Test that the admin is not reachable
@@ -51,8 +50,7 @@ async def test_admin_reachable(app: ops.model.Application, ops_test: OpsTest):
         except requests.RequestException as e:
             logger.error("Unexpected error after config change: %s", e)
 
-    # Mypy doesn't know that Application has set_config()
-    await app.set_config({"django_allowed_hosts": "*"})  # type: ignore
+    await app.set_config({"django_allowed_hosts": "*"})
     time.sleep(10)
 
     # Test that the admin is reachable
@@ -65,21 +63,19 @@ async def test_admin_reachable(app: ops.model.Application, ops_test: OpsTest):
 
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
-async def test_acl_actions(app: ops.model.Application):
+async def test_acl_actions(app: juju.application.Application):
     """
     arrange: build and deploy the charm.
     act: nothing.
     assert: that the acl actions do the right thing.
     """
-    # Application actually does have units
-    unit = app.units[0]  # type: ignore
+    unit = app.units[0]
 
-    # Mypy has difficulty with ActiveStatus
-    assert unit.workload_status == ops.model.ActiveStatus.name  # type: ignore
+    assert unit.workload_status == ops.model.ActiveStatus.name
 
     zone = "test-zone"
 
-    action_create_acl: Action = await unit.run_action(  # type: ignore
+    action_create_acl: Action = await unit.run_action(
         "create-acl",
         **{"service-account": "test-service-account", "zone": zone},
     )
@@ -87,7 +83,7 @@ async def test_acl_actions(app: ops.model.Application):
     assert action_create_acl.status == "completed"
     assert "ACL created successfully" in action_create_acl.results["result"]
 
-    action_check_acl: Action = await unit.run_action(  # type: ignore
+    action_check_acl: Action = await unit.run_action(
         "check-acl",
         **{"service-account": "test-service-account", "zone": zone},
     )
@@ -95,14 +91,14 @@ async def test_acl_actions(app: ops.model.Application):
     assert action_check_acl.status == "completed"
     assert "ACL exists" in action_check_acl.results["result"]
 
-    action_list_acl: Action = await unit.run_action(  # type: ignore
+    action_list_acl: Action = await unit.run_action(
         "list-acl",
     )
     await action_list_acl.wait()
     assert action_list_acl.status == "completed"
     assert f"test-service-account - {zone}" in action_list_acl.results["result"]
 
-    action_delete_acl: Action = await unit.run_action(  # type: ignore
+    action_delete_acl: Action = await unit.run_action(
         "delete-acl",
         **{"service-account": "test-service-account", "zone": zone},
     )
@@ -110,7 +106,7 @@ async def test_acl_actions(app: ops.model.Application):
     assert action_delete_acl.status == "completed"
     assert "ACL deleted successfully" in action_delete_acl.results["result"]
 
-    action_check_acl: Action = await unit.run_action(  # type: ignore
+    action_check_acl = await unit.run_action(
         "check-acl",
         **{"service-account": "test-service-account", "zone": zone},
     )
@@ -121,17 +117,15 @@ async def test_acl_actions(app: ops.model.Application):
 
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
-async def test_lifecycle(app: ops.model.Application, ops_test: OpsTest):
+async def test_lifecycle(app: juju.application.Application, ops_test: OpsTest):
     """
     arrange: build and deploy the charm.
     act: nothing.
     assert: that the charm ends up in an active state.
     """
-    # Application actually does have units
-    unit = app.units[0]  # type: ignore
+    unit = app.units[0]
 
-    # Mypy has difficulty with ActiveStatus
-    assert unit.workload_status == ops.model.ActiveStatus.name  # type: ignore
+    assert unit.workload_status == ops.model.ActiveStatus.name
 
     status = await tests.integration.helpers.dig_query(
         ops_test,
@@ -167,14 +161,13 @@ async def test_lifecycle(app: ops.model.Application, ops_test: OpsTest):
 
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
-async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
+async def test_basic_dns_config(app: juju.application.Application, ops_test: OpsTest):
     """
     arrange: build, deploy the charm and change its configuration.
     act: request the test domain.
     assert: the output of the dig command is the expected one
     """
-    # Application actually does have units
-    unit = app.units[0]  # type: ignore
+    unit = app.units[0]
 
     test_zone_def = f"""zone "dns.test" IN {{
     type primary;
@@ -325,7 +318,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
 async def test_dns_record_relation(
-    app: ops.model.Application,
+    app: juju.application.Application,
     ops_test: OpsTest,
     model: Model,
     status: ops.model.StatusBase,
@@ -356,11 +349,11 @@ async def test_dns_record_relation(
 
     await model.wait_for_idle()
 
-    await tests.integration.helpers.force_reload_bind(ops_test, app.units[0])  # type: ignore
+    await tests.integration.helpers.force_reload_bind(ops_test, app.units[0])
     await model.wait_for_idle()
 
     # Test the status of the bind-operator instance
-    assert app.units[0].workload_status == status.name  # type: ignore
+    assert app.units[0].workload_status == status.name
 
     # Test if the records give the correct results
     # Do that only if we have an active status
@@ -370,7 +363,7 @@ async def test_dns_record_relation(
 
                 result = await tests.integration.helpers.dig_query(
                     ops_test,
-                    app.units[0],  # type: ignore
+                    app.units[0],
                     f"@127.0.0.1 {entry.host_label}.{entry.domain} {entry.record_type} +short",
                     retry=True,
                     wait=5,

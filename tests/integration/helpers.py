@@ -20,6 +20,7 @@ import string
 import tempfile
 import time
 
+import juju
 import ops
 from pytest_operator.plugin import OpsTest
 
@@ -148,7 +149,7 @@ async def dispatch_to_unit(
 
 
 async def generate_anycharm_relation(
-    app: ops.model.Application,
+    app: juju.application.Application,
     ops_test: OpsTest,
     any_charm_name: str,
     dns_entries: list[models.DnsEntry],
@@ -247,7 +248,9 @@ async def dig_query(
     return result
 
 
-async def get_active_unit(app: ops.model.Application, ops_test: OpsTest) -> ops.model.Unit | None:
+async def get_active_unit(
+    app: juju.application.Application, ops_test: OpsTest
+) -> ops.model.Unit | None:
     """Get the current active unit if it exists.
 
     Args:
@@ -277,7 +280,9 @@ async def get_active_unit(app: ops.model.Application, ops_test: OpsTest) -> ops.
     return None
 
 
-async def check_if_active_unit_exists(app: ops.model.Application, ops_test: OpsTest) -> bool:
+async def check_if_active_unit_exists(
+    app: juju.application.Application, ops_test: OpsTest
+) -> bool:
     """Check if an active unit exists and is reachable.
 
     Args:

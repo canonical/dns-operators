@@ -7,7 +7,7 @@
 import logging
 import time
 
-import juju
+import juju.application
 import ops
 import pytest
 import requests

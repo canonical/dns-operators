@@ -6,7 +6,7 @@
 
 import logging
 
-import juju
+import juju.application
 import pytest
 from pytest_operator.plugin import Model, OpsTest
 

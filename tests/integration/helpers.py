@@ -20,7 +20,7 @@ import string
 import tempfile
 import time
 
-import juju
+import juju.application
 import ops
 from pytest_operator.plugin import OpsTest
 

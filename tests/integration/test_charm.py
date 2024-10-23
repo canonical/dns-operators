@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
-async def test_admin_reachable(app: juju.application.Application, ops_test: OpsTest):
+async def test_admin_reachable(app: juju.application.Application):
     """
     arrange: build and deploy the charm.
     act: nothing.
@@ -38,23 +38,17 @@ async def test_admin_reachable(app: juju.application.Application, ops_test: OpsT
     time.sleep(10)
 
     # Test that the admin is not reachable
-    for _, unit_ip in enumerate(await tests.integration.helpers.get_unit_ips(ops_test, unit)):
+    for unit_ip in await tests.integration.helpers.get_unit_ips(app):
         url = f"http://{unit_ip}:8080/admin/"
-        try:
+        with pytest.raises(requests.exceptions.HTTPError):
             response = requests.head(url, timeout=5)
             response.raise_for_status()
-            assert False, f"Asset unexpectedly accessible at {url} after config change"
-            # Consider using assert False here instead of logger.error
-        except requests.exceptions.HTTPError:
-            logger.info("Asset inaccessible at %s as expected after config change", url)
-        except requests.RequestException as e:
-            logger.error("Unexpected error after config change: %s", e)
 
     await app.set_config({"django_allowed_hosts": "*"})
     time.sleep(10)
 
     # Test that the admin is reachable
-    for _, unit_ip in enumerate(await tests.integration.helpers.get_unit_ips(ops_test, unit)):
+    for unit_ip in await tests.integration.helpers.get_unit_ips(app):
         url = f"http://{unit_ip}:8080/admin/"
         response = requests.head(url, timeout=5)
         response.raise_for_status()

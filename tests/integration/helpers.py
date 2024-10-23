@@ -260,7 +260,7 @@ async def get_active_unit(
     Returns:
         The current active unit if it exists, None otherwise
     """
-    for unit in app.units:  # type: ignore
+    for unit in app.units:
         # We take `[1]` because `[0]` is the return code of the process
         data = json.loads((await ops_test.juju("show-unit", unit.name, "--format", "json"))[1])
         relations = data[unit.name]["relation-info"]
@@ -292,8 +292,7 @@ async def check_if_active_unit_exists(
     Returns:
         The current active unit if it exists, None otherwise
     """
-    # Application actually does have units
-    unit = app.units[0]  # type: ignore
+    unit = app.units[0]
     # We take `[1]` because `[0]` is the return code of the process
     data = json.loads((await ops_test.juju("show-unit", unit.name, "--format", "json"))[1])
     relations = data[unit.name]["relation-info"]
@@ -332,20 +331,14 @@ async def force_reload_bind(ops_test: OpsTest, unit: ops.model.Unit):
     await run_on_unit(ops_test, unit.name, restart_cmd)
 
 
-async def get_unit_ips(ops_test: OpsTest, unit: ops.model.Unit) -> list[str]:
+async def get_unit_ips(app: juju.application.Application) -> list[str]:
     """Retrieve unit ip addresses.
 
     Args:
-        ops_test: The ops test framework instance
-        unit: the bind unit to force reload
+        app: Application to search for IPs
 
     Returns:
         list of units ip addresses.
     """
-    _, status, _ = await ops_test.juju("status", "--format", "json")
-    status = json.loads(status)
-    units = status["applications"][unit.name.split("/")[0]]["units"]
-    ip_list = []
-    for key in sorted(units.keys(), key=lambda n: int(n.split("/")[-1])):
-        ip_list.append(units[key]["public-address"])
-    return ip_list
+    status = await app.model.get_status()
+    return [unit.address for unit in status.applications[app.name].units.values()]

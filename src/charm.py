@@ -78,11 +78,7 @@ class BindCharm(actions_mixin.ActionsMixin, ops.CharmBase):
         try:
             self.snap_path = str(self.model.resources.fetch("charmed-bind-snap"))
         except ops.ModelError as e:
-            self.unit.status = ops.BlockedStatus(
-                "Something went wrong when claiming resource 'charmed-bind-snap; "
-                "run `juju debug-log` for more info'"
-            )
-            logger.error(e)
+            logger.warning(e)
 
     def _on_reload_bind(self, _: events.ReloadBindEvent) -> None:
         """Handle periodic reload bind event.

@@ -331,14 +331,20 @@ async def force_reload_bind(ops_test: OpsTest, unit: ops.model.Unit):
     await run_on_unit(ops_test, unit.name, restart_cmd)
 
 
-async def get_unit_ips(app: juju.application.Application) -> list[str]:
+async def get_unit_ips(ops_test: OpsTest, unit: ops.model.Unit) -> list[str]:
     """Retrieve unit ip addresses.
 
     Args:
-        app: Application to search for IPs
+        ops_test: The ops test framework instance
+        unit: the bind unit to force reload
 
     Returns:
         list of units ip addresses.
     """
-    status = await app.model.get_status()
-    return [unit.address for unit in status.applications[app.name].units.values()]
+    _, status, _ = await ops_test.juju("status", "--format", "json")
+    status = json.loads(status)
+    units = status["applications"][unit.name.split("/")[0]]["units"]
+    ip_list = []
+    for key in sorted(units.keys(), key=lambda n: int(n.split("/")[-1])):
+        ip_list.append(units[key]["public-address"])
+    return ip_list

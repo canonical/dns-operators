@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
-async def test_admin_reachable(app: juju.application.Application):
+async def test_admin_reachable(ops_test: OpsTest, app: juju.application.Application):
     """
     arrange: build and deploy the charm.
     act: nothing.
@@ -38,7 +38,7 @@ async def test_admin_reachable(app: juju.application.Application):
     time.sleep(10)
 
     # Test that the admin is not reachable
-    for unit_ip in await tests.integration.helpers.get_unit_ips(app):
+    for unit_ip in await tests.integration.helpers.get_unit_ips(ops_test, unit):
         url = f"http://{unit_ip}:8080/admin/"
         with pytest.raises(requests.exceptions.HTTPError):
             response = requests.head(url, timeout=5)
@@ -48,7 +48,7 @@ async def test_admin_reachable(app: juju.application.Application):
     time.sleep(10)
 
     # Test that the admin is reachable
-    for unit_ip in await tests.integration.helpers.get_unit_ips(app):
+    for unit_ip in await tests.integration.helpers.get_unit_ips(ops_test, unit):
         url = f"http://{unit_ip}:8080/admin/"
         response = requests.head(url, timeout=5)
         response.raise_for_status()

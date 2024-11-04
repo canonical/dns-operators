@@ -4,7 +4,6 @@
 
 """Charm for bind."""
 
-import json
 import logging
 import pathlib
 import subprocess  # nosec
@@ -154,15 +153,6 @@ class BindCharm(ops.CharmBase):
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle changed configuration event."""
-        self.unit.status = ops.MaintenanceStatus("Configuring workload")
-        self.bind.configure(
-            {
-                "django-debug": "true" if self.config["django_debug"] else "false",
-                "django-allowed-hosts": json.dumps(
-                    str(self.config["django_allowed_hosts"]).split(",")
-                ),
-            }
-        )
 
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install."""

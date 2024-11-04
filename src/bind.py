@@ -370,23 +370,3 @@ class BindService:
             )
             logger.error(error_msg)
             raise ConfigureError(error_msg) from e
-
-    def command(self, cmd: str) -> str:
-        """Run manage command of the charmed-bind service.
-
-        Args:
-            cmd: command to execute by django's manage script
-
-        Returns:
-            The resulting output of the command's execution
-        """
-        try:
-            # We ignore security issues with this subprocess call
-            # as it can only be done from the operator of the charm
-            return subprocess.check_output(
-                ["sudo", "snap", "run", "charmed-bind.manage", cmd]
-            ).decode(  # nosec
-                "utf-8"
-            )
-        except subprocess.SubprocessError as e:
-            return f"Error: {e}"

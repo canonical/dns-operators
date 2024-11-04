@@ -14,7 +14,6 @@ import typing
 import ops
 from charms.bind.v0 import dns_record
 
-import actions_mixin
 import constants
 import dns_data
 import events
@@ -33,7 +32,7 @@ class PeerRelationNetworkUnavailableError(exceptions.BindCharmError):
     """Exception raised when the peer relation network is unavailable."""
 
 
-class BindCharm(actions_mixin.ActionsMixin, ops.CharmBase):
+class BindCharm(ops.CharmBase):
     """Charm the service."""
 
     def __init__(self, *args: typing.Any):
@@ -68,7 +67,6 @@ class BindCharm(actions_mixin.ActionsMixin, ops.CharmBase):
         self.unit.open_port("tcp", 8080)  # ACL API
         self.unit.open_port("tcp", 53)  # Bind DNS
         self.unit.open_port("udp", 53)  # Bind DNS
-        actions_mixin.ActionsMixin.hooks(self)
 
         # Try to check if the `charmed-bind-snap` resource is defined.
         # Using this can be useful when debugging locally

@@ -31,7 +31,7 @@ async def deploy_any_charm(
     machines: list[str] | None,
     entries: list[models.DnsEntry],
 ):
-    """Deploy any charm and relate it to the bind-operator.
+    """Deploy any charm and integrate it to the bind-operator.
 
     Args:
         app: Deployed bind-operator app
@@ -68,7 +68,7 @@ async def test_lots_of_applications(
 ):
     """
     arrange: build and deploy the charm.
-    act: deploy a lot of applications and relate them to the bind operator
+    act: deploy a lot of applications and integrate them to the bind operator
     assert:
     """
     batch_number = 10
@@ -145,7 +145,7 @@ async def test_lots_of_record_requests(
 ):
     """
     arrange: build and deploy the charm.
-    act: deploy a lot of applications and relate them to the bind operator
+    act: deploy a lot of applications and integrate them to the bind operator
     assert:
     """
     application_number = 10

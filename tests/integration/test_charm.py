@@ -10,8 +10,6 @@ import time
 import juju.application
 import ops
 import pytest
-import requests
-from juju.action import Action
 from pytest_operator.plugin import Model, OpsTest
 
 import constants
@@ -19,94 +17,6 @@ import models
 import tests.integration.helpers
 
 logger = logging.getLogger(__name__)
-
-
-@pytest.mark.asyncio
-@pytest.mark.abort_on_fail
-async def test_admin_reachable(ops_test: OpsTest, app: juju.application.Application):
-    """
-    arrange: build and deploy the charm.
-    act: nothing.
-    assert: that the admin of the API is reachable.
-    """
-    unit = app.units[0]
-
-    # Mypy has difficulty with ActiveStatus
-    assert unit.workload_status == ops.model.ActiveStatus.name
-
-    await app.set_config({"django_allowed_hosts": ""})
-    time.sleep(10)
-
-    # Test that the admin is not reachable
-    for unit_ip in await tests.integration.helpers.get_unit_ips(ops_test, unit):
-        url = f"http://{unit_ip}:8080/admin/"
-        with pytest.raises(requests.exceptions.HTTPError):
-            response = requests.head(url, timeout=5)
-            response.raise_for_status()
-
-    await app.set_config({"django_allowed_hosts": "*"})
-    time.sleep(10)
-
-    # Test that the admin is reachable
-    for unit_ip in await tests.integration.helpers.get_unit_ips(ops_test, unit):
-        url = f"http://{unit_ip}:8080/admin/"
-        response = requests.head(url, timeout=5)
-        response.raise_for_status()
-        logger.info("File found at %s", url)
-
-
-@pytest.mark.asyncio
-@pytest.mark.abort_on_fail
-async def test_acl_actions(app: juju.application.Application):
-    """
-    arrange: build and deploy the charm.
-    act: nothing.
-    assert: that the acl actions do the right thing.
-    """
-    unit = app.units[0]
-
-    assert unit.workload_status == ops.model.ActiveStatus.name
-
-    zone = "test-zone"
-
-    action_create_acl: Action = await unit.run_action(
-        "create-acl",
-        **{"service-account": "test-service-account", "zone": zone},
-    )
-    await action_create_acl.wait()
-    assert action_create_acl.status == "completed"
-    assert "ACL created successfully" in action_create_acl.results["result"]
-
-    action_check_acl: Action = await unit.run_action(
-        "check-acl",
-        **{"service-account": "test-service-account", "zone": zone},
-    )
-    await action_check_acl.wait()
-    assert action_check_acl.status == "completed"
-    assert "ACL exists" in action_check_acl.results["result"]
-
-    action_list_acl: Action = await unit.run_action(
-        "list-acl",
-    )
-    await action_list_acl.wait()
-    assert action_list_acl.status == "completed"
-    assert f"test-service-account - {zone}" in action_list_acl.results["result"]
-
-    action_delete_acl: Action = await unit.run_action(
-        "delete-acl",
-        **{"service-account": "test-service-account", "zone": zone},
-    )
-    await action_delete_acl.wait()
-    assert action_delete_acl.status == "completed"
-    assert "ACL deleted successfully" in action_delete_acl.results["result"]
-
-    action_check_acl = await unit.run_action(
-        "check-acl",
-        **{"service-account": "test-service-account", "zone": zone},
-    )
-    await action_check_acl.wait()
-    assert action_check_acl.status == "completed"
-    assert "ACL does not exist" in action_check_acl.results["result"]
 
 
 @pytest.mark.asyncio

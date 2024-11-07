@@ -258,6 +258,10 @@ class BindService:
             elif pathlib.Path(snap_path).is_file():
                 # Installing the charm via subprocess.
                 # Calling subprocess here is not a security issue.
+                logger.info(
+                    "Installing from custom charmed-bind snap located: %s",
+                    snap_path,
+                )
                 subprocess.check_output(
                     ["sudo", "snap", "install", snap_path, "--dangerous"]
                 )  # nosec

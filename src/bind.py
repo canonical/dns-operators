@@ -45,10 +45,6 @@ class InstallError(SnapError):
     """Exception raised when unable to install dependencies for the service."""
 
 
-class ConfigureError(SnapError):
-    """Exception raised when unable to configure the service."""
-
-
 class BindService:
     """Bind service class."""
 
@@ -354,23 +350,3 @@ class BindService:
         if not ips:
             return ""
         return f"{';'.join([str(ip) for ip in ips])};"
-
-    def configure(self, config: dict[str, str]) -> None:
-        """Configure the charmed-bind service.
-
-        Args:
-            config: dict of configuration values
-
-        Raises:
-            ConfigureError: when encountering a SnapError
-        """
-        try:
-            cache = snap.SnapCache()
-            charmed_bind = cache[constants.DNS_SNAP_NAME]
-            charmed_bind.set(config)
-        except snap.SnapError as e:
-            error_msg = (
-                f"An exception occurred when configuring {constants.DNS_SNAP_NAME}. Reason: {e}"
-            )
-            logger.error(error_msg)
-            raise ConfigureError(error_msg) from e

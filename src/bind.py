@@ -251,7 +251,7 @@ class BindService:
 
                 if not snap_package.present or refresh:
                     snap_package.ensure(snap.SnapState.Latest, channel=snap_channel)
-            elif pathlib.Path(snap_path).is_file():
+            else:
                 # Installing the charm via subprocess.
                 # Calling subprocess here is not a security issue.
                 logger.info(
@@ -261,12 +261,7 @@ class BindService:
                 subprocess.check_output(
                     ["sudo", "snap", "install", snap_path, "--dangerous"]
                 )  # nosec
-            else:
-                logger.warning(
-                    "Custom snap workload path defined but no file found at this location: %s",
-                    snap_path,
-                )
-        except (snap.SnapError, snap.SnapNotFoundError) as e:
+        except (snap.SnapError, snap.SnapNotFoundError, subprocess.CalledProcessError) as e:
             error_msg = f"An exception occurred when installing {snap_name}. Reason: {e}"
             logger.error(error_msg)
             raise InstallError(error_msg) from e

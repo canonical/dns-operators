@@ -263,7 +263,7 @@ class BindService:
                 )  # nosec
         except (snap.SnapError, snap.SnapNotFoundError, subprocess.CalledProcessError) as e:
             error_msg = f"An exception occurred when installing {snap_name}. Reason: {e}"
-            logger.error(error_msg)
+            logger.exception(error_msg)
             raise InstallError(error_msg) from e
 
     def _zones_to_files_content(self, zones: list[models.Zone]) -> dict[str, str]:

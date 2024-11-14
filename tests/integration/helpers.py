@@ -4,14 +4,6 @@
 
 """Helper functions for the integration tests."""
 
-# Ignore duplicate code from the helpers (they can be in the charm also)
-# pylint: disable=duplicate-code
-# Ignore functions having too many arguments (will be removed in the future)
-# pylint: disable=too-many-positional-arguments
-
-# Ignore too many args warning. I NEED THEM OKAY ?!
-# pylint: disable=too-many-arguments
-
 import json
 import logging
 import pathlib

@@ -66,11 +66,10 @@ class BindCharm(ops.CharmBase):
         self.unit.open_port("tcp", 53)  # Bind DNS
         self.unit.open_port("udp", 53)  # Bind DNS
 
-        # Try to check if the `charmed-bind-snap` resource is defined.
+        # Record if the `charmed-bind-snap` resource is defined.
         # Using this can be useful when debugging locally
         # More information about resources:
         # https://juju.is/docs/sdk/resources#heading--add-a-resource-to-a-charm
-        self.snap_path: str = ""
         try:
             self.snap_path = str(self.model.resources.fetch("charmed-bind-snap"))
         except ops.ModelError as e:

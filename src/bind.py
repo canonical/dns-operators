@@ -105,7 +105,7 @@ class BindService:
             logger.error(error_msg)
             raise StopError(error_msg) from e
 
-    def setup(self, unit_name: str, snap_path: str) -> None:
+    def setup(self, unit_name: str, snap_path: str | None) -> None:
         """Prepare the machine.
 
         Args:
@@ -230,7 +230,7 @@ class BindService:
         logger.debug("Update and reload duration (ms): %s", (time.time_ns() - start_time) / 1e6)
 
     def _install_snap_package(
-        self, snap_name: str, snap_channel: str, snap_path: str, refresh: bool = False
+        self, snap_name: str, snap_channel: str, snap_path: str | None, refresh: bool = False
     ) -> None:
         """Installs snap package.
 
@@ -245,7 +245,7 @@ class BindService:
         """
         try:
             # If a snap resource was not given, install the snap as published on snapcraft
-            if snap_path == "":
+            if snap_path is None or snap_path == "":
                 snap_cache = snap.SnapCache()
                 snap_package = snap_cache[snap_name]
 

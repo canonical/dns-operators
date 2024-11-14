@@ -70,6 +70,7 @@ class BindCharm(ops.CharmBase):
         # Using this can be useful when debugging locally
         # More information about resources:
         # https://juju.is/docs/sdk/resources#heading--add-a-resource-to-a-charm
+        self.snap_path: str | None = None
         try:
             self.snap_path = str(self.model.resources.fetch("charmed-bind-snap"))
         except ops.ModelError as e:

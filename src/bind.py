@@ -7,6 +7,7 @@ import logging
 import os
 import pathlib
 import shutil
+import subprocess  # nosec
 import tempfile
 import time
 
@@ -104,15 +105,17 @@ class BindService:
             logger.error(error_msg)
             raise StopError(error_msg) from e
 
-    def setup(self, unit_name: str) -> None:
+    def setup(self, unit_name: str, snap_path: str | None) -> None:
         """Prepare the machine.
 
         Args:
             unit_name: The name of the current unit
+            snap_path: The path to the snap to install, can be blank.
         """
         self._install_snap_package(
             snap_name=constants.DNS_SNAP_NAME,
             snap_channel=constants.SNAP_PACKAGES[constants.DNS_SNAP_NAME]["channel"],
+            snap_path=snap_path,
         )
         self._install_bind_reload_service(unit_name)
         # We need to put the service zone in place so we call
@@ -227,28 +230,40 @@ class BindService:
         logger.debug("Update and reload duration (ms): %s", (time.time_ns() - start_time) / 1e6)
 
     def _install_snap_package(
-        self, snap_name: str, snap_channel: str, refresh: bool = False
+        self, snap_name: str, snap_channel: str, snap_path: str | None, refresh: bool = False
     ) -> None:
         """Installs snap package.
 
         Args:
             snap_name: the snap package to install
             snap_channel: the snap package channel
+            snap_path: The path to the snap to install, can be blank.
             refresh: whether to refresh the snap if it's already present.
 
         Raises:
             InstallError: when encountering a SnapError or a SnapNotFoundError
         """
         try:
-            snap_cache = snap.SnapCache()
-            snap_package = snap_cache[snap_name]
+            # If a snap resource was not given, install the snap as published on snapcraft
+            if snap_path is None or snap_path == "":
+                snap_cache = snap.SnapCache()
+                snap_package = snap_cache[snap_name]
 
-            if not snap_package.present or refresh:
-                snap_package.ensure(snap.SnapState.Latest, channel=snap_channel)
-
-        except (snap.SnapError, snap.SnapNotFoundError) as e:
+                if not snap_package.present or refresh:
+                    snap_package.ensure(snap.SnapState.Latest, channel=snap_channel)
+            else:
+                # Installing the charm via subprocess.
+                # Calling subprocess here is not a security issue.
+                logger.info(
+                    "Installing from custom charmed-bind snap located: %s",
+                    snap_path,
+                )
+                subprocess.check_output(
+                    ["sudo", "snap", "install", snap_path, "--dangerous"]
+                )  # nosec
+        except (snap.SnapError, snap.SnapNotFoundError, subprocess.CalledProcessError) as e:
             error_msg = f"An exception occurred when installing {snap_name}. Reason: {e}"
-            logger.error(error_msg)
+            logger.exception(error_msg)
             raise InstallError(error_msg) from e
 
     def _zones_to_files_content(self, zones: list[models.Zone]) -> dict[str, str]:

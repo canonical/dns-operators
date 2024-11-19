@@ -7,6 +7,7 @@
 import logging
 import time
 
+import juju.application
 import ops
 import pytest
 from pytest_operator.plugin import Model, OpsTest
@@ -20,17 +21,15 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
-async def test_lifecycle(app: ops.model.Application, ops_test: OpsTest):
+async def test_lifecycle(app: juju.application.Application, ops_test: OpsTest):
     """
     arrange: build and deploy the charm.
     act: nothing.
     assert: that the charm ends up in an active state.
     """
-    # Application actually does have units
-    unit = app.units[0]  # type: ignore
+    unit = app.units[0]
 
-    # Mypy has difficulty with ActiveStatus
-    assert unit.workload_status == ops.model.ActiveStatus.name  # type: ignore
+    assert unit.workload_status == ops.model.ActiveStatus.name
 
     status = await tests.integration.helpers.dig_query(
         ops_test,
@@ -66,14 +65,13 @@ async def test_lifecycle(app: ops.model.Application, ops_test: OpsTest):
 
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
-async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
+async def test_basic_dns_config(app: juju.application.Application, ops_test: OpsTest):
     """
     arrange: build, deploy the charm and change its configuration.
     act: request the test domain.
     assert: the output of the dig command is the expected one
     """
-    # Application actually does have units
-    unit = app.units[0]  # type: ignore
+    unit = app.units[0]
 
     test_zone_def = f"""zone "dns.test" IN {{
     type primary;
@@ -86,7 +84,10 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
     await tests.integration.helpers.run_on_unit(ops_test, unit.name, stop_timer_cmd)
 
     await tests.integration.helpers.push_to_unit(
-        ops_test, unit, test_zone_def, f"{constants.DNS_CONFIG_DIR}/named.conf.local"
+        ops_test=ops_test,
+        unit=unit,
+        source=test_zone_def,
+        destination=f"{constants.DNS_CONFIG_DIR}/named.conf.local",
     )
 
     test_zone = """$TTL    604800
@@ -102,7 +103,10 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
 @       IN      TXT     "this-is-a-test"
     """
     await tests.integration.helpers.push_to_unit(
-        ops_test, unit, test_zone, f"{constants.DNS_CONFIG_DIR}/db.dns.test"
+        ops_test=ops_test,
+        unit=unit,
+        source=test_zone,
+        destination=f"{constants.DNS_CONFIG_DIR}/db.dns.test",
     )
 
     restart_cmd = f"sudo snap restart --reload {constants.DNS_SNAP_NAME}"
@@ -218,7 +222,7 @@ async def test_basic_dns_config(app: ops.model.Application, ops_test: OpsTest):
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
 async def test_dns_record_relation(
-    app: ops.model.Application,
+    app: juju.application.Application,
     ops_test: OpsTest,
     model: Model,
     status: ops.model.StatusBase,
@@ -249,11 +253,11 @@ async def test_dns_record_relation(
 
     await model.wait_for_idle()
 
-    await tests.integration.helpers.force_reload_bind(ops_test, app.units[0])  # type: ignore
+    await tests.integration.helpers.force_reload_bind(ops_test, app.units[0])
     await model.wait_for_idle()
 
     # Test the status of the bind-operator instance
-    assert app.units[0].workload_status == status.name  # type: ignore
+    assert app.units[0].workload_status == status.name
 
     # Test if the records give the correct results
     # Do that only if we have an active status
@@ -263,7 +267,7 @@ async def test_dns_record_relation(
 
                 result = await tests.integration.helpers.dig_query(
                     ops_test,
-                    app.units[0],  # type: ignore
+                    app.units[0],
                     f"@127.0.0.1 {entry.host_label}.{entry.domain} {entry.record_type} +short",
                     retry=True,
                     wait=5,

@@ -51,6 +51,9 @@ module = "tests.*"
 [tool.pylint]
 disable = "wrong-import-order"
 
+[tool.pylint.tests]
+disable = ["too-many-arguments"]
+
 [tool.pytest.ini_options]
 minversion = "6.0"
 log_cli_level = "INFO"

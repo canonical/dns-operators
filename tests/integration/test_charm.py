@@ -265,7 +265,6 @@ async def test_dns_record_relation(
     if status == ops.model.ActiveStatus:
         for integration_data in integration_datasets:
             for entry in integration_data:
-
                 ips = await tests.integration.helpers.get_unit_ips(ops_test, app.units[0])
                 logger.info(ips)
                 for ip in ips:

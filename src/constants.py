@@ -19,11 +19,13 @@ $TTL 600
 status IN TXT "ok"
 """
 
-ZONE_HEADER_TEMPLATE = """$ORIGIN {zone}.
+ZONE_APEX_TEMPLATE = """$ORIGIN {zone}.
 $TTL 600
 @ IN SOA {zone}. mail.{zone}. ( {serial} 1d 1h 1h 10m )
-@ IN NS localhost.
 """
+
+ZONE_APEX_NS_TEMPLATE = "@ IN NS ns{number}.\nns{number} IN A {ip}\n"
+
 
 ZONE_RECORD_TEMPLATE = "{host_label} {record_class} {record_type} {record_data}\n"
 

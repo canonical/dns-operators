@@ -205,7 +205,7 @@ class BindService:
 
             if topology is not None and topology.is_current_unit_active:
                 # Write zone files
-                zone_files: dict[str, str] = self._zones_to_files_content(zones)
+                zone_files: dict[str, str] = self._zones_to_files_content(zones, topology)
                 for domain, content in zone_files.items():
                     pathlib.Path(tempdir, f"db.{domain}").write_text(content, encoding="utf-8")
 
@@ -266,11 +266,14 @@ class BindService:
             logger.exception(error_msg)
             raise InstallError(error_msg) from e
 
-    def _zones_to_files_content(self, zones: list[models.Zone]) -> dict[str, str]:
+    def _zones_to_files_content(
+        self, zones: list[models.Zone], topology: models.Topology
+    ) -> dict[str, str]:
         """Return zone files and their content.
 
         Args:
             zones: list of the zones to transform to text
+            topology: Topology of the current deployment
 
         Returns:
             A dict whose keys are the domain of each zone
@@ -278,12 +281,29 @@ class BindService:
         """
         zone_files: dict[str, str] = {}
         for zone in zones:
-            content = constants.ZONE_HEADER_TEMPLATE.format(
+            content = constants.ZONE_APEX_TEMPLATE.format(
                 zone=zone.domain,
                 # The serial is the timestamp divided by 60.
                 # We only need precision to the minute and want to avoid overflows
                 serial=int(time.time() / 60),
             )
+
+            # By default, we hide the active unit.
+            # So only the standbies are used to respond to queries and receive NOTIFY events
+            ip_list: list[pydantic.IPvAnyAddress] = topology.standby_units_ip
+            # If we have no standby unit (a single unit deployment)
+            # then use all the units IPs instead
+            if not ip_list:
+                ip_list = topology.units_ip
+            # We sort the list to hopefully present the NS in a stable order in the file
+            for ip in sorted(ip_list):
+                content += constants.ZONE_APEX_NS_TEMPLATE.format(
+                    # We convert the IP to an int and use that as the NS record number
+                    # This way, we generate a somewhat stable list of NS records
+                    number=int(ip),
+                    ip=ip,
+                )
+
             for entry in zone.entries:
                 content += constants.ZONE_RECORD_TEMPLATE.format(
                     host_label=entry.host_label,

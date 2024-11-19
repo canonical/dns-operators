@@ -7,6 +7,7 @@
 import logging
 import time
 
+import dns.resolver
 import juju.application
 import ops
 import pytest
@@ -171,6 +172,31 @@ async def test_basic_dns_config(app: juju.application.Application, ops_test: Ops
                 ],
                 [
                     models.DnsEntry(
+                        domain="dns.test",
+                        host_label="admin",
+                        ttl=600,
+                        record_class="IN",
+                        record_type="A",
+                        record_data="41.41.41.41",
+                    ),
+                ],
+            ),
+            ops.model.BlockedStatus,
+        ),
+        (
+            (
+                [
+                    models.DnsEntry(
+                        domain="dns.test",
+                        host_label="admin",
+                        ttl=600,
+                        record_class="IN",
+                        record_type="A",
+                        record_data="42.42.42.42",
+                    ),
+                ],
+                [
+                    models.DnsEntry(
                         domain="dns-app-2.test",
                         host_label="somehost",
                         ttl=600,
@@ -191,31 +217,6 @@ async def test_basic_dns_config(app: juju.application.Application, ops_test: Ops
                 ],
             ),
             ops.model.ActiveStatus,
-        ),
-        (
-            (
-                [
-                    models.DnsEntry(
-                        domain="dns.test",
-                        host_label="admin",
-                        ttl=600,
-                        record_class="IN",
-                        record_type="A",
-                        record_data="42.42.42.42",
-                    ),
-                ],
-                [
-                    models.DnsEntry(
-                        domain="dns.test",
-                        host_label="admin",
-                        ttl=600,
-                        record_class="IN",
-                        record_type="A",
-                        record_data="41.41.41.41",
-                    ),
-                ],
-            ),
-            ops.model.BlockedStatus,
         ),
     ),
 )
@@ -265,14 +266,17 @@ async def test_dns_record_relation(
         for integration_data in integration_datasets:
             for entry in integration_data:
 
-                result = await tests.integration.helpers.dig_query(
-                    ops_test,
-                    app.units[0],
-                    f"@127.0.0.1 {entry.host_label}.{entry.domain} {entry.record_type} +short",
-                    retry=True,
-                    wait=5,
-                )
-                assert result == str(entry.record_data), (
-                    f"{entry.host_label}.{entry.domain}"
-                    f" {entry.record_type} {entry.record_data}"
-                )
+                ips = await tests.integration.helpers.get_unit_ips(ops_test, app.units[0])
+                logger.info(ips)
+                for ip in ips:
+                    # Create a DNS resolver
+                    resolver = dns.resolver.Resolver()
+                    resolver.nameservers = [ip]
+
+                    # Perform the DNS query
+                    answers = resolver.resolve(
+                        f"{entry.host_label}.{entry.domain}", entry.record_type
+                    )
+                    logger.info("%s", f"{entry.host_label}.{entry.domain}")
+                    logger.info("%s", [answer.to_text() for answer in answers])
+                    assert str(entry.record_data) in [answer.to_text() for answer in answers]

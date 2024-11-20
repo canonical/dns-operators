@@ -252,10 +252,9 @@ async def test_dns_record_relation(
         )
         any_app_number += 1
 
-    await model.wait_for_idle()
-
+    await model.wait_for_idle(idle_period=30)
     await tests.integration.helpers.force_reload_bind(ops_test, app.units[0])
-    await model.wait_for_idle()
+    await model.wait_for_idle(idle_period=30)
 
     # Test the status of the bind-operator instance
     assert app.units[0].workload_status == status.name
@@ -273,9 +272,9 @@ async def test_dns_record_relation(
                     resolver.nameservers = [ip]
 
                     # Perform the DNS query
+                    logger.info("%s", f"{entry.host_label}.{entry.domain}")
                     answers = resolver.resolve(
                         f"{entry.host_label}.{entry.domain}", entry.record_type
                     )
-                    logger.info("%s", f"{entry.host_label}.{entry.domain}")
                     logger.info("%s", [answer.to_text() for answer in answers])
                     assert str(entry.record_data) in [answer.to_text() for answer in answers]

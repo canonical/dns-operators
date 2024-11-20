@@ -5,7 +5,7 @@ on:
 
 jobs:
   integration-tests:
-    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@2fffb890e385d3edd5e1bc8ef86c60c190caf4f6
     secrets: inherit
     with:
       self-hosted-runner: false

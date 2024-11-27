@@ -3,6 +3,7 @@
 
 """Unit tests for the bind module."""
 
+import json
 import logging
 from unittest.mock import patch
 
@@ -10,6 +11,8 @@ import ops
 import pytest
 import scenario
 from scenario.context import _Event  # needed for custom events for now
+
+import tests.unit.helpers
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +38,7 @@ def test_start(context, base_state):
 @pytest.mark.usefixtures("base_state")
 def test_stop(context, base_state):
     state = ops.testing.State(**base_state)
-    out = context.run(context.on.start(), state)
+    out = context.run(context.on.stop(), state)
     assert out.unit_status == ops.testing.ActiveStatus()
 
 
@@ -43,7 +46,7 @@ def test_stop(context, base_state):
 @pytest.mark.usefixtures("base_state")
 def test_install(context, base_state):
     state = ops.testing.State(**base_state)
-    out = context.run(context.on.start(), state)
+    out = context.run(context.on.install(), state)
     assert out.unit_status == ops.testing.ActiveStatus()
 
 
@@ -152,3 +155,115 @@ def test_reload_bind(context, base_state):
     reload_bind_event = _Event("reload_bind")
     out = context.run(reload_bind_event, state)
     assert out.unit_status == ops.testing.ActiveStatus()
+
+
+@pytest.mark.usefixtures("context")
+@pytest.mark.usefixtures("base_state")
+def test_dns_record_relation_changed_wo_conflict(context, base_state):
+    record_requirers_data = tests.unit.helpers.dns_record_requirers_data_from_integration_datasets(
+        [
+            [
+                tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                tests.unit.helpers.RECORDS["admin.dns.test_42"],
+            ],
+        ],
+    )
+    dumped_model = record_requirers_data[0].model_dump(exclude_unset=True)
+    dumped_data = {
+        "dns_entries": json.dumps(dumped_model["dns_entries"], default=str),
+    }
+
+    dns_record_relation = scenario.Relation(
+        endpoint="dns-record",
+        remote_app_data=dumped_data,
+    )
+    base_state["relations"].append(dns_record_relation)
+    base_state["leader"] = True
+    state = ops.testing.State(**base_state)
+    dns_record_relation_changed_event = _Event(
+        "dns_record_relation_changed", relation=dns_record_relation
+    )
+    out = context.run(dns_record_relation_changed_event, state)
+    in_uuids = {str(x["uuid"]) for x in dumped_model["dns_entries"]}
+    for relation in out.relations:
+        if relation.endpoint == "dns-record":
+            data = json.loads(relation.local_app_data["dns_entries"])
+            out_uuids = {x["uuid"] for x in data}
+            # check that all the records from the requirer data are approved
+            assert out_uuids == in_uuids
+    assert out.unit_status == ops.testing.ActiveStatus()
+
+
+@pytest.mark.usefixtures("context")
+@pytest.mark.usefixtures("base_state")
+def test_dns_record_relation_changed_wo_conflict_not_leader(context, base_state):
+    record_requirers_data = tests.unit.helpers.dns_record_requirers_data_from_integration_datasets(
+        [
+            [
+                tests.unit.helpers.RECORDS["admin.dns.test_42"],
+                tests.unit.helpers.RECORDS["admin.dns.test_42"],
+            ],
+        ],
+    )
+    dumped_model = record_requirers_data[0].model_dump(exclude_unset=True)
+    dumped_data = {
+        "dns_entries": json.dumps(dumped_model["dns_entries"], default=str),
+    }
+
+    dns_record_relation = scenario.Relation(
+        endpoint="dns-record",
+        remote_app_data=dumped_data,
+    )
+    base_state["relations"].append(dns_record_relation)
+    base_state["leader"] = False
+    state = ops.testing.State(**base_state)
+    dns_record_relation_changed_event = _Event(
+        "dns_record_relation_changed", relation=dns_record_relation
+    )
+    out = context.run(dns_record_relation_changed_event, state)
+    for relation in out.relations:
+        if relation.endpoint == "dns-record":
+            # As we are not the leader, we do not update the databag of the relation
+            assert "dns_entries" not in relation.local_app_data
+    assert out.unit_status == ops.testing.ActiveStatus()
+
+
+@pytest.mark.usefixtures("context")
+@pytest.mark.usefixtures("base_state")
+def test_dns_record_relation_changed_w_conflict(context, base_state):
+    record_requirers_data = tests.unit.helpers.dns_record_requirers_data_from_integration_datasets(
+        [
+            [
+                tests.unit.helpers.RECORDS["admin.dns.test_42"],
+            ],
+            [
+                tests.unit.helpers.RECORDS["admin.dns.test_42"],
+            ],
+        ],
+    )
+    for record_requirer_data in record_requirers_data:
+        dumped_model = record_requirer_data.model_dump(exclude_unset=True)
+        dumped_data = {
+            "dns_entries": json.dumps(dumped_model["dns_entries"], default=str),
+        }
+        dns_record_relation = scenario.Relation(
+            endpoint="dns-record",
+            remote_app_data=dumped_data,
+        )
+        base_state["relations"].append(dns_record_relation)
+    base_state["leader"] = True
+    state = ops.testing.State(**base_state)
+    dns_record_relation_changed_event = _Event(
+        "dns_record_relation_changed", relation=dns_record_relation
+    )
+    out = context.run(dns_record_relation_changed_event, state)
+    # in_uuids = {str(x["uuid"]) for x in dumped_model["dns_entries"]}
+    for relation in out.relations:
+        if relation.endpoint == "dns-record":
+            logger.debug("relation data: '%s'", relation.local_app_data)
+            # if "dns_entries" in relation.local_app_data:
+            #     data = json.loads(relation.local_app_data["dns_entries"])
+            #     out_uuids = {x["uuid"] for x in data}
+            #     # check that all the records from the requirer data are approved
+            #     # assert out_uuids == in_uuids
+    assert out.unit_status == ops.testing.BlockedStatus('Conflicting requests')

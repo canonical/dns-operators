@@ -266,4 +266,4 @@ def test_dns_record_relation_changed_w_conflict(context, base_state):
             #     out_uuids = {x["uuid"] for x in data}
             #     # check that all the records from the requirer data are approved
             #     # assert out_uuids == in_uuids
-    assert out.unit_status == ops.testing.BlockedStatus('Conflicting requests')
+    assert out.unit_status == ops.testing.BlockedStatus("Conflicting requests")

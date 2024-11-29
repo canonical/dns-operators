@@ -98,7 +98,6 @@ class Status(str, Enum):
 
     Attributes:
         APPROVED: approved
-        INVALID_CREDENTIALS: invalid_credentials
         PERMISSION_DENIED: permission_denied
         CONFLICT: conflict
         INVALID_DATA: invalid_data
@@ -108,7 +107,6 @@ class Status(str, Enum):
     """
 
     APPROVED = "approved"
-    INVALID_CREDENTIALS = "invalid_credentials"
     PERMISSION_DENIED = "permission_denied"
     CONFLICT = "conflict"
     INVALID_DATA = "invalid_data"

@@ -147,8 +147,8 @@ PROVIDER_RELATION_DATA = {
         [
             {
                 "uuid": str(UUID3),
-                "status": "invalid_credentials",
-                "description": "invalid_credentials",
+                "status": "invalid_data",
+                "description": "invalid_data",
             },
             {
                 "uuid": str(UUID4),
@@ -161,8 +161,8 @@ DNS_RECORD_PROVIDER_DATA = dns_record.DNSRecordProviderData(
     dns_entries=[
         dns_record.DNSProviderData(
             uuid=UUID3,
-            status=dns_record.Status.INVALID_CREDENTIALS,
-            description="invalid_credentials",
+            status=dns_record.Status.INVALID_DATA,
+            description="invalid_data",
         ),
         dns_record.DNSProviderData(
             uuid=UUID4,

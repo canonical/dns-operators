@@ -35,4 +35,4 @@ resources:
   charmed-bind-snap:
     type: file
     filename: charmed-bind.snap
-    description: charmed-bind snap file for debugging purposes
+    description: (local) charmed-bind snap file for debugging purposes

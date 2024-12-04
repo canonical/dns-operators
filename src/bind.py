@@ -21,6 +21,7 @@ import constants
 import dns_data
 import exceptions
 import models
+import templates
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +132,7 @@ class BindService:
         (
             pathlib.Path(constants.SYSTEMD_SERVICES_PATH) / "dispatch-reload-bind.service"
         ).write_text(
-            constants.DISPATCH_EVENT_SERVICE.format(
+            templates.DISPATCH_EVENT_SERVICE.format(
                 event="reload-bind",
                 timeout="10s",
                 unit=unit_name,
@@ -139,7 +140,7 @@ class BindService:
             encoding="utf-8",
         )
         (pathlib.Path(constants.SYSTEMD_SERVICES_PATH) / "dispatch-reload-bind.timer").write_text(
-            constants.SYSTEMD_SERVICE_TIMER.format(interval="1", service="dispatch-reload-bind"),
+            templates.SYSTEMD_SERVICE_TIMER.format(interval="1", service="dispatch-reload-bind"),
             encoding="utf-8",
         )
         systemd.service_enable("dispatch-reload-bind.timer")
@@ -197,7 +198,7 @@ class BindService:
 
             # Write the service.test file
             pathlib.Path(constants.DNS_CONFIG_DIR, f"db.{constants.ZONE_SERVICE_NAME}").write_text(
-                constants.ZONE_SERVICE.format(
+                templates.ZONE_SERVICE.format(
                     serial=int(time.time() / 60),
                 ),
                 encoding="utf-8",
@@ -205,7 +206,7 @@ class BindService:
 
             if topology is not None and topology.is_current_unit_active:
                 # Write zone files
-                zone_files: dict[str, str] = self._zones_to_files_content(zones)
+                zone_files: dict[str, str] = self._zones_to_files_content(zones, topology)
                 for domain, content in zone_files.items():
                     pathlib.Path(tempdir, f"db.{domain}").write_text(content, encoding="utf-8")
 
@@ -266,11 +267,14 @@ class BindService:
             logger.exception(error_msg)
             raise InstallError(error_msg) from e
 
-    def _zones_to_files_content(self, zones: list[models.Zone]) -> dict[str, str]:
+    def _zones_to_files_content(
+        self, zones: list[models.Zone], topology: models.Topology
+    ) -> dict[str, str]:
         """Return zone files and their content.
 
         Args:
             zones: list of the zones to transform to text
+            topology: Topology of the current deployment
 
         Returns:
             A dict whose keys are the domain of each zone
@@ -278,14 +282,31 @@ class BindService:
         """
         zone_files: dict[str, str] = {}
         for zone in zones:
-            content = constants.ZONE_HEADER_TEMPLATE.format(
+            content = templates.ZONE_APEX_TEMPLATE.format(
                 zone=zone.domain,
                 # The serial is the timestamp divided by 60.
                 # We only need precision to the minute and want to avoid overflows
                 serial=int(time.time() / 60),
             )
+
+            # By default, we hide the active unit.
+            # So only the standbies are used to respond to queries and receive NOTIFY events
+            # If we have no standby unit (a single unit deployment)
+            # then use current unit IP instead
+            ip_list: list[pydantic.IPvAnyAddress] = topology.standby_units_ip or [
+                topology.current_unit_ip
+            ]
+            # We sort the list to hopefully present the NS in a stable order in the file
+            for ip in sorted(ip_list):
+                content += templates.ZONE_APEX_NS_TEMPLATE.format(
+                    # We convert the IP to an int and use that as the NS record number
+                    # This way, we generate a somewhat stable list of NS records
+                    number=int(ip),
+                    ip=ip,
+                )
+
             for entry in zone.entries:
-                content += constants.ZONE_RECORD_TEMPLATE.format(
+                content += templates.ZONE_RECORD_TEMPLATE.format(
                     host_label=entry.host_label,
                     record_class=entry.record_class,
                     record_type=entry.record_type,
@@ -310,7 +331,7 @@ class BindService:
         # It's good practice to include rfc1918
         content: str = f'include "{constants.DNS_CONFIG_DIR}/zones.rfc1918";\n'
         # Include a zone specifically used for some services tests
-        content += constants.NAMED_CONF_PRIMARY_ZONE_DEF_TEMPLATE.format(
+        content += templates.NAMED_CONF_PRIMARY_ZONE_DEF_TEMPLATE.format(
             name=f"{constants.ZONE_SERVICE_NAME}",
             absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{constants.ZONE_SERVICE_NAME}",
             zone_transfer_ips="",
@@ -318,13 +339,13 @@ class BindService:
         if topology is not None:
             for name in zones:
                 if topology.is_current_unit_active:
-                    content += constants.NAMED_CONF_PRIMARY_ZONE_DEF_TEMPLATE.format(
+                    content += templates.NAMED_CONF_PRIMARY_ZONE_DEF_TEMPLATE.format(
                         name=name,
                         absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{name}",
                         zone_transfer_ips=self._bind_config_ip_list(topology.standby_units_ip),
                     )
                 else:
-                    content += constants.NAMED_CONF_SECONDARY_ZONE_DEF_TEMPLATE.format(
+                    content += templates.NAMED_CONF_SECONDARY_ZONE_DEF_TEMPLATE.format(
                         name=name,
                         absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{name}",
                         primary_ip=self._bind_config_ip_list([topology.active_unit_ip]),

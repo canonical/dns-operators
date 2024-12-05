@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
 def test_start_wo_peer_relation(context, base_state):
+    """
+    arrange: prepare some state
+    act: run start
+    assert: status is peer not available
+    """
     base_state["relations"] = []
     state = ops.testing.State(**base_state)
     out = context.run(context.on.start(), state)
@@ -29,6 +34,11 @@ def test_start_wo_peer_relation(context, base_state):
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
 def test_start(context, base_state):
+    """
+    arrange: prepare some state with peer relation
+    act: run start
+    assert: status is active
+    """
     state = ops.testing.State(**base_state)
     out = context.run(context.on.start(), state)
     assert out.unit_status == ops.testing.ActiveStatus()
@@ -37,6 +47,11 @@ def test_start(context, base_state):
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
 def test_stop(context, base_state):
+    """
+    arrange: prepare some state with peer relation
+    act: run stop
+    assert: status is active
+    """
     state = ops.testing.State(**base_state)
     out = context.run(context.on.stop(), state)
     assert out.unit_status == ops.testing.ActiveStatus()
@@ -45,6 +60,11 @@ def test_stop(context, base_state):
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
 def test_install(context, base_state):
+    """
+    arrange: prepare some state with peer relation
+    act: run install
+    assert: status is active
+    """
     state = ops.testing.State(**base_state)
     out = context.run(context.on.install(), state)
     assert out.unit_status == ops.testing.ActiveStatus()
@@ -53,6 +73,11 @@ def test_install(context, base_state):
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
 def test_config_changed(context, base_state):
+    """
+    arrange: prepare some state with peer relation
+    act: run config_changed
+    assert: status is active
+    """
     state = ops.testing.State(**base_state)
     out = context.run(context.on.config_changed(), state)
     assert out.unit_status == ops.testing.ActiveStatus()
@@ -60,7 +85,12 @@ def test_config_changed(context, base_state):
 
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
-def test_leader_elected_changed_while_leader_no_active_unit(context, base_state):
+def test_leader_elected_changed_while_leader_not_active(context, base_state):
+    """
+    arrange: prepare some state with peer relation
+    act: run leader_elected
+    assert: status is active
+    """
     base_state["leader"] = True
     state = ops.testing.State(**base_state)
     out = context.run(context.on.leader_elected(), state)
@@ -70,6 +100,11 @@ def test_leader_elected_changed_while_leader_no_active_unit(context, base_state)
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
 def test_leader_elected_changed_while_leader_not_active_dig_timeout(context, base_state):
+    """
+    arrange: be leader not active and dig timeout
+    act: run leader_elected
+    assert: status is active
+    """
     base_state["leader"] = True
     databag = {"active-unit": "1.2.99.4"}
     peer_relation = scenario.PeerRelation(
@@ -87,6 +122,11 @@ def test_leader_elected_changed_while_leader_not_active_dig_timeout(context, bas
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
 def test_leader_elected_changed_while_leader_not_active_dig_ok(context, base_state):
+    """
+    arrange: be leader not active and dig successful
+    act: run leader_elected
+    assert: status is active
+    """
     base_state["leader"] = True
     databag = {"active-unit": "1.2.99.4"}
     peer_relation = scenario.PeerRelation(
@@ -104,6 +144,11 @@ def test_leader_elected_changed_while_leader_not_active_dig_ok(context, base_sta
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
 def test_leader_elected_changed_while_not_leader(context, base_state):
+    """
+    arrange: not leader
+    act: run leader_elected
+    assert: status is active
+    """
     base_state["leader"] = False
     state = ops.testing.State(**base_state)
     out = context.run(context.on.leader_elected(), state)
@@ -114,6 +159,11 @@ def test_leader_elected_changed_while_not_leader(context, base_state):
 @pytest.mark.usefixtures("base_state")
 @pytest.mark.usefixtures("peer_relation")
 def test_peer_relation_departed_while_leader(context, base_state, peer_relation):
+    """
+    arrange: while leader
+    act: run peer relation departed
+    assert: status is active
+    """
     base_state["leader"] = True
     state = ops.testing.State(**base_state)
     peer_relation_departed_event = _Event(
@@ -127,6 +177,11 @@ def test_peer_relation_departed_while_leader(context, base_state, peer_relation)
 @pytest.mark.usefixtures("base_state")
 @pytest.mark.usefixtures("peer_relation")
 def test_peer_relation_departed_while_not_leader(context, base_state, peer_relation):
+    """
+    arrange: while not leader
+    act: run peer relation departed
+    assert: status is active
+    """
     base_state["leader"] = False
     state = ops.testing.State(**base_state)
     peer_relation_departed_event = _Event(
@@ -140,6 +195,11 @@ def test_peer_relation_departed_while_not_leader(context, base_state, peer_relat
 @pytest.mark.usefixtures("base_state")
 @pytest.mark.usefixtures("peer_relation")
 def test_peer_relation_joined(context, base_state, peer_relation):
+    """
+    arrange: while not leader
+    act: run peer relation joined
+    assert: status is active
+    """
     state = ops.testing.State(**base_state)
     peer_relation_joined_event = _Event(
         f"{peer_relation.endpoint}_relation_joined", relation=peer_relation
@@ -151,6 +211,11 @@ def test_peer_relation_joined(context, base_state, peer_relation):
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
 def test_reload_bind(context, base_state):
+    """
+    arrange: base state
+    act: run reload bind
+    assert: status is active
+    """
     state = ops.testing.State(**base_state)
     reload_bind_event = _Event("reload_bind")
     out = context.run(reload_bind_event, state)
@@ -160,6 +225,11 @@ def test_reload_bind(context, base_state):
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
 def test_dns_record_relation_changed_wo_conflict(context, base_state):
+    """
+    arrange: base state with some relation
+    act: run dns record relation changed
+    assert: status is active
+    """
     record_requirers_data = tests.unit.helpers.dns_record_requirers_data_from_integration_datasets(
         [
             [
@@ -197,6 +267,11 @@ def test_dns_record_relation_changed_wo_conflict(context, base_state):
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
 def test_dns_record_relation_changed_wo_conflict_not_leader(context, base_state):
+    """
+    arrange: base state with some relation not leader
+    act: run dns record relation changed
+    assert: status is active
+    """
     record_requirers_data = tests.unit.helpers.dns_record_requirers_data_from_integration_datasets(
         [
             [
@@ -232,6 +307,11 @@ def test_dns_record_relation_changed_wo_conflict_not_leader(context, base_state)
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
 def test_dns_record_relation_changed_w_conflict(context, base_state):
+    """
+    arrange: base state with some relation with conflicts
+    act: run dns record relation changed
+    assert: status is blocked
+    """
     record_requirers_data = tests.unit.helpers.dns_record_requirers_data_from_integration_datasets(
         [
             [

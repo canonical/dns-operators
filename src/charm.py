@@ -66,16 +66,6 @@ class BindCharm(ops.CharmBase):
         self.unit.open_port("tcp", 53)  # Bind DNS
         self.unit.open_port("udp", 53)  # Bind DNS
 
-        # Record if the `charmed-bind-snap` resource is defined.
-        # Using this can be useful when debugging locally
-        # More information about resources:
-        # https://juju.is/docs/sdk/resources#heading--add-a-resource-to-a-charm
-        self.snap_path: str | None = None
-        try:
-            self.snap_path = str(self.model.resources.fetch("charmed-bind-snap"))
-        except ops.ModelError as e:
-            logger.warning(e)
-
     def _on_reload_bind(self, _: events.ReloadBindEvent) -> None:
         """Handle periodic reload bind event.
 
@@ -156,7 +146,7 @@ class BindCharm(ops.CharmBase):
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install."""
         self.unit.status = ops.MaintenanceStatus("Preparing bind")
-        self.bind.setup(self.unit.name, self.snap_path)
+        self.bind.setup(self.unit.name)
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start."""
@@ -169,7 +159,7 @@ class BindCharm(ops.CharmBase):
     def _on_upgrade_charm(self, _: ops.UpgradeCharmEvent) -> None:
         """Handle upgrade-charm."""
         self.unit.status = ops.MaintenanceStatus("Upgrading dependencies")
-        self.bind.setup(self.unit.name, self.snap_path)
+        self.bind.setup(self.unit.name)
 
     def _on_leader_elected(self, _: ops.LeaderElectedEvent) -> None:
         """Handle leader-elected event."""

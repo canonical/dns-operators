@@ -66,12 +66,6 @@ def base_state_fixture(peer_relation):
         peer_relation: peer relation fixture
     """
     input_state = {
-        "resources": [
-            ops.testing.Resource(
-                name="charmed-bind-snap",
-                path="",
-            ),
-        ],
         "relations": [peer_relation],
     }
     yield input_state

@@ -31,8 +31,3 @@ provides:
 peers:
   bind-peers:
     interface: bind-instance
-resources:
-  charmed-bind-snap:
-    type: file
-    filename: charmed-bind.snap
-    description: (local) charmed-bind snap file for debugging purposes

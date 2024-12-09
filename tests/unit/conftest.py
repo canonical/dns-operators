@@ -41,7 +41,7 @@ def context_fixture(tmp_path_factory):
         patch("bind.BindService.start"),
         patch("bind.BindService.stop"),
         patch("bind.BindService.setup"),
-        patch("bind.BindService.write_file") as mock_write_file,
+        patch("bind.BindService._write_file") as mock_write_file,
     ):
         mock_write_file.side_effect = _mock_write_file
         yield ops.testing.Context(

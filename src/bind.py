@@ -163,7 +163,7 @@ class BindService:
             event.add_status(ops.BlockedStatus("Conflicting requests"))
         event.add_status(ops.ActiveStatus())
 
-    def write_file(self, path: pathlib.Path, content: str) -> None:
+    def _write_file(self, path: pathlib.Path, content: str) -> None:
         """Write a file to the filesystem.
 
         This function exists to be easily mocked during unit tests.
@@ -203,13 +203,13 @@ class BindService:
         with tempfile.TemporaryDirectory() as tempdir:
 
             # Write the serialized state to a json file for future comparison
-            self.write_file(
+            self._write_file(
                 pathlib.Path(constants.DNS_CONFIG_DIR) / "state.json",
                 dns_data.dump_state(zones, topology),
             )
 
             # Write the service.test file
-            self.write_file(
+            self._write_file(
                 pathlib.Path(constants.DNS_CONFIG_DIR) / f"db.{constants.ZONE_SERVICE_NAME}",
                 templates.ZONE_SERVICE.format(
                     serial=int(time.time() / 60),
@@ -220,10 +220,10 @@ class BindService:
                 # Write zone files
                 zone_files: dict[str, str] = self._zones_to_files_content(zones, topology)
                 for domain, content in zone_files.items():
-                    self.write_file(pathlib.Path(tempdir) / f"db.{domain}", content)
+                    self._write_file(pathlib.Path(tempdir) / f"db.{domain}", content)
 
             # Write the named.conf file
-            self.write_file(
+            self._write_file(
                 pathlib.Path(tempdir) / "named.conf.local",
                 self._generate_named_conf_local([z.domain for z in zones], topology),
             )

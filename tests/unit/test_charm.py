@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
-def test_start_wo_peer_relation(context, base_state):
+def test_start_without_peer_relation(context, base_state):
     """
     arrange: prepare some state
     act: run start
@@ -224,7 +224,7 @@ def test_reload_bind(context, base_state):
 
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
-def test_dns_record_relation_changed_wo_conflict(context, base_state):
+def test_dns_record_relation_changed_without_conflict(context, base_state):
     """
     arrange: base state with some relation
     act: run dns record relation changed
@@ -266,7 +266,7 @@ def test_dns_record_relation_changed_wo_conflict(context, base_state):
 
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
-def test_dns_record_relation_changed_wo_conflict_not_leader(context, base_state):
+def test_dns_record_relation_changed_without_conflict_not_leader(context, base_state):
     """
     arrange: base state with some relation not leader
     act: run dns record relation changed
@@ -306,7 +306,7 @@ def test_dns_record_relation_changed_wo_conflict_not_leader(context, base_state)
 @pytest.mark.skip(reason="TODO: Status is not currently correctly computed.")
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
-def test_dns_record_relation_changed_w_conflict(context, base_state):
+def test_dns_record_relation_changed_with_conflict(context, base_state):
     """
     arrange: base state with some relation with conflicts
     act: run dns record relation changed

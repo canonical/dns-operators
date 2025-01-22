@@ -9,4 +9,5 @@ jobs:
     secrets: inherit
     with:
       self-hosted-runner: false
+      self-hosted-runner-label: "edge"
       working-directory: ./bind-operator

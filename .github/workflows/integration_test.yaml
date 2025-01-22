@@ -4,11 +4,12 @@ on:
   pull_request:
 
 jobs:
-  integration-tests:
+  integration-tests-bind-operator:
     uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
     secrets: inherit
     with:
       self-hosted-runner: false
       self-hosted-runner-label: "edge"
-      juju-channel: 3.1/stable
+      juju-channel: 3.6/stable
       provider: lxd
+      working-directory: ./bind-operator

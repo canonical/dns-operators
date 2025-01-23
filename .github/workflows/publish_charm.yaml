@@ -7,6 +7,9 @@ on:
       - track/*
 
 jobs:
-  publish-to-edge:
+  publish-to-edge-bind-operator:
     uses: canonical/operator-workflows/.github/workflows/publish_charm.yaml@main
     secrets: inherit
+    with:
+      channel: latest/edge
+      working-directory: ./bind-operator

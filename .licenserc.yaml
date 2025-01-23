@@ -25,7 +25,6 @@ header:
     - '.gitignore'
     - 'icon.svg'
     - '.jujuignore'
-    - 'lib/**'
     - 'LICENSE'
     - '.licenserc.yaml'
     - '.trivyignore'
@@ -33,5 +32,6 @@ header:
     - '.wokeignore'
     - '.woke.yaml'
     - '.woke.yml'
-    - 'zap_rules.tsv'
+    - 'bind-operator/lib/**'
+    - 'bind-operator/zap_rules.tsv'
   comment: on-failure

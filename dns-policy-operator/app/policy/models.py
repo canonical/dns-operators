@@ -28,4 +28,4 @@ class RecordRequest(models.Model):
 
     def __str__(self):
         """Record request model string representation."""
-        return f"{self.host_label} {self.domain} {self.ttl} {self.record_type} {self.record_data}"
+        return f"[{self.status}] {self.host_label} {self.domain} {self.ttl} {self.record_type} {self.record_data}"

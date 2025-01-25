@@ -50,6 +50,26 @@ class RecordRequestAdmin(admin.ModelAdmin):
     list_max_show_all = 200
     search_fields = ['host_label', 'domain', 'record_type', 'record_data', 'status']
     search_help_text = 'Search by status, host label, domain, record type, or record data'
+    list_display = [
+        'host_label',
+        'domain',
+        'ttl',
+        'record_type',
+        'record_data',
+        'active',
+        'status',
+        'status_reason',
+        'reviewer',
+        'created_at',
+        'last_modified_at',
+    ]
+    list_filter = [
+        'domain',
+        'record_type',
+        'active',
+        'status',
+        'reviewer',
+    ]
 
 
 admin.site.register(RecordRequest, RecordRequestAdmin)

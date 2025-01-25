@@ -50,6 +50,9 @@ class RecordRequestAdmin(admin.ModelAdmin):
     list_max_show_all = 200
     search_fields = ['host_label', 'domain', 'record_type', 'record_data', 'status']
     search_help_text = 'Search by status, host label, domain, record type, or record data'
+    list_display_links = [
+        'reviewer',
+    ]
     list_display = [
         'host_label',
         'domain',
@@ -73,3 +76,24 @@ class RecordRequestAdmin(admin.ModelAdmin):
 
 
 admin.site.register(RecordRequest, RecordRequestAdmin)
+
+
+class ReadOnlyUserAdmin(admin.ModelAdmin):
+    list_display = ['username', 'email', 'first_name', 'last_name', 'is_staff', 'is_active']
+    list_display_links = []
+    list_editable = []
+    search_fields = ['username', 'email', 'first_name', 'last_name']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        if request.user.is_superuser:
+            return True
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+admin.site.unregister(User)
+admin.site.register(User, ReadOnlyUserAdmin)

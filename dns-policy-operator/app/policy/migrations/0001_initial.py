@@ -5,7 +5,7 @@ import django.db.models.deletion
 import django.utils.timezone
 import uuid
 from django.conf import settings
-from django.contrib.auth.models import Group, Permission
+from django.contrib.auth.models import Group, Permission, User
 from django.contrib.contenttypes.models import ContentType
 from django.db import migrations, models
 
@@ -26,6 +26,17 @@ def create_reviewer_group(apps, schema_editor):
             content_type=record_request_content_type,
         )
         reviewer_group.permissions.add(permission)
+
+    # Get the content type for the User model
+    content_type = ContentType.objects.get_for_model(User)
+
+    # Create a custom permission for viewing user details
+    permission = Permission.objects.create(
+        codename='view_user',
+        name='Can view user details',
+        content_type=content_type,
+    )
+    reviewer_group.permissions.add(permission)
 
     reviewer_group.save()
 

@@ -48,11 +48,7 @@ class Command(BaseCommand):
                 validate_password(password_repeat)
             except exceptions.ValidationError as err:
                 self.stderr.write("\n".join(err.messages))
-                response = input(
-                    "Bypass password validation and create user anyway? [y/N]: "
-                )
-                if response.lower() != "y":
-                    return
+                return
 
         user, created = User.objects.get_or_create(
             username=options['username'],

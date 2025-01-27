@@ -30,7 +30,6 @@ class Command(BaseCommand):
         if rlist:
             # Read password from STDIN
             password = sys.stdin.readline().strip()
-            password_repeat = sys.stdin.readline().strip()
         else:
             # Took example on Django here
             # ref: https://github.com/django/django/blob/main/django/contrib/auth/management/commands/createsuperuser.py#L172
@@ -40,15 +39,16 @@ class Command(BaseCommand):
                 self.stderr.write("Error: Your passwords didn't match.")
                 # Don't validate passwords that don't match.
                 return
-            if password.strip() == "":
-                self.stderr.write("Error: Blank passwords aren't allowed.")
-                # Don't validate blank passwords.
-                return
-            try:
-                validate_password(password_repeat)
-            except exceptions.ValidationError as err:
-                self.stderr.write("\n".join(err.messages))
-                return
+
+        if password.strip() == "":
+            self.stderr.write("Error: Blank passwords aren't allowed.")
+            # Don't validate blank passwords.
+            return
+        try:
+            validate_password(password)
+        except exceptions.ValidationError as err:
+            self.stderr.write("\n".join(err.messages))
+            return
 
         user, created = User.objects.get_or_create(
             username=options['username'],

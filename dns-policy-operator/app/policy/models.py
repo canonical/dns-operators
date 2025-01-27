@@ -12,6 +12,16 @@ from django.utils import timezone
 
 class RecordRequest(models.Model):
     """Record request model."""
+
+    class Status(models.TextChoices):
+        """Record request statuses."""
+        PENDING = 'pending'
+        APPROVED = 'approved'
+        DENIED = 'denied'
+        INVALID = 'invalid'
+        FAILED = 'failed'
+        PUBLISHED = 'published'
+
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     domain = models.CharField(max_length=255)
     host_label = models.CharField(max_length=255)
@@ -20,7 +30,7 @@ class RecordRequest(models.Model):
     record_data = models.CharField(max_length=255)
     active = models.BooleanField(default=False)
     requirer_id = models.CharField(max_length=255, null=True)
-    status = models.CharField(max_length=50)
+    status = models.CharField(max_length=50, choices=Status.choices)
     status_reason = models.CharField(max_length=255, null=True)
     reviewer = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(default=timezone.now)

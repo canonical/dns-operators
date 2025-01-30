@@ -28,9 +28,7 @@ jobs:
           cd dns-policy-app/app
           python3 -m pip install --upgrade pip
           pip install -r requirements.txt
-          sudo apt-get install -y postgresql postgresql-contrib
-          sleep 60
-          bash ci/init-test-db.sh
+          docker run --rm -d -e POSTGRES_PASSWORD=testpassword postgres:17.2
           export $(xargs < ci/.test-env) && ./manage.py test
 
   ruff:

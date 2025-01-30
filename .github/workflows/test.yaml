@@ -28,7 +28,8 @@ jobs:
           cd dns-policy-app/app
           python3 -m pip install --upgrade pip
           pip install -r requirements.txt
-          docker run --rm -d -e POSTGRES_PASSWORD=testpassword postgres:17.2
+          docker run --rm --name db -d -e POSTGRES_PASSWORD=testpassword postgres:17.2
+          docker inspect db | grep IPA
           export $(xargs < ci/.test-env) && ./manage.py test
 
   ruff:

@@ -29,6 +29,7 @@ jobs:
           python3 -m pip install --upgrade pip
           pip install -r requirements.txt
           sudo apt-get install -y postgresql postgresql-contrib
+          sleep 60
           bash ci/init-test-db.sh
           export $(xargs < ci/.test-env) && ./manage.py test
 

@@ -4,10 +4,10 @@
 """Admin module registration."""
 
 from django.contrib import admin
-from django.urls import reverse
-from django.http import HttpRequest
 from django.contrib.auth.models import User
 from django.db.models.query import QuerySet
+from django.http import HttpRequest
+from django.urls import reverse
 
 from .models import RecordRequest
 

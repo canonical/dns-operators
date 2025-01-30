@@ -3,12 +3,12 @@
 
 """Create reviewer command."""
 
-import select
-import os
 import getpass
-import sys
+import os
 import secrets
+import select
 import string
+import sys
 
 from django.contrib.auth.models import Group, User
 from django.contrib.auth.password_validation import validate_password

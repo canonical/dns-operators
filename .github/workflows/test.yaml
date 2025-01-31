@@ -29,10 +29,7 @@ jobs:
           python3 -m pip install --upgrade pip
           pip install -r requirements.txt
           docker run --rm --name db -d -e POSTGRES_PASSWORD=testpassword postgres:17.2
-          docker inspect db | grep IPA
-          sleep 60
-          docker inspect db | grep IPA
-          docker ps -a
+          sleep 60 # wait a bit for the container to start
           export $(xargs < ci/.test-env) && ./manage.py test
 
   ruff:

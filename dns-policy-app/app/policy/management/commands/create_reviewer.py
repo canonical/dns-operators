@@ -42,7 +42,7 @@ class Command(BaseCommand):
                 password = sys.stdin.readline().strip()
 
         if password == "":
-            password = os.getenv("PASSWORD", "")
+            password = os.getenv("POLICY_REVIEWER_PASSWORD", "")
 
         if password == "":
             # Took example on Django here

@@ -15,17 +15,6 @@ jobs:
   django-tests:
     runs-on: ubuntu-latest
     working-directory: ./dns-policy-app/app
-    services:
-      postgres:
-        image: postgres:17.2
-        env:
-          POSTGRES_PASSWORD: testpassword
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.2.2
@@ -39,6 +28,8 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           pip install --no-cache-dir -r requirements.txt
+          docker run --rm --name db -d -e POSTGRES_PASSWORD=testpassword postgres:17.2
+          sleep 60 # wait a bit for the container to start
           export $(xargs < ci/.test-env) && ./manage.py test
 
   ruff:

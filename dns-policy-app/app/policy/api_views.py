@@ -3,7 +3,7 @@
 
 """Define views."""
 
-from rest_framework import permissions, status
+from rest_framework import permissions, status, generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -39,7 +39,13 @@ class ListApprovedRequestsView(APIView):
 
     def get(self, request):
         """Get approved requests."""
-        record_requests = RecordRequest.objects.filter(status=RecordRequest.Status.APPROVED)
+        record_requests = RecordRequest.objects.filter(
+            status__in=(
+                RecordRequest.Status.APPROVED,
+                RecordRequest.Status.FAILED,
+                RecordRequest.Status.PUBLISHED,
+            )
+        )
         serializer = RecordRequestSerializer(record_requests, many=True)
         return Response(serializer.data)
 
@@ -84,3 +90,35 @@ class DenyRequestView(APIView):
         record_request.status = RecordRequest.Status.DENIED
         record_request.save()
         return Response(status=status.HTTP_200_OK)
+
+class RequestsView(generics.ListCreateAPIView):
+    """Handle all record requests from incoming relations."""
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = RecordRequest.objects.all()
+    serializer_class = RecordRequestSerializer
+
+    def post(self, request):
+        """Handle requests."""
+        try:
+            existing_rrs = RecordRequest.objects.all()
+
+            # Add the new record requests
+            for rr in request.data:
+                # TODO: validate record request before setting status to pending
+                rr["status"] = "pending"
+                serializer = RecordRequestSerializer(data=rr)
+                if serializer.is_valid(raise_exception=True):
+                    if not any(str(r.uuid) == rr["uuid"] for r in existing_rrs):
+                        serializer.save()
+
+
+            # Remove the record requests absent from the query
+            for rr in existing_rrs:
+                if not any(r["uuid"] == str(rr.uuid) for r in request.data):
+                    rr.delete()
+
+            return Response({}, status=status.HTTP_200_OK)
+        except json.JSONDecodeError as e:
+            return Response({"error": f"Invalid JSON: {e}"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

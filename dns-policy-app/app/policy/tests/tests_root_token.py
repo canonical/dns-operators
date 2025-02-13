@@ -1,17 +1,26 @@
-from django.test import TestCase
-from django.core.management import call_command
-from io import StringIO
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+"""Test root token creation command."""
+
 import json
-from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
+from io import StringIO
+
 from django.contrib.auth.models import User
+from django.core.management import call_command
+from django.test import TestCase
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 
 class TestRootToken(TestCase):
+    """Test root token."""
 
     def setUp(self):
+        """Set up."""
         self.internal_user = User.objects.get(username='root')
 
     def test_command_output(self):
+        """Test command output."""
         out = StringIO()
         call_command('get_root_token', stdout=out)
         output = out.getvalue()
@@ -20,6 +29,7 @@ class TestRootToken(TestCase):
         self.assertIn('refresh', token_data)
 
     def test_token_is_valid(self):
+        """Test token validity."""
         out = StringIO()
         call_command('get_root_token', stdout=out)
         output = out.getvalue()

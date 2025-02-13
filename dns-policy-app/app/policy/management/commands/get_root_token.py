@@ -3,10 +3,11 @@
 
 """Get root token command."""
 
+import json
+
+from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth.models import User
-import json
 
 
 class Command(BaseCommand):

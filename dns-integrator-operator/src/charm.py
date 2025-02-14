@@ -67,8 +67,12 @@ class DnsIntegratorOperatorCharm(ops.CharmBase):
             entries.append(entry)
         return dns_record.DNSRecordRequirerData(dns_entries=entries)
 
-    def _uuidv4(self, seed: str = None) -> str:
+    def _uuidv4(self, seed: str) -> str:
         """Get stable uuid.
+
+        The goal is to always generate the same UUID for the same record request without
+        relying on a database to store them. Without that, the UUID would change anytime
+        the config of the charm is changed and all requests would be seen as new ones.
 
         Args:
             seed: string seed used to create the output
@@ -76,9 +80,6 @@ class DnsIntegratorOperatorCharm(ops.CharmBase):
         Returns:
             UUID constructed based on the given seed
         """
-        if seed is None:
-            return str(uuid.uuid4())
-
         hash = hashlib.sha512(seed.encode())
         hash_num = int.from_bytes(hash.digest(), byteorder='big')
         hash_str = hash.hexdigest()

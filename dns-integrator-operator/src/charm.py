@@ -45,7 +45,7 @@ class DnsIntegratorOperatorCharm(ops.CharmBase):
                 )
         except ops.model.ModelError as e:
             logger.error("ERROR while updating relation data: %s", e)
-            self.unit.status = ops.BlockedStatus("Error while updating relation data.")
+            raise
 
     def _get_dns_record_requirer_data(self) -> dns_record.DNSRecordRequirerData:
         """Get DNS record requirer data."""

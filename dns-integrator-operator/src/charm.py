@@ -58,7 +58,7 @@ class DnsIntegratorOperatorCharm(ops.CharmBase):
             entry = dns_record.RequirerEntry(
                 host_label=host_label,
                 domain=domain,
-                ttl=ttl,
+                ttl=int(ttl),
                 record_class=record_class,
                 record_type=record_type,
                 record_data=record_data,

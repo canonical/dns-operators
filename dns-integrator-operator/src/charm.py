@@ -15,8 +15,6 @@ from charms.bind.v0 import dns_record
 
 logger = logging.getLogger(__name__)
 
-VALID_LOG_LEVELS = ["info", "debug", "warning", "error", "critical"]
-
 
 class DnsIntegratorOperatorCharm(ops.CharmBase):
     """Charm the service."""
@@ -32,9 +30,8 @@ class DnsIntegratorOperatorCharm(ops.CharmBase):
         self.framework.observe(self.on.config_changed, self._on_config_changed)
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
-        """Handle changes in configuration."""
+        """Handle changes in configuration by updating the relation databag with the new record requests."""
         self.unit.status = ops.MaintenanceStatus("Configuring charm")
-        logger.debug("UPDATE INTEGRATOR CONFIG")
         self._update_relations()
         self.unit.status = ops.ActiveStatus()
 

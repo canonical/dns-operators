@@ -5,9 +5,9 @@
 
 """DNS Integrator Charm."""
 
+import hashlib
 import logging
 import typing
-import hashlib
 
 import ops
 from charms.bind.v0 import dns_record
@@ -15,7 +15,7 @@ from charms.bind.v0 import dns_record
 logger = logging.getLogger(__name__)
 
 
-class DnsIntegratorOperatorCharm(ops.CharmBase):
+class DnsIntegratorCharm(ops.CharmBase):
     """Charm the service."""
 
     def __init__(self, *args: typing.Any):
@@ -27,15 +27,43 @@ class DnsIntegratorOperatorCharm(ops.CharmBase):
         super().__init__(*args)
         self.dns_record = dns_record.DNSRecordRequires(self)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.start, self._on_start)
+        self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
+
+    def _on_start(self, _: ops.StartEvent) -> None:
+        """Handle start.
+
+        This hook is here to display some status after installation via collect_status().
+        """
+
+    def _on_collect_status(self, _: ops.CollectStatusEvent) -> None:
+        """Handle collect status event."""
+        if str(self.config["requests"]) == "":
+            self.unit.status = ops.BlockedStatus("Waiting for some configuration")
+            return
+
+        has_integration = False
+        for __ in self.model.relations[self.dns_record.relation_name]:
+            has_integration = True
+            break
+        if not has_integration:
+            self.unit.status = ops.BlockedStatus("Waiting for integration")
+            return
+
+        self.unit.status = ops.ActiveStatus()
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
-        """Handle changes in configuration by updating the relation databag with the new record requests."""
+        """Handle changes in configuration by updating the relation databag."""
         self.unit.status = ops.MaintenanceStatus("Configuring charm")
         self._update_relations()
         self.unit.status = ops.ActiveStatus()
 
     def _update_relations(self) -> None:
-        """Update all DNS data for the existing relations."""
+        """Update all DNS data for the existing relations.
+
+        Raises:
+            ModelError: if not able to update relation data.
+        """
         if not self.model.unit.is_leader():
             return
         try:
@@ -53,6 +81,7 @@ class DnsIntegratorOperatorCharm(ops.CharmBase):
         for request in str(self.config["requests"]).split("\n"):
             data = request.split()
             if len(data) != 6:
+                logger.error("Invalid entry ignored: '%s'", request)
                 continue
             (host_label, domain, ttl, record_class, record_type, record_data) = data
             entry = dns_record.RequirerEntry(
@@ -80,17 +109,23 @@ class DnsIntegratorOperatorCharm(ops.CharmBase):
         Returns:
             UUID constructed based on the given seed
         """
-        hash = hashlib.sha512(seed.encode())
-        hash_num = int.from_bytes(hash.digest(), byteorder='big')
-        hash_str = hash.hexdigest()
+        if not isinstance(seed, str):
+            raise TypeError("seed should be a string")
+        h = hashlib.sha512(seed.encode())
+        hash_num = int.from_bytes(h.digest(), byteorder="big")
+        hash_str = h.hexdigest()
 
         # Determine the variant character (8,9,a,b)
         variant_chars = ["8", "9", "a", "b"]
         variant = variant_chars[hash_num % 4]
 
         # Construct the UUIDv4
-        return f"{hash_str[0:8]}-{hash_str[8:12]}-4{hash_str[12:15]}-{variant + hash_str[15:18]}-{hash_str[18:30]}"
+        return (
+            f"{hash_str[0:8]}-{hash_str[8:12]}-"
+            f"4{hash_str[12:15]}-{variant + hash_str[15:18]}-"
+            f"{hash_str[18:30]}"
+        )
 
 
 if __name__ == "__main__":  # pragma: nocover
-    ops.main(DnsIntegratorOperatorCharm)  # type: ignore
+    ops.main(DnsIntegratorCharm)  # type: ignore

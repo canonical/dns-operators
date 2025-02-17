@@ -5,14 +5,17 @@
 
 """DNS Integrator Charm."""
 
-import hashlib
 import logging
 import typing
+import uuid
 
 import ops
 from charms.bind.v0 import dns_record
 
 logger = logging.getLogger(__name__)
+
+# the following UUID is used as namespace for the uuidv5 generation
+UUID_NAMESPACE = uuid.UUID("c53fe32f-6486-4f24-9417-b79b2cb596c4")
 
 
 class DnsIntegratorCharm(ops.CharmBase):
@@ -91,40 +94,10 @@ class DnsIntegratorCharm(ops.CharmBase):
                 record_class=record_class,
                 record_type=record_type,
                 record_data=record_data,
-                uuid=self._uuidv4(" ".join(data)),
+                uuid=uuid.uuid5(UUID_NAMESPACE, " ".join(data)),
             )
             entries.append(entry)
         return dns_record.DNSRecordRequirerData(dns_entries=entries)
-
-    def _uuidv4(self, seed: str) -> str:
-        """Get stable uuid.
-
-        The goal is to always generate the same UUID for the same record request without
-        relying on a database to store them. Without that, the UUID would change anytime
-        the config of the charm is changed and all requests would be seen as new ones.
-
-        Args:
-            seed: string seed used to create the output
-
-        Returns:
-            UUID constructed based on the given seed
-        """
-        if not isinstance(seed, str):
-            raise TypeError("seed should be a string")
-        h = hashlib.sha512(seed.encode())
-        hash_num = int.from_bytes(h.digest(), byteorder="big")
-        hash_str = h.hexdigest()
-
-        # Determine the variant character (8,9,a,b)
-        variant_chars = ["8", "9", "a", "b"]
-        variant = variant_chars[hash_num % 4]
-
-        # Construct the UUIDv4
-        return (
-            f"{hash_str[0:8]}-{hash_str[8:12]}-"
-            f"4{hash_str[12:15]}-{variant + hash_str[15:18]}-"
-            f"{hash_str[18:30]}"
-        )
 
 
 if __name__ == "__main__":  # pragma: nocover

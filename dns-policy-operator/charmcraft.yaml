@@ -1,32 +1,10 @@
-# This file configures Charmcraft.
-# See https://juju.is/docs/sdk/charmcraft-config for guidance.
-
-# (Required)
-# The charm package name, no spaces
-# See https://juju.is/docs/sdk/naming#heading--naming-charms for guidance.
-name: dns-policy-operator
-
-# (Required)
-# The charm type, either 'charm' or 'bundle'.
+name: dns-policy
 type: charm
+title: DNS policy charm
 
-# (Recommended)
-title: Charm Template
-
-# (Required)
 summary: A very short one-line summary of the charm.
 
-
-# (Required)
 description: |
-  A single sentence that says what the charm is, concisely and memorably.
-  A paragraph of one to three short sentences, that describe what the charm does.
-  A third paragraph that explains what need the charm meets.
-  Finally, a paragraph that describes whom the charm is useful for.
-
-# (Required for 'charm' type)
-# A list of environments (OS version and architecture) where charms must be
-# built on and run on.
 bases:
   - build-on:
     - name: ubuntu
@@ -35,11 +13,6 @@ bases:
     - name: ubuntu
       channel: "22.04"
 
-# (Optional) Configuration options for the charm
-# This config section defines charm config options, and populates the Configure
-# tab on Charmhub.
-# More information on this section at https://juju.is/docs/sdk/charmcraft-yaml#heading--config
-# General configuration documentation: https://juju.is/docs/sdk/config
 config:
   options:
     # An example config option to customise the log level of the workload
@@ -64,13 +37,20 @@ requires:
   database:
     interface: postgresql_client
     limit: 1
+  dns-record-requirer:
+    interface: dns_record
+    scope: container
+    limit: 1
+
+provides:
+  dns-record-provider:
+    interface: dns_record
 
 parts:
   app:
     plugin: dump
     source: .
     prime:
-      # /var/lib/juju/agents/unit-dns-policy-operator-0/charm/dns-policy-app_0.1_amd64.snap
       - dns-policy-app_*_amd64.snap
   charm:
     build-snaps:
@@ -78,3 +58,4 @@ parts:
     override-build: |
       rustup default stable
       craftctl default
+subordinate: true

@@ -1,0 +1,4 @@
+#!/bin/sh
+
+set -xe
+exec "$SNAP/usr/sbin/named" -c "$SNAP_COMMON/bind/named.conf" -f

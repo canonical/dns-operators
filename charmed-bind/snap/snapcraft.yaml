@@ -1,3 +1,5 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
 name: charmed-bind
 base: core22
 version: 'jammy'

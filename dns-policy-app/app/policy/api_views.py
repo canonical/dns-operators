@@ -3,8 +3,6 @@
 
 """Define views."""
 
-import json
-
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -101,26 +99,23 @@ class RequestsView(generics.ListCreateAPIView):
 
     def post(self, request):
         """Handle requests."""
-        try:
-            existing_rrs = RecordRequest.objects.all()
+        existing_rrs = RecordRequest.objects.all()
 
-            # Add the new record requests
-            for rr in request.data:
-                # TODO: validate record request before setting status to pending
-                rr["status"] = "pending"
-                serializer = RecordRequestSerializer(data=rr)
-                if serializer.is_valid(raise_exception=True):
-                    if not any(str(r.uuid) == rr["uuid"] for r in existing_rrs):
-                        serializer.save()
+        # Add the new record requests
+        for rr in request.data:
+            # TODO: validate record request before setting status to pending
+            rr["status"] = "pending"
+            serializer = RecordRequestSerializer(data=rr)
+            if not serializer.is_valid(raise_exception=True):
+               continue
+            if any(str(r.uuid) == rr["uuid"] for r in existing_rrs):
+               continue
+            serializer.save()
 
 
-            # Remove the record requests absent from the query
-            for rr in existing_rrs:
-                if not any(r["uuid"] == str(rr.uuid) for r in request.data):
-                    rr.delete()
+        # Remove the record requests absent from the query
+        for rr in existing_rrs:
+            if not any(r["uuid"] == str(rr.uuid) for r in request.data):
+                rr.delete()
 
-            return Response({}, status=status.HTTP_200_OK)
-        except json.JSONDecodeError as e:
-            return Response({"error": f"Invalid JSON: {e}"}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({}, status=status.HTTP_200_OK)

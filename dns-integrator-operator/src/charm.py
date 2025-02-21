@@ -59,7 +59,6 @@ class DnsIntegratorCharm(ops.CharmBase):
         """Handle changes in configuration by updating the relation databag."""
         self.unit.status = ops.MaintenanceStatus("Configuring charm")
         self._update_relations()
-        self.unit.status = ops.ActiveStatus()
 
     def _update_relations(self) -> None:
         """Update all DNS data for the existing relations.

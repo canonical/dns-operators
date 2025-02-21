@@ -60,4 +60,4 @@ line-ending = "auto"
 
 # McCabe complexity
 [lint.mccabe]
-max-complexity = 14
+max-complexity = 11

@@ -19,8 +19,7 @@ header:
     - '**/*.rule'
     - '**/*.tmpl'
     - '**/*.txt'
-    - '**/lib/**'
-    - '**/zap_rules.tsv'
+    - '**/mime.types'
     - 'CODEOWNERS'
     - '.codespellignore'
     - '.dockerignore'
@@ -35,4 +34,7 @@ header:
     - '.wokeignore'
     - '.woke.yaml'
     - '.woke.yml'
+    - 'bind-operator/lib/**'
+    - 'bind-operator/zap_rules.tsv'
+    - 'dns-policy-app/app/ci/.test-env'
   comment: on-failure

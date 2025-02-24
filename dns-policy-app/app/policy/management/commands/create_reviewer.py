@@ -42,9 +42,11 @@ class Command(BaseCommand):
                 password = sys.stdin.readline().strip()
 
         if password == "":
+            # Check if there is a password given in the environment
             password = os.getenv("POLICY_REVIEWER_PASSWORD", "")
 
         if password == "":
+            # Fallback to prompting the user for a password
             # Took example on Django here
             # ref: https://github.com/django/django/blob/main/django/contrib/auth/management/commands/createsuperuser.py#L172
             password = getpass.getpass()
@@ -77,6 +79,9 @@ class Command(BaseCommand):
         if not created:
             self.stdout.write(self.style.WARNING(f'User {options['username']} already exists'))
             return
+
+        user.set_password(password)
+        user.save()
 
         reviewer_group, _ = Group.objects.get_or_create(name='Reviewers')
         user.groups.add(reviewer_group)

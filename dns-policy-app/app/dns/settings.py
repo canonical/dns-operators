@@ -19,9 +19,11 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "")
 if SECRET_KEY == "":
+    # We need to store the secret key somewhere to have it persist between
+    # the manage.py script calls and the gunicorn process (it needs to be the same for the JWT tokens).
+    # We could use a environment variable but it is easier to do manual operations if need be when it is stored in a file.
     with open(Path(BASE_DIR, '.secret'), "r", encoding="utf-8") as secretfile:
         SECRET_KEY = secretfile.read().strip()
 

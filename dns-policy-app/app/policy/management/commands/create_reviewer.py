@@ -73,9 +73,6 @@ class Command(BaseCommand):
                 'is_staff': True,
             }
         )
-        if created:
-            user.set_password(password)
-            user.save()
         if not created:
             self.stdout.write(self.style.WARNING(f'User {options['username']} already exists'))
             return

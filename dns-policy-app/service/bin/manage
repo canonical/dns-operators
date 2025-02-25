@@ -3,7 +3,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-set -xe
+set -e
 
 DJANGO_DEBUG="$(snapctl get debug)"
 export DJANGO_DEBUG

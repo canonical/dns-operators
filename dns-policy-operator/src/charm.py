@@ -5,7 +5,6 @@
 import json
 import logging
 import pathlib
-import time
 import typing
 
 import ops
@@ -234,7 +233,6 @@ class DnsPolicyCharm(ops.CharmBase):
             event: Event triggering the broken relation handler.
         """
         self.unit.status = ops.WaitingStatus("Waiting for database relation")
-        # self._stop_service()
 
     def _on_create_reviewer_action(self, event: ops.charm.ActionEvent) -> None:
         """Handle the create reviewer ActionEvent.

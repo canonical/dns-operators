@@ -1,20 +1,28 @@
 #!/usr/bin/env python3
 # Copyright 2025 Canonical Ltd.
-# Licensed under the Apache2.0. See LICENSE file in charm source for details.
+# See LICENSE file for licensing details.
+
+"""Integration tests."""
 
 import logging
-from pathlib import Path
 
+import juju.application
+import ops
 import pytest
-import yaml
 from pytest_operator.plugin import OpsTest
+
+# import tests.integration.helpers
 
 logger = logging.getLogger(__name__)
 
-METADATA = yaml.safe_load(Path("./charmcraft.yaml").read_text())
-APP_NAME = METADATA["name"]
 
-
+@pytest.mark.asyncio
 @pytest.mark.abort_on_fail
-async def test_fake(ops_test: OpsTest):
-    """Fake test."""
+async def test_active(full_deployment: dict[str, juju.application.Application], ops_test: OpsTest):
+    """
+    arrange: build and deploy the charm.
+    act: nothing.
+    assert: that the charm ends up in an active state.
+    """
+    unit = full_deployment["dns-policy"].units[0]
+    assert unit.workload_status == ops.model.ActiveStatus.name

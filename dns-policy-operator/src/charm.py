@@ -61,10 +61,6 @@ class DnsPolicyCharm(ops.CharmBase):
             self._on_database_relation_broken,
         )
         self.framework.observe(self.on.create_reviewer_action, self._on_create_reviewer_action)
-        self.framework.observe(
-            self.dns_record_provider.on.dns_record_request_received,
-            self._on_dns_record_request_received,
-        )
         self.framework.observe(self.on.reconcile, self._on_reconcile)
         self.unit.open_port("tcp", 8080)  # dns-policy-app
 

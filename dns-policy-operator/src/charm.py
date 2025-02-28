@@ -90,20 +90,20 @@ class DnsPolicyCharm(ops.CharmBase):
     def _start_timer(self, event_name: str, timeout: str, interval: str) -> None:
         """Install a timer.
 
-        Syntax of time spans: https://www.freedesktop.org/software/systemd/man/latest/systemd.time.html
+        Syntax of time spans:
+            https://www.freedesktop.org/software/systemd/man/latest/systemd.time.html
 
         Args:
             event_name: The event to be fired
             timeout: timeout before killing the command
             interval: interval between each execution
         """
-        # TODO: make idempotent
         (
             pathlib.Path(constants.SYSTEMD_SERVICES_PATH) / f"dispatch-{event_name}.service"
         ).write_text(
             templates.DISPATCH_EVENT_SERVICE.format(
                 event=event_name,
-                timeout="10s",
+                timeout=timeout,
                 unit=self.unit.name,
             ),
             encoding="utf-8",
@@ -111,7 +111,9 @@ class DnsPolicyCharm(ops.CharmBase):
         (
             pathlib.Path(constants.SYSTEMD_SERVICES_PATH) / f"dispatch-{event_name}.timer"
         ).write_text(
-            templates.SYSTEMD_SERVICE_TIMER.format(interval="1", service=f"dispatch-{event_name}"),
+            templates.SYSTEMD_SERVICE_TIMER.format(
+                interval=interval, service=f"dispatch-{event_name}"
+            ),
             encoding="utf-8",
         )
         systemd.service_enable(f"dispatch-{event_name}.timer")
@@ -123,7 +125,6 @@ class DnsPolicyCharm(ops.CharmBase):
         Args:
             event_name: The event to be fired
         """
-        # TODO: make idempotent
         systemd.service_disable(f"dispatch-{event_name}.timer")
         systemd.service_stop(f"dispatch-{event_name}.timer")
 
@@ -146,7 +147,7 @@ class DnsPolicyCharm(ops.CharmBase):
                 entries.append(models.create_dns_entry_from_requirer_entry(entry))
         return entries
 
-    def _on_config_changed(self, event: ops.ConfigChangedEvent) -> None:
+    def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle changed configuration."""
         # Fetch the new config value
         log_level = typing.cast(str, self.model.config["log-level"]).lower()
@@ -167,16 +168,16 @@ class DnsPolicyCharm(ops.CharmBase):
         )
         self.unit.status = ops.ActiveStatus("")
 
-    def _on_start(self, event: ops.StartEvent) -> None:
+    def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start event."""
         self.unit.status = ops.ActiveStatus("")
 
-    def _on_install(self, event: ops.InstallEvent) -> None:
+    def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install event."""
         self.unit.status = ops.MaintenanceStatus("Preparing dns-policy-app")
         self.dns_policy.setup(self.unit.name)
         self.unit.status = ops.ActiveStatus("")
-        self._start_timer("reconcile", "60s", "1m")
+        self._start_timer("reconcile", "30s", "1m")
 
     def _on_database_created(self, _: DatabaseCreatedEvent) -> None:
         """Handle database created.
@@ -239,7 +240,10 @@ class DnsPolicyCharm(ops.CharmBase):
         event.set_results(
             {
                 "result": self.dns_policy.command(
-                    f"create_reviewer {event.params['username']} {event.params['email']} --generate_password",
+                    (
+                        f"create_reviewer {event.params['username']} "
+                        f"{event.params['email']} --generate_password"
+                    ),
                 )
             }
         )

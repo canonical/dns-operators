@@ -77,9 +77,9 @@ async def dns_policy_fixture(
 @pytest_asyncio.fixture(scope="module", name="postgresql")
 async def postgresql_fixture(
     ops_test: OpsTest,
-    pytestconfig: Config,
     model: Model,
 ):
+    """Deploy the postgresql charm."""
     postgres_app = await model.deploy(
         "postgresql",
         channel="14/stable",
@@ -121,13 +121,12 @@ async def bind_fixture(
 
 @pytest_asyncio.fixture(scope="module", name="full_deployment")
 async def full_deployment_fixture(
-    ops_test: OpsTest,
-    pytestconfig: Config,
     model: Model,
     bind,
     dns_policy,
     postgresql,
 ):
+    """Add necessary integration for the deployed charms."""
     await asyncio.gather(
         model.add_relation(dns_policy.name, postgresql.name),
         model.add_relation(dns_policy.name, bind.name),

@@ -11,7 +11,7 @@ import subprocess  # nosec
 import ops
 import pydantic
 import requests
-from charms.bind.v0.dns_record import DNSRecordProviderData, DNSRecordRequirerData, RequirerEntry
+from charms.bind.v0.dns_record import RequirerEntry
 from charms.operator_libs_linux.v2 import snap
 
 import constants
@@ -76,7 +76,7 @@ class DnsPolicyService:
         Raises:
             ReloadError: when encountering a SnapError
         """
-        logger.debug("Reloading charmed bind")
+        logger.debug("Reloading workload")
         try:
             cache = snap.SnapCache()
             dns_policy = cache[constants.DNS_SNAP_NAME]
@@ -130,14 +130,18 @@ class DnsPolicyService:
         Args:
             unit_name: The name of the current unit
         """
+        # The location of the snap is hardcoded for now.
+        # This will be soon replaced by retrieving the published snap from the snap store.
         self._install_snap_package_from_file(
-            f"/var/lib/juju/agents/unit-{unit_name.replace('/','-')}/charm/dns-policy-app_0.1_amd64.snap"
+            (
+                f"/var/lib/juju/agents/unit-{unit_name.replace('/','-')}/charm/"
+                "dns-policy-app_0.1_amd64.snap"
+            )
         )
 
     def collect_status(
         self,
         event: ops.CollectStatusEvent,
-        relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
     ) -> None:
         """Add status for the charm based on the status of the dns record requests.
 
@@ -207,7 +211,10 @@ class DnsPolicyService:
             logger.exception(error_msg)
             raise InstallError(error_msg) from e
         except subprocess.CalledProcessError as e:
-            error_msg = f"An exception occurred when installing {snap_path}. Reason: {e}. Output: {e.output}"
+            error_msg = (
+                f"An exception occurred when installing {snap_path}. "
+                f"Reason: {e}. Output: {e.output}"
+            )
             logger.exception(error_msg)
             raise InstallError(error_msg) from e
 
@@ -276,7 +283,6 @@ class DnsPolicyService:
         """Get API root token."""
         try:
             res = self.command("get_root_token")
-            logger.debug("root req: %s", res)
             tokens = json.loads(res)
         except json.decoder.JSONDecodeError as e:
             raise RootTokenError(str(e)) from e
@@ -286,16 +292,15 @@ class DnsPolicyService:
 
     def send_requests(self, token: str, record_requests: list[RequirerEntry]) -> bool:
         """Send record requests."""
-        # logger.debug("Send: %s", json.dumps([x.model_dump() for x in record_requests]))
         req = requests.post(
             "http://localhost:8080/api/requests/",
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {token}",
             },
+            timeout=10,
             data=json.dumps([x.model_dump() for x in record_requests]),
         )
-        # logger.debug("Send result: %s %s", req.status_code, req.text)
         return req.status_code == 200
 
     def create_record_request(self, token: str, record_request: models.DnsEntry) -> bool:
@@ -306,9 +311,9 @@ class DnsPolicyService:
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {token}",
             },
+            timeout=10,
             data=record_request.json(),
         )
-        logger.debug(f"Create RR: {req.text}")
         return req.status_code == 201
 
     def get_approved_requests(self, token: str) -> list[RequirerEntry]:
@@ -319,6 +324,7 @@ class DnsPolicyService:
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {token}",
             },
+            timeout=10,
         )
 
         try:
@@ -328,9 +334,8 @@ class DnsPolicyService:
             if "code" in data and data["code"] == "token_not_valid":
                 raise GetApprovedRecordRequestsError(str(data))
 
-            logger.debug("RR: %s", data)
             for rr in data:
-                # TODO
+                # The record_class is always "IN"
                 rr["record_class"] = "IN"
                 entry = RequirerEntry.model_validate(rr)
                 entries.append(entry)

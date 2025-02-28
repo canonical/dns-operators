@@ -9,16 +9,13 @@ import logging
 import juju.application
 import ops
 import pytest
-from pytest_operator.plugin import OpsTest
-
-# import tests.integration.helpers
 
 logger = logging.getLogger(__name__)
 
 
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
-async def test_active(full_deployment: dict[str, juju.application.Application], ops_test: OpsTest):
+async def test_active(full_deployment: dict[str, juju.application.Application]):
     """
     arrange: build and deploy the charm.
     act: nothing.

@@ -24,8 +24,6 @@ from dns_policy import DnsPolicyService
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
 
-VALID_LOG_LEVELS = ["info", "debug", "warning", "error", "critical"]
-
 
 class ReconcileEvent(ops.charm.EventBase):
     """Event representing a periodic reload of the charmed-bind service."""
@@ -73,13 +71,6 @@ class DnsPolicyCharm(ops.CharmBase):
         logger.debug("db: %s", database_relation_data)
         if database_relation_data["POSTGRES_HOST"] == "":
             self.unit.status = ops.WaitingStatus("Waiting for a database integration.")
-            return
-
-        # Do some validation of the configuration option
-        log_level = typing.cast(str, self.model.config["log-level"]).lower()
-        if log_level not in VALID_LOG_LEVELS:
-            # In this case, the config option is bad, so block the charm and notify the operator.
-            self.unit.status = ops.BlockedStatus(f"invalid log level: '{log_level}'")
             return
 
         self.unit.status = ops.ActiveStatus()
@@ -169,13 +160,6 @@ class DnsPolicyCharm(ops.CharmBase):
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle changed configuration."""
-        # Fetch the new config value
-        log_level = typing.cast(str, self.model.config["log-level"]).lower()
-
-        # Do some validation of the configuration option
-        if log_level not in VALID_LOG_LEVELS:
-            return
-
         self.unit.status = ops.MaintenanceStatus("Configuring workload")
         self.dns_policy.configure(
             {

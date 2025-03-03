@@ -88,63 +88,6 @@ class DnsPolicyService:
             logger.error(error_msg)
             raise StatusError(error_msg) from e
 
-    def reload(self, force_start: bool) -> None:
-        """Reload the dns-policy service.
-
-        Args:
-            force_start: start the service even if it was inactive
-
-        Raises:
-            ReloadError: when encountering a SnapError
-        """
-        logger.debug("Reloading workload")
-        try:
-            cache = snap.SnapCache()
-            dns_policy = cache[constants.DNS_SNAP_NAME]
-            dns_policy_service = dns_policy.services[constants.DNS_SNAP_SERVICE]
-            if dns_policy_service["active"] or force_start:
-                dns_policy.restart(reload=True)
-        except snap.SnapError as e:
-            error_msg = (
-                f"An exception occurred when reloading {constants.DNS_SNAP_NAME}. Reason: {e}"
-            )
-            logger.error(error_msg)
-            raise ReloadError(error_msg) from e
-
-    def start(self) -> None:
-        """Start the dns-policy service.
-
-        Raises:
-            StartError: when encountering a SnapError
-        """
-        try:
-            cache = snap.SnapCache()
-            dns_policy = cache[constants.DNS_SNAP_NAME]
-            dns_policy.start()
-        except snap.SnapError as e:
-            error_msg = (
-                f"An exception occurred when stopping {constants.DNS_SNAP_NAME}. Reason: {e}"
-            )
-            logger.error(error_msg)
-            raise StartError(error_msg) from e
-
-    def stop(self) -> None:
-        """Stop the dns-policy service.
-
-        Raises:
-            StopError: when encountering a SnapError
-        """
-        try:
-            cache = snap.SnapCache()
-            dns_policy = cache[constants.DNS_SNAP_NAME]
-            dns_policy.stop()
-        except snap.SnapError as e:
-            error_msg = (
-                f"An exception occurred when stopping {constants.DNS_SNAP_NAME}. Reason: {e}"
-            )
-            logger.error(error_msg)
-            raise StopError(error_msg) from e
-
     def setup(self, unit_name: str) -> None:
         """Prepare the machine.
 
@@ -159,44 +102,6 @@ class DnsPolicyService:
                 "dns-policy-app_0.1_amd64.snap"
             )
         )
-
-    def _write_file(self, path: pathlib.Path, content: str) -> None:
-        """Write a file to the filesystem.
-
-        This function exists to be easily mocked during unit tests.
-
-        Args:
-            path: path to the file
-            content: content of the file
-        """
-        pathlib.Path(path).write_text(
-            content,
-            encoding="utf-8",
-        )
-
-    def _install_snap_package_from_snapstore(
-        self, snap_name: str, snap_channel: str, refresh: bool = False
-    ) -> None:
-        """Installs snap package.
-
-        Args:
-            snap_name: the snap package to install
-            snap_channel: the snap package channel
-            refresh: whether to refresh the snap if it's already present.
-
-        Raises:
-            InstallError: when encountering a SnapError or a SnapNotFoundError
-        """
-        try:
-            snap_cache = snap.SnapCache()
-            snap_package = snap_cache[snap_name]
-
-            if not snap_package.present or refresh:
-                snap_package.ensure(snap.SnapState.Latest, channel=snap_channel)
-        except (snap.SnapError, snap.SnapNotFoundError, subprocess.CalledProcessError) as e:
-            error_msg = f"An exception occurred when installing {snap_name}. Reason: {e}"
-            logger.exception(error_msg)
-            raise InstallError(error_msg) from e
 
     def _install_snap_package_from_file(self, snap_path: str) -> None:
         """Installs snap package.
@@ -226,26 +131,6 @@ class DnsPolicyService:
             )
             logger.exception(error_msg)
             raise InstallError(error_msg) from e
-
-    def get_config(self) -> dict:
-        """Get the configuration of the dns-policy service.
-
-        Returns:
-            dict of configuration values
-
-        Raises:
-            ConfigureError: when encountering a SnapError
-        """
-        try:
-            cache = snap.SnapCache()
-            charmed_bind = cache[constants.DNS_SNAP_NAME]
-            return charmed_bind.get(None, typed=True)
-        except snap.SnapError as e:
-            error_msg = (
-                f"An exception occurred when configuring {constants.DNS_SNAP_NAME}. Reason: {e}"
-            )
-            logger.error(error_msg)
-            raise ConfigureError(error_msg) from e
 
     def configure(self, config: dict[str, str]) -> None:
         """Configure the dns-policy service.

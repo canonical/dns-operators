@@ -59,3 +59,17 @@ parts:
       rustup default stable
       craftctl default
 subordinate: true
+
+actions:
+  create-reviewer:
+    description: Create a reviewer
+    params:
+      username:
+        type: string
+        description: Username
+      email:
+        type: string
+        description: Email
+    required:
+      - username
+      - email

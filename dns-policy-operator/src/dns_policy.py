@@ -8,14 +8,12 @@ import logging
 import pathlib
 import subprocess  # nosec
 
-import ops
 import pydantic
 import requests
 from charms.bind.v0.dns_record import RequirerEntry
 from charms.operator_libs_linux.v2 import snap
 
 import constants
-import models
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +32,10 @@ class DnsPolicyCharmError(Exception):
 
 class SnapError(DnsPolicyCharmError):
     """Exception raised when an action on the snap fails."""
+
+
+class StatusError(SnapError):
+    """Exception raised when unable to get the status the service."""
 
 
 class ReloadError(SnapError):
@@ -66,6 +68,25 @@ class GetApprovedRecordRequestsError(DnsPolicyCharmError):
 
 class DnsPolicyService:
     """DnsPolicy service class."""
+
+    def status(self) -> bool:
+        """Get the status of the snap service.
+
+        Returns:
+            true if the service is active
+        """
+        try:
+            cache = snap.SnapCache()
+            dns_policy = cache[constants.DNS_SNAP_NAME]
+            dns_policy_service = dns_policy.services[constants.DNS_SNAP_SERVICE]
+            return dns_policy_service["active"]
+        except snap.SnapError as e:
+            error_msg = (
+                f"An exception occurred when retrieving the status of {constants.DNS_SNAP_NAME}. "
+                f"Reason: {e}"
+            )
+            logger.error(error_msg)
+            raise StatusError(error_msg) from e
 
     def reload(self, force_start: bool) -> None:
         """Reload the dns-policy service.
@@ -138,18 +159,6 @@ class DnsPolicyService:
                 "dns-policy-app_0.1_amd64.snap"
             )
         )
-
-    def collect_status(
-        self,
-        event: ops.CollectStatusEvent,
-    ) -> None:
-        """Add status for the charm based on the status of the dns record requests.
-
-        Args:
-            event: Event triggering the collect-status hook
-            relation_data: data coming from the relation databag
-        """
-        event.add_status(ops.ActiveStatus())
 
     def _write_file(self, path: pathlib.Path, content: str) -> None:
         """Write a file to the filesystem.
@@ -302,19 +311,6 @@ class DnsPolicyService:
             data=json.dumps([x.model_dump() for x in record_requests]),
         )
         return req.status_code == 200
-
-    def create_record_request(self, token: str, record_request: models.DnsEntry) -> bool:
-        """Create record request."""
-        req = requests.post(
-            "http://localhost:8080/api/requests/create",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {token}",
-            },
-            timeout=10,
-            data=record_request.json(),
-        )
-        return req.status_code == 201
 
     def get_approved_requests(self, token: str) -> list[RequirerEntry]:
         """Get approved record requests."""

@@ -50,19 +50,39 @@ class DnsPolicyCharm(ops.CharmBase):
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
         self.framework.observe(
             self._database.database.on.database_created, self._on_database_created
         )
         self.framework.observe(
             self._database.database.on.endpoints_changed, self._on_database_endpoints_changed
         )
-        self.framework.observe(
-            self.on[constants.DATABASE_RELATION_NAME].relation_broken,
-            self._on_database_relation_broken,
-        )
         self.framework.observe(self.on.create_reviewer_action, self._on_create_reviewer_action)
         self.framework.observe(self.on.reconcile, self._on_reconcile)
         self.unit.open_port("tcp", 8080)  # dns-policy-app
+
+    def _on_collect_status(self, _: ops.CollectStatusEvent) -> None:
+        """Handle collect status event."""
+        logger.debug("collect status")
+        logger.debug("st: %s", self.dns_policy.status())
+        if not self.dns_policy.status():
+            self.unit.status = ops.MaintenanceStatus("Workload not yet ready.")
+            return
+
+        database_relation_data = self._database.get_relation_data()
+        logger.debug("db: %s", database_relation_data)
+        if database_relation_data["POSTGRES_HOST"] == "":
+            self.unit.status = ops.WaitingStatus("Waiting for a database integration.")
+            return
+
+        # Do some validation of the configuration option
+        log_level = typing.cast(str, self.model.config["log-level"]).lower()
+        if log_level not in VALID_LOG_LEVELS:
+            # In this case, the config option is bad, so block the charm and notify the operator.
+            self.unit.status = ops.BlockedStatus(f"invalid log level: '{log_level}'")
+            return
+
+        self.unit.status = ops.ActiveStatus()
 
     def _on_reconcile(self, _: ReconcileEvent) -> None:
         if not self.model.unit.is_leader():
@@ -154,8 +174,7 @@ class DnsPolicyCharm(ops.CharmBase):
 
         # Do some validation of the configuration option
         if log_level not in VALID_LOG_LEVELS:
-            # In this case, the config option is bad, so block the charm and notify the operator.
-            self.unit.status = ops.BlockedStatus(f"invalid log level: '{log_level}'")
+            return
 
         self.unit.status = ops.MaintenanceStatus("Configuring workload")
         self.dns_policy.configure(
@@ -166,17 +185,14 @@ class DnsPolicyCharm(ops.CharmBase):
                 ),
             }
         )
-        self.unit.status = ops.ActiveStatus("")
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start event."""
-        self.unit.status = ops.ActiveStatus("")
 
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install event."""
         self.unit.status = ops.MaintenanceStatus("Preparing dns-policy-app")
         self.dns_policy.setup(self.unit.name)
-        self.unit.status = ops.ActiveStatus("")
         self._start_timer("reconcile", "30s", "1m")
 
     def _on_database_created(self, _: DatabaseCreatedEvent) -> None:
@@ -186,6 +202,7 @@ class DnsPolicyCharm(ops.CharmBase):
             event: Event triggering the database created handler.
         """
         database_relation_data = self._database.get_relation_data()
+        self.unit.status = ops.MaintenanceStatus("Preparing database")
         self.dns_policy.configure(
             {
                 "debug": "true" if self.config["debug"] else "false",
@@ -208,6 +225,7 @@ class DnsPolicyCharm(ops.CharmBase):
             event: Event triggering the endpoints changed handler.
         """
         database_relation_data = self._database.get_relation_data()
+        self.unit.status = ops.MaintenanceStatus("Preparing database")
         self.dns_policy.configure(
             {
                 "debug": "true" if self.config["debug"] else "false",
@@ -222,14 +240,6 @@ class DnsPolicyCharm(ops.CharmBase):
             }
         )
         self.dns_policy.command("migrate")
-
-    def _on_database_relation_broken(self, _: ops.RelationBrokenEvent) -> None:
-        """Handle broken relation.
-
-        Args:
-            event: Event triggering the broken relation handler.
-        """
-        self.unit.status = ops.WaitingStatus("Waiting for database relation")
 
     def _on_create_reviewer_action(self, event: ops.charm.ActionEvent) -> None:
         """Handle the create reviewer ActionEvent.

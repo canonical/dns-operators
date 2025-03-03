@@ -3,6 +3,7 @@
 
 """Provide the DatabaseObserver class to handle database relation and state."""
 
+import logging
 import typing
 
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
@@ -10,6 +11,8 @@ from ops.charm import CharmBase
 from ops.framework import Object
 
 import constants
+
+logger = logging.getLogger(__name__)
 
 
 class DatabaseHandler(Object):

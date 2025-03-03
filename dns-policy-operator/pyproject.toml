@@ -77,6 +77,7 @@ extend-ignore = [
 ]
 ignore = ["E501", "D107"]
 extend-exclude = ["__pycache__", "*.egg_info"]
+# D100, D101, D102, D103, D104: Ignore some docstrings rules in tests
 per-file-ignores = {"tests/*" = ["D100","D101","D102","D103","D104"]}
 
 [tool.ruff.mccabe]

@@ -29,7 +29,7 @@ select = ["E", "W", "F", "C", "N", "R", "D", "H"]
 # Ignore D107 Missing docstring in __init__
 # Ignore E402 module level import not at top of file 
 ignore = ["W503", "E501", "D107", "E402"]
-# D100, D101, D102, D103: Ignore missing docstrings in tests
+# D100, D101, D102, D103, D104, D205, D212, D415: Ignore some docstrings rules in tests
 per-file-ignores = ["tests/*:D100,D101,D102,D103,D104,D205,D212,D415"]
 docstring-convention = "google"
 

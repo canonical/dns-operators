@@ -1,7 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Provide the DatabaseObserver class to handle database relation and state."""
+"""Provide the DatabaseHandler class to handle database relation and state."""
 
 import logging
 import typing
@@ -16,10 +16,10 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseHandler(Object):
-    """The Database relation observer."""
+    """The Database relation handler."""
 
     def __init__(self, charm: CharmBase, relation_name: str) -> None:
-        """Initialize the observer and register event handlers.
+        """Initialize the handler and register event handlers.
 
         Args:
             charm: The parent charm to attach the observer to.

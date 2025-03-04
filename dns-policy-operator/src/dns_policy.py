@@ -29,6 +29,10 @@ class DnsPolicyCharmError(Exception):
         self.msg = msg
 
 
+class ApiError(DnsPolicyCharmError):
+    """Exception raised when an API request to the workload fails."""
+
+
 class CommandError(DnsPolicyCharmError):
     """Exception raised when a command fails."""
 
@@ -179,28 +183,55 @@ class DnsPolicyService:
         return tokens["access"]
 
     def send_requests(self, token: str, record_requests: list[RequirerEntry]) -> bool:
-        """Send record requests."""
-        req = requests.post(
-            "http://localhost:8080/api/requests/",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {token}",
-            },
-            timeout=10,
-            data=json.dumps([x.model_dump() for x in record_requests]),
-        )
-        return req.status_code == 200
+        """Send record requests.
+
+        Args:
+            token: root token for the API
+            record_requests: list of record requests from the relations
+
+        Returns:
+            True if the request succeeded False otherwise
+
+        Raises:
+            ApiError if the request errors
+        """
+        try:
+            req = requests.post(
+                f"{constants.DNS_POLICY_ENDPOINTS_BASE}/",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {token}",
+                },
+                timeout=10,
+                data=json.dumps([x.model_dump() for x in record_requests]),
+            )
+            return req.status_code == 200
+        except requests.RequestException as e:
+            raise ApiError(str(e)) from e
 
     def get_approved_requests(self, token: str) -> list[RequirerEntry]:
-        """Get approved record requests."""
-        req = requests.get(
-            "http://localhost:8080/api/requests/approved/",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {token}",
-            },
-            timeout=10,
-        )
+        """Get approved record requests.
+
+        Args:
+            token: root token for the API
+
+        Returns:
+            A list of RequirerEntry to update the relations
+
+        Raises:
+            ApiError if the request errors
+        """
+        try:
+            req = requests.get(
+                f"{constants.DNS_POLICY_ENDPOINTS_BASE}/approved/",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {token}",
+                },
+                timeout=10,
+            )
+        except requests.RequestException as e:
+            raise ApiError(str(e)) from e
 
         try:
             entries = []

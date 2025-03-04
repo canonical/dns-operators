@@ -4,7 +4,6 @@
 """Provide the DatabaseHandler class to handle database relation and state."""
 
 import logging
-import typing
 
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from ops.charm import CharmBase
@@ -34,7 +33,7 @@ class DatabaseHandler(Object):
             database_name=constants.DATABASE_NAME,
         )
 
-    def get_relation_data(self) -> typing.Dict[str, str]:
+    def get_relation_data(self) -> dict[str, str]:
         """Get database data from relation.
 
         Returns:

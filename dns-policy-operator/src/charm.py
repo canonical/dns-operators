@@ -63,15 +63,11 @@ class DnsPolicyCharm(ops.CharmBase):
 
     def _on_collect_status(self, _: ops.CollectStatusEvent) -> None:
         """Handle collect status event."""
-        logger.debug("collect status")
-        logger.debug("st: %s", self.dns_policy.status())
         if not self.dns_policy.status():
             self.unit.status = ops.MaintenanceStatus("Workload not yet ready.")
             return
 
-        database_relation_data = self._database.get_relation_data()
-        logger.debug("db: %s", database_relation_data)
-        if database_relation_data["POSTGRES_HOST"] == "":
+        if not self._database.is_relation_ready():
             self.unit.status = ops.WaitingStatus("Waiting for a database integration.")
             return
 
@@ -162,7 +158,7 @@ class DnsPolicyCharm(ops.CharmBase):
                 "database-user": database_relation_data["POSTGRES_USER"],
             }
         )
-        self.dns_policy.command("migrate")
+        self.dns_policy._command("migrate")
 
     def _on_database_endpoints_changed(self, _: DatabaseEndpointsChangedEvent) -> None:
         """Handle endpoints change.
@@ -185,7 +181,7 @@ class DnsPolicyCharm(ops.CharmBase):
                 "database-user": database_relation_data["POSTGRES_USER"],
             }
         )
-        self.dns_policy.command("migrate")
+        self.dns_policy._command("migrate")
 
     def _on_create_reviewer_action(self, event: ops.charm.ActionEvent) -> None:
         """Handle the create reviewer ActionEvent.
@@ -195,7 +191,7 @@ class DnsPolicyCharm(ops.CharmBase):
         """
         event.set_results(
             {
-                "result": self.dns_policy.command(
+                "result": self.dns_policy._command(
                     (
                         f"create_reviewer {event.params['username']} "
                         f"{event.params['email']} --generate_password"

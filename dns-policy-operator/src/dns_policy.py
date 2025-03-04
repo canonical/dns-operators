@@ -139,7 +139,7 @@ class DnsPolicyService:
             logger.error(error_msg)
             raise ConfigureError(error_msg) from e
 
-    def command(self, cmd: str) -> str:
+    def _command(self, cmd: str) -> str:
         """Run manage command of the dns-policy service.
 
         Args:
@@ -163,7 +163,7 @@ class DnsPolicyService:
     def get_api_root_token(self) -> str:
         """Get API root token."""
         try:
-            res = self.command("get_root_token")
+            res = self._command("get_root_token")
             tokens = json.loads(res)
         except json.decoder.JSONDecodeError as e:
             raise RootTokenError(str(e)) from e

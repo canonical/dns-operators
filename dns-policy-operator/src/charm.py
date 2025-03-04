@@ -7,7 +7,6 @@
 
 import json
 import logging
-import pathlib
 import typing
 
 import ops
@@ -16,13 +15,12 @@ from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
     DatabaseEndpointsChangedEvent,
 )
-from charms.operator_libs_linux.v1 import systemd
 
 import constants
 import models
-import templates
 from database import DatabaseHandler
 from dns_policy import DnsPolicyService
+from timer import TimerService
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
@@ -45,6 +43,7 @@ class DnsPolicyCharm(ops.CharmBase):
 
         self.on.define_event("reconcile", ReconcileEvent)
         self.dns_policy = DnsPolicyService()
+        self._timer = TimerService()
         self._database = DatabaseHandler(self, constants.DATABASE_RELATION_NAME)
         self.dns_record_provider = dns_record.DNSRecordProvides(self, "dns-record-provider")
         self.dns_record_requirer = dns_record.DNSRecordRequires(self, "dns-record-requirer")
@@ -98,49 +97,9 @@ class DnsPolicyCharm(ops.CharmBase):
 
         approved_requests = self.dns_policy.get_approved_requests(token)
         dns_record_requirer_data = dns_record.DNSRecordRequirerData(dns_entries=approved_requests)
+        # TODO: only respond to the correct relation
         for relation in self.model.relations[self.dns_record_requirer.relation_name]:
             self.dns_record_requirer.update_relation_data(relation, dns_record_requirer_data)
-
-    def _start_timer(self, event_name: str, timeout: str, interval: str) -> None:
-        """Install a timer.
-
-        Syntax of time spans:
-            https://www.freedesktop.org/software/systemd/man/latest/systemd.time.html
-
-        Args:
-            event_name: The event to be fired
-            timeout: timeout before killing the command
-            interval: interval between each execution
-        """
-        (
-            pathlib.Path(constants.SYSTEMD_SERVICES_PATH) / f"dispatch-{event_name}.service"
-        ).write_text(
-            templates.DISPATCH_EVENT_SERVICE.format(
-                event=event_name,
-                timeout=timeout,
-                unit=self.unit.name,
-            ),
-            encoding="utf-8",
-        )
-        (
-            pathlib.Path(constants.SYSTEMD_SERVICES_PATH) / f"dispatch-{event_name}.timer"
-        ).write_text(
-            templates.SYSTEMD_SERVICE_TIMER.format(
-                interval=interval, service=f"dispatch-{event_name}"
-            ),
-            encoding="utf-8",
-        )
-        systemd.service_enable(f"dispatch-{event_name}.timer")
-        systemd.service_start(f"dispatch-{event_name}.timer")
-
-    def _stop_timer(self, event_name: str) -> None:
-        """Stop a timer.
-
-        Args:
-            event_name: The event to be fired
-        """
-        systemd.service_disable(f"dispatch-{event_name}.timer")
-        systemd.service_stop(f"dispatch-{event_name}.timer")
 
     def dns_record_relations_data_to_entries(
         self,
@@ -180,7 +139,7 @@ class DnsPolicyCharm(ops.CharmBase):
         """Handle install event."""
         self.unit.status = ops.MaintenanceStatus("Preparing dns-policy-app")
         self.dns_policy.setup(self.unit.name)
-        self._start_timer("reconcile", "30s", "1m")
+        self._timer.start(self.unit.name, "reconcile", "30s", "1m")
 
     def _on_database_created(self, _: DatabaseCreatedEvent) -> None:
         """Handle database created.

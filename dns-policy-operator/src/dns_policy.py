@@ -5,7 +5,6 @@
 
 import json
 import logging
-import pathlib
 import subprocess  # nosec
 
 import pydantic
@@ -36,18 +35,6 @@ class SnapError(DnsPolicyCharmError):
 
 class StatusError(SnapError):
     """Exception raised when unable to get the status the service."""
-
-
-class ReloadError(SnapError):
-    """Exception raised when unable to reload the service."""
-
-
-class StartError(SnapError):
-    """Exception raised when unable to start the service."""
-
-
-class StopError(SnapError):
-    """Exception raised when unable to stop the service."""
 
 
 class InstallError(SnapError):

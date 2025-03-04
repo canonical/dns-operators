@@ -19,8 +19,7 @@ logger = logging.getLogger(__name__)
 def context_fixture():
     """Context fixture."""
     with (
-        patch("dns_policy.DnsPolicyService.start"),
-        patch("dns_policy.DnsPolicyService.stop"),
+        patch("timer.TimerService.start"),
         patch("dns_policy.DnsPolicyService.setup"),
         patch("dns_policy.DnsPolicyService.status") as dns_policy_status,
         patch("dns_policy.DnsPolicyService.configure"),

@@ -29,6 +29,10 @@ class DnsPolicyCharmError(Exception):
         self.msg = msg
 
 
+class CommandError(DnsPolicyCharmError):
+    """Exception raised when a command fails."""
+
+
 class SnapError(DnsPolicyCharmError):
     """Exception raised when an action on the snap fails."""
 
@@ -139,12 +143,15 @@ class DnsPolicyService:
             logger.error(error_msg)
             raise ConfigureError(error_msg) from e
 
-    def _command(self, cmd: str) -> str:
+    def command(self, cmd: str) -> str:
         """Run manage command of the dns-policy service.
 
         Args:
             cmd: command to execute by django's manage script
             env: environment
+
+        Raises:
+            CommandError if the command call errors
 
         Returns:
             The resulting output of the command's execution
@@ -158,12 +165,12 @@ class DnsPolicyService:
                 "utf-8"
             )
         except subprocess.SubprocessError as e:
-            return f"Error: {e}"
+            raise CommandError(str(e)) from e
 
     def get_api_root_token(self) -> str:
         """Get API root token."""
         try:
-            res = self._command("get_root_token")
+            res = self.command("get_root_token")
             tokens = json.loads(res)
         except json.decoder.JSONDecodeError as e:
             raise RootTokenError(str(e)) from e

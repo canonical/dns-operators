@@ -158,7 +158,7 @@ class DnsPolicyCharm(ops.CharmBase):
                 "database-user": database_relation_data["POSTGRES_USER"],
             }
         )
-        self.dns_policy._command("migrate")
+        self.dns_policy.command("migrate")
 
     def _on_database_endpoints_changed(self, _: DatabaseEndpointsChangedEvent) -> None:
         """Handle endpoints change.
@@ -181,7 +181,7 @@ class DnsPolicyCharm(ops.CharmBase):
                 "database-user": database_relation_data["POSTGRES_USER"],
             }
         )
-        self.dns_policy._command("migrate")
+        self.dns_policy.command("migrate")
 
     def _on_create_reviewer_action(self, event: ops.charm.ActionEvent) -> None:
         """Handle the create reviewer ActionEvent.
@@ -191,7 +191,7 @@ class DnsPolicyCharm(ops.CharmBase):
         """
         event.set_results(
             {
-                "result": self.dns_policy._command(
+                "result": self.dns_policy.command(
                     (
                         f"create_reviewer {event.params['username']} "
                         f"{event.params['email']} --generate_password"

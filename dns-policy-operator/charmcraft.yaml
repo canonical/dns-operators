@@ -2,8 +2,8 @@
 # See LICENSE file for licensing details.
 name: dns-policy
 type: charm
+subordinate: true
 title: DNS policy charm
-
 summary: A very short one-line summary of the charm.
 
 description: |
@@ -60,7 +60,6 @@ parts:
     override-build: |
       rustup default stable
       craftctl default
-subordinate: true
 
 actions:
   create-reviewer:

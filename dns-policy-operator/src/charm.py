@@ -93,7 +93,6 @@ class DnsPolicyCharm(ops.CharmBase):
 
         approved_requests = self.dns_policy.get_approved_requests(token)
         dns_record_requirer_data = dns_record.DNSRecordRequirerData(dns_entries=approved_requests)
-        # TODO: only respond to the correct relation
         for relation in self.model.relations[self.dns_record_requirer.relation_name]:
             self.dns_record_requirer.update_relation_data(relation, dns_record_requirer_data)
 

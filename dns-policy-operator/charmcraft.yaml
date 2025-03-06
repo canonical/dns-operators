@@ -17,13 +17,6 @@ bases:
 
 config:
   options:
-    # An example config option to customise the log level of the workload
-    log-level:
-      description: |
-        Configures the log level of gunicorn.
-        Acceptable values are: "info", "debug", "warning", "error" and "critical"
-      default: "info"
-      type: string
     debug:
       type: boolean
       description: "Whether dns-policy-app debug mode is enabled."
@@ -33,7 +26,7 @@ config:
       description: A comma-separated list of host/domain names that the dns-policy-app API
         can serve. This configuration will set the DJANGO_ALLOWED_HOSTS environment
         variable with its content being a JSON encoded list.
-      default: "localhost, 127.0.0.1, 0.0.0.0"
+      default: "0.0.0.0"
 
 requires:
   database:

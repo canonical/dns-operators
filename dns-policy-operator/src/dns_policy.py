@@ -182,7 +182,7 @@ class DnsPolicyService:
             raise RootTokenError("Invalid root token!")
         return tokens["access"]
 
-    def send_requests(self, token: str, record_requests: list[RequirerEntry]) -> bool:
+    def send_requests(self, token: str, record_requests: list[RequirerEntry]) -> None:
         """Send record requests.
 
         Args:
@@ -205,7 +205,7 @@ class DnsPolicyService:
                 timeout=10,
                 data=json.dumps([x.model_dump() for x in record_requests]),
             )
-            return req.status_code == 200
+            req.raise_for_status()
         except requests.RequestException as e:
             raise ApiError(str(e)) from e
 

@@ -23,7 +23,7 @@ class DnsEntry(pydantic.BaseModel):
 
     domain: str = pydantic.Field(min_length=1)
     host_label: str = pydantic.Field(min_length=1)
-    ttl: int
+    ttl: int = pydantic.Field(ge=1, le=604800)
     record_class: RecordClass
     record_type: RecordType
     record_data: pydantic.IPvAnyAddress

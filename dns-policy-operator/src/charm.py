@@ -17,10 +17,10 @@ from charms.data_platform_libs.v0.data_interfaces import (
 )
 
 import constants
+import database
+import dns_policy
 import models
-from database import DatabaseHandler
-from dns_policy import DnsPolicyService
-from timer import TimerService
+import timer
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
@@ -42,9 +42,9 @@ class DnsPolicyCharm(ops.CharmBase):
         super().__init__(*args)
 
         self.on.define_event("reconcile", ReconcileEvent)
-        self.dns_policy = DnsPolicyService()
-        self._timer = TimerService()
-        self._database = DatabaseHandler(self, constants.DATABASE_RELATION_NAME)
+        self.dns_policy = dns_policy.DnsPolicyService()
+        self._timer = timer.TimerService()
+        self._database = database.DatabaseHandler(self, constants.DATABASE_RELATION_NAME)
         self.dns_record_provider = dns_record.DNSRecordProvides(self, "dns-record-provider")
         self.dns_record_requirer = dns_record.DNSRecordRequires(self, "dns-record-requirer")
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -188,16 +188,20 @@ class DnsPolicyCharm(ops.CharmBase):
         Args:
             event: Event triggering this action handler.
         """
-        event.set_results(
-            {
-                "result": self.dns_policy.command(
-                    (
-                        f"create_reviewer {event.params['username']} "
-                        f"{event.params['email']} --generate_password"
-                    ),
-                )
-            }
-        )
+        try:
+            event.set_results(
+                {
+                    "result": self.dns_policy.command(
+                        (
+                            f"create_reviewer {event.params['username']} "
+                            f"{event.params['email']} --generate_password"
+                        ),
+                    )
+                }
+            )
+        except dns_policy.CommandError as e:
+            logger.error(f"Create reviewer failed: {e}")
+            event.fail(f"Create reviewer failed: {e}")
 
 
 if __name__ == "__main__":  # pragma: nocover

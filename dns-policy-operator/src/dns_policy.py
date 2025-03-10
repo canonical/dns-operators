@@ -61,6 +61,31 @@ class GetApprovedRecordRequestsError(DnsPolicyCharmError):
     """Exception raised when unable to get approved record requests."""
 
 
+class DnsPolicyConfig(pydantic.BaseModel):
+    """Configuration for the DnsPolicy workload."""
+
+    debug: bool = False
+    allowed_hosts: list[str] = pydantic.Field(default_factory=list)
+    database_host: str = ""
+    database_port: int = 0
+    database_name: str = ""
+    database_password: str = ""
+    database_user: str = ""
+
+    @pydantic.model_serializer
+    def ser_model(self) -> dict[str, str]:
+        """Make sure to serialize to a dict[str, str]."""
+        return {
+            "debug": "true" if self.debug else "false",
+            "allowed_hosts": json.dumps(self.allowed_hosts),
+            "database_host": self.database_host,
+            "database_port": str(self.database_port),
+            "database_name": self.database_name,
+            "database_password": self.database_password,
+            "database_user": self.database_user,
+        }
+
+
 class DnsPolicyService:
     """DnsPolicy service class."""
 
@@ -127,7 +152,7 @@ class DnsPolicyService:
             logger.exception(error_msg)
             raise InstallError(error_msg) from e
 
-    def configure(self, config: dict[str, str]) -> None:
+    def configure(self, config: DnsPolicyConfig) -> None:
         """Configure the dns-policy service.
 
         Args:
@@ -139,7 +164,7 @@ class DnsPolicyService:
         try:
             cache = snap.SnapCache()
             charmed_bind = cache[constants.DNS_SNAP_NAME]
-            charmed_bind.set(config)
+            charmed_bind.set(dict(config))
         except snap.SnapError as e:
             error_msg = (
                 f"An exception occurred when configuring {constants.DNS_SNAP_NAME}. Reason: {e}"

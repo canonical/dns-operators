@@ -15,3 +15,6 @@ DATABASE_RELATION_NAME = "database"
 DATABASE_NAME = "dnspolicy"
 SYSTEMD_SERVICES_PATH = "/etc/systemd/system/"
 DNS_POLICY_ENDPOINTS_BASE = "http://localhost:8080/api/requests"
+
+RECONCILE_TIMER_INTERVAL = "1m"
+RECONCILE_TIMER_TIMEOUT = "30s"

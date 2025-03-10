@@ -5,6 +5,7 @@
 
 """DNS policy charm."""
 
+import datetime
 import json
 import logging
 import typing
@@ -50,7 +51,7 @@ class DnsPolicyCharm(ops.CharmBase):
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.install, self._on_install)
-        self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
+        self.framework.observe(self.on.collect_unit_status, self._on_collect_unit_status)
         self.framework.observe(
             self._database.database.on.database_created, self._on_database_created
         )
@@ -61,12 +62,11 @@ class DnsPolicyCharm(ops.CharmBase):
         self.framework.observe(self.on.reconcile, self._on_reconcile)
         self.unit.open_port("tcp", 8080)  # dns-policy-app
 
-    def _on_collect_status(self, _: ops.CollectStatusEvent) -> None:
-        """Handle collect status event."""
+    def _on_collect_unit_status(self, _: ops.CollectStatusEvent) -> None:
+        """Handle collect unit status event."""
         if not self.dns_policy.status():
             self.unit.status = ops.MaintenanceStatus("Workload not yet ready.")
             return
-
         if not self._database.is_relation_ready():
             self.unit.status = ops.WaitingStatus("Waiting for a database integration.")
             return
@@ -93,8 +93,17 @@ class DnsPolicyCharm(ops.CharmBase):
 
         approved_requests = self.dns_policy.get_approved_requests(token)
         dns_record_requirer_data = dns_record.DNSRecordRequirerData(dns_entries=approved_requests)
-        for relation in self.model.relations[self.dns_record_requirer.relation_name]:
-            self.dns_record_requirer.update_relation_data(relation, dns_record_requirer_data)
+        try:
+            relation = self.model.get_relation(self.dns_record_requirer.relation_name)
+            if relation is not None:
+                self.dns_record_requirer.update_relation_data(relation, dns_record_requirer_data)
+            else:
+                # Logging as error as this should not happen (as we're a subordinate charm)
+                logger.error("%s is not ready !", self.dns_record_requirer.relation_name)
+        except ops.TooManyRelatedAppsError:
+            # Logging as error as this should not happen
+            logger.error("Got multiple %s integrations !", self.dns_record_requirer.relation_name)
+            raise
 
     def dns_record_relations_data_to_entries(
         self,
@@ -119,12 +128,14 @@ class DnsPolicyCharm(ops.CharmBase):
         """Handle changed configuration."""
         self.unit.status = ops.MaintenanceStatus("Configuring workload")
         self.dns_policy.configure(
-            {
-                "debug": "true" if self.config["debug"] else "false",
-                "allowed-hosts": json.dumps(
-                    [e.strip() for e in str(self.config["allowed-hosts"]).split(",")]
-                ),
-            }
+            dns_policy.DnsPolicyConfig.model_validate(
+                {
+                    "debug": "true" if self.config["debug"] else "false",
+                    "allowed-hosts": json.dumps(
+                        [e.strip() for e in str(self.config["allowed-hosts"]).split(",")]
+                    ),
+                }
+            )
         )
 
     def _on_start(self, _: ops.StartEvent) -> None:
@@ -134,7 +145,17 @@ class DnsPolicyCharm(ops.CharmBase):
         """Handle install event."""
         self.unit.status = ops.MaintenanceStatus("Preparing dns-policy-app")
         self.dns_policy.setup(self.unit.name)
-        self._timer.start(self.unit.name, "reconcile", "30s", "1m")
+        self._timer.start(
+            self.unit.name,
+            "reconcile",
+            constants.RECONCILE_TIMER_TIMEOUT,
+            constants.RECONCILE_TIMER_INTERVAL,
+        )
+        logger.info(
+            "Started reconcile timer at %s, interval of %s",
+            datetime.datetime.now(),
+            constants.RECONCILE_TIMER_INTERVAL,
+        )
 
     def _on_database_created(self, _: DatabaseCreatedEvent) -> None:
         """Handle database created.
@@ -142,22 +163,7 @@ class DnsPolicyCharm(ops.CharmBase):
         Args:
             event: Event triggering the database created handler.
         """
-        database_relation_data = self._database.get_relation_data()
-        self.unit.status = ops.MaintenanceStatus("Preparing database")
-        self.dns_policy.configure(
-            {
-                "debug": "true" if self.config["debug"] else "false",
-                "allowed-hosts": json.dumps(
-                    [e.strip() for e in str(self.config["allowed-hosts"]).split(",")]
-                ),
-                "database-port": database_relation_data["POSTGRES_PORT"],
-                "database-host": database_relation_data["POSTGRES_HOST"],
-                "database-name": database_relation_data["POSTGRES_DB"],
-                "database-password": database_relation_data["POSTGRES_PASSWORD"],
-                "database-user": database_relation_data["POSTGRES_USER"],
-            }
-        )
-        self.dns_policy.command("migrate")
+        self._handle_database_endpoint_changes()
 
     def _on_database_endpoints_changed(self, _: DatabaseEndpointsChangedEvent) -> None:
         """Handle endpoints change.
@@ -165,20 +171,25 @@ class DnsPolicyCharm(ops.CharmBase):
         Args:
             event: Event triggering the endpoints changed handler.
         """
+        self._handle_database_endpoint_changes()
+
+    def _handle_database_endpoint_changes(self) -> None:
         database_relation_data = self._database.get_relation_data()
         self.unit.status = ops.MaintenanceStatus("Preparing database")
         self.dns_policy.configure(
-            {
-                "debug": "true" if self.config["debug"] else "false",
-                "allowed-hosts": json.dumps(
-                    [e.strip() for e in str(self.config["allowed-hosts"]).split(",")]
-                ),
-                "database-port": database_relation_data["POSTGRES_PORT"],
-                "database-host": database_relation_data["POSTGRES_HOST"],
-                "database-name": database_relation_data["POSTGRES_DB"],
-                "database-password": database_relation_data["POSTGRES_PASSWORD"],
-                "database-user": database_relation_data["POSTGRES_USER"],
-            }
+            dns_policy.DnsPolicyConfig.model_validate(
+                {
+                    "debug": "true" if self.config["debug"] else "false",
+                    "allowed-hosts": json.dumps(
+                        [e.strip() for e in str(self.config["allowed-hosts"]).split(",")]
+                    ),
+                    "database-port": database_relation_data["POSTGRES_PORT"],
+                    "database-host": database_relation_data["POSTGRES_HOST"],
+                    "database-name": database_relation_data["POSTGRES_DB"],
+                    "database-password": database_relation_data["POSTGRES_PASSWORD"],
+                    "database-user": database_relation_data["POSTGRES_USER"],
+                }
+            )
         )
         self.dns_policy.command("migrate")
 
@@ -200,7 +211,7 @@ class DnsPolicyCharm(ops.CharmBase):
                 }
             )
         except dns_policy.CommandError as e:
-            logger.error(f"Create reviewer failed: {e}")
+            logger.error("Create reviewer failed: %s", e)
             event.fail(f"Create reviewer failed: {e}")
 
 

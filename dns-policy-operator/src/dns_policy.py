@@ -98,8 +98,12 @@ class DnsPolicyService:
         try:
             cache = snap.SnapCache()
             dns_policy = cache[constants.DNS_SNAP_NAME]
-            dns_policy_service = dns_policy.services[constants.DNS_SNAP_SERVICE]
-            return dns_policy_service["active"]
+            for service in constants.DNS_SNAP_SERVICES:
+                dns_policy_service = dns_policy.services[service]
+                if not dns_policy_service["active"]:
+                    return False
+            return True
+
         except snap.SnapError as e:
             error_msg = (
                 f"An exception occurred when retrieving the status of {constants.DNS_SNAP_NAME}. "

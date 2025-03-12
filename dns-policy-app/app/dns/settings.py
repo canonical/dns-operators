@@ -28,7 +28,7 @@ if SECRET_KEY == "":
         SECRET_KEY = secretfile.read().strip()
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DJANGO_DEBUG", "") == "true"
+DEBUG = os.getenv("DJANGO_DEBUG", "").lower() == "true"
 
 try:
     env_allowed_hosts = json.loads(os.getenv("DJANGO_ALLOWED_HOSTS", "[]"))

@@ -1,6 +1,6 @@
 [![CharmHub Badge](https://charmhub.io/bind/badge.svg)](https://charmhub.io/bind)
-[![Publish to edge](https://github.com/canonical/dns-charms/actions/workflows/publish_charm.yaml/badge.svg)](https://github.com/canonical/dns-charms/actions/workflows/publish_charm.yaml)
-[![Promote charm](https://github.com/canonical/dns-charms/actions/workflows/promote_charm.yaml/badge.svg)](https://github.com/canonical/dns-charms/actions/workflows/promote_charm.yaml)
+[![Publish to edge](https://github.com/canonical/dns-operators/actions/workflows/publish_charm.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/publish_charm.yaml)
+[![Promote charm](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml)
 [![Discourse Status](https://img.shields.io/discourse/status?server=https%3A%2F%2Fdiscourse.charmhub.io&style=flat&label=CharmHub%20Discourse)](https://discourse.charmhub.io)
 
 # Bind Operator
@@ -38,6 +38,6 @@ It can integrate with any requirer charm implementing the [dns_record interface]
 * [Official webpage](https://charmhub.io/bind)
 
 ## Project and community
-* [Issues](https://github.com/canonical/dns-charms/issues)
+* [Issues](https://github.com/canonical/dns-operators/issues)
 * [Contributing](https://charmhub.io/bind/docs/how-to-contribute)
 * [Matrix](https://chat.charmhub.io/charmhub/channels/charm-dev)

@@ -1,6 +1,6 @@
 # Bind Snap
 
-This snap is meant to be the workload of the [bind-operator](https://github.com/canonical/dns-charms/bind-operator) charm.  
+This snap is meant to be the workload of the [bind-operator](https://github.com/canonical/dns-operators/bind-operator) charm.  
 
 ## Get started
 
@@ -15,8 +15,8 @@ The steps outlined below are based on the assumption that you are building the s
 
 #### Clone Repository
 ```bash
-git clone git@github.com:canonical/charmed-bind.git
-cd charmed-bind
+git clone git@github.com:canonical/dns-operators.git
+cd dns-operators/charmed-bind
 ```
 #### Installing and Configuring Prerequisites
 ```bash
@@ -35,6 +35,6 @@ sudo snap install ./charmed-bind_*.snap --devmode
 * [Official webpage](https://charmhub.io/bind)
 
 ## Project and community
-* [Issues](https://github.com/canonical/dns-charms/issues)
+* [Issues](https://github.com/canonical/dns-operators/issues)
 * [Contributing](https://charmhub.io/bind/docs/how-to-contribute)
 * [Matrix](https://chat.charmhub.io/charmhub/channels/charm-dev)

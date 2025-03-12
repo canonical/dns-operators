@@ -6,7 +6,6 @@
 """DNS policy charm."""
 
 import datetime
-import json
 import logging
 import typing
 
@@ -128,14 +127,7 @@ class DnsPolicyCharm(ops.CharmBase):
         """Handle changed configuration."""
         self.unit.status = ops.MaintenanceStatus("Configuring workload")
         self.dns_policy.configure(
-            dns_policy.DnsPolicyConfig.model_validate(
-                {
-                    "debug": "true" if self.config["debug"] else "false",
-                    "allowed-hosts": json.dumps(
-                        [e.strip() for e in str(self.config["allowed-hosts"]).split(",")]
-                    ),
-                }
-            )
+            dns_policy.DnsPolicyConfig.from_charm(self, self._database.get_relation_data())
         )
 
     def _on_start(self, _: ops.StartEvent) -> None:
@@ -174,22 +166,9 @@ class DnsPolicyCharm(ops.CharmBase):
         self._handle_database_endpoint_changes()
 
     def _handle_database_endpoint_changes(self) -> None:
-        database_relation_data = self._database.get_relation_data()
         self.unit.status = ops.MaintenanceStatus("Preparing database")
         self.dns_policy.configure(
-            dns_policy.DnsPolicyConfig.model_validate(
-                {
-                    "debug": "true" if self.config["debug"] else "false",
-                    "allowed-hosts": json.dumps(
-                        [e.strip() for e in str(self.config["allowed-hosts"]).split(",")]
-                    ),
-                    "database-port": database_relation_data["POSTGRES_PORT"],
-                    "database-host": database_relation_data["POSTGRES_HOST"],
-                    "database-name": database_relation_data["POSTGRES_DB"],
-                    "database-password": database_relation_data["POSTGRES_PASSWORD"],
-                    "database-user": database_relation_data["POSTGRES_USER"],
-                }
-            )
+            dns_policy.DnsPolicyConfig.from_charm(self, self._database.get_relation_data())
         )
         self.dns_policy.command("migrate")
 

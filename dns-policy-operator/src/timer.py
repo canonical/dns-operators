@@ -14,12 +14,28 @@ import templates
 logger = logging.getLogger(__name__)
 
 
+class TimerError(Exception):
+    """Base exception for the bind charm."""
+
+    def __init__(self, msg: str):
+        """Initialize a new instance of the exception.
+
+        Args:
+            msg (str): Explanation of the error.
+        """
+        self.msg = msg
+
+
+class InvalidIntervalError(TimerError):
+    """Exception raised when am interval is invalid."""
+
+
 # Even with only one method, this service could be reused so it makes sense for it to exist
 # pylint: disable=too-few-public-methods
 class TimerService:
     """Timer service class."""
 
-    def start(self, unit_name: str, event_name: str, timeout: str, interval: str) -> None:
+    def start(self, unit_name: str, event_name: str, timeout: str, interval: int) -> None:
         """Install a timer.
 
         Syntax of time spans:
@@ -29,8 +45,14 @@ class TimerService:
             unit_name: Unit name where to start the timer
             event_name: The event to be fired
             timeout: timeout before killing the command
-            interval: interval between each execution
+            interval: interval between each execution in minutes (should be between 1 and 59)
+
+        Raises:
+            InvalidIntervalError: if the input interval is invalid
         """
+        # Check if interval is correct
+        if interval < 1 or interval > 59:
+            raise InvalidIntervalError(f"Invalid interval: {interval}")
         (
             pathlib.Path(constants.SYSTEMD_SERVICES_PATH) / f"dispatch-{event_name}.service"
         ).write_text(

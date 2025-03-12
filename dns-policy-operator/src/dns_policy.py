@@ -3,10 +3,12 @@
 
 """App charm business logic."""
 
+import itertools
 import json
 import logging
 import subprocess  # nosec
 
+import ops
 import pydantic
 import requests
 from charms.bind.v0.dns_record import RequirerEntry
@@ -27,6 +29,10 @@ class DnsPolicyCharmError(Exception):
             msg (str): Explanation of the error.
         """
         self.msg = msg
+
+
+class ConfigInvalidError(DnsPolicyCharmError):
+    """Exception raised when a config value for the dns policy is invalid."""
 
 
 class ApiError(DnsPolicyCharmError):
@@ -62,7 +68,11 @@ class GetApprovedRecordRequestsError(DnsPolicyCharmError):
 
 
 class DnsPolicyConfig(pydantic.BaseModel):
-    """Configuration for the DnsPolicy workload."""
+    """Configuration for the DnsPolicy workload.
+
+    This is used to translate information from the current charm state into valid configuration
+    for the dns-policy workload app.
+    """
 
     debug: bool = False
     allowed_hosts: list[str] = pydantic.Field(default_factory=list)
@@ -77,13 +87,53 @@ class DnsPolicyConfig(pydantic.BaseModel):
         """Make sure to serialize to a dict[str, str]."""
         return {
             "debug": "true" if self.debug else "false",
-            "allowed_hosts": json.dumps(self.allowed_hosts),
-            "database_host": self.database_host,
-            "database_port": str(self.database_port),
-            "database_name": self.database_name,
-            "database_password": self.database_password,
-            "database_user": self.database_user,
+            "allowed-hosts": json.dumps(self.allowed_hosts),
+            "database-host": self.database_host,
+            "database-port": str(self.database_port) if self.database_port else "",
+            "database-name": self.database_name,
+            "database-password": self.database_password,
+            "database-user": self.database_user,
         }
+
+    @classmethod
+    def from_charm(
+        cls, charm: ops.CharmBase, database_relation_data: dict[str, str]
+    ) -> "DnsPolicyConfig":
+        """Initialize a new instance of the DnsPolicyConfig class from the associated charm.
+
+        Args:
+            charm: The charm instance associated with this state.
+            database_relation_data: Relation data from the database.
+
+        Returns: An instance of the DnsPolicyConfig object.
+
+        Raises:
+            ConfigInvalidError: For any validation error in the charm config data.
+        """
+        try:
+            database_port = int(database_relation_data["POSTGRES_PORT"])
+        except ValueError:
+            database_port = 0
+        config = {
+            "debug": charm.config["debug"],
+            "allowed_hosts": [e.strip() for e in str(charm.config["allowed-hosts"]).split(",")],
+            "database_host": database_relation_data["POSTGRES_HOST"],
+            "database_port": database_port,
+            "database_name": database_relation_data["POSTGRES_DB"],
+            "database_password": database_relation_data["POSTGRES_PASSWORD"],
+            "database_user": database_relation_data["POSTGRES_USER"],
+        }
+
+        logger.debug("Init DnsPolicyConfig with: %s", config)
+
+        try:
+            validated_dns_policy_config = DnsPolicyConfig.model_validate(config)
+        except pydantic.ValidationError as e:
+            error_fields = set(itertools.chain.from_iterable(error["loc"] for error in e.errors()))
+            error_field_str = " ".join(f"{f}" for f in error_fields)
+            raise ConfigInvalidError(f"invalid configuration: {error_field_str}") from e
+
+        return validated_dns_policy_config
 
 
 class DnsPolicyService:
@@ -118,6 +168,10 @@ class DnsPolicyService:
         Args:
             unit_name: The name of the current unit
         """
+        # Check if the snap is already installed
+        cache = snap.SnapCache()
+        if constants.DNS_SNAP_NAME in cache:
+            return
         # The location of the snap is hardcoded for now.
         # This will be soon replaced by retrieving the published snap from the snap store.
         self._install_snap_package_from_file(
@@ -168,7 +222,8 @@ class DnsPolicyService:
         try:
             cache = snap.SnapCache()
             charmed_bind = cache[constants.DNS_SNAP_NAME]
-            charmed_bind.set(dict(config))
+            logger.debug("Configure dns-policy-app: %s", config.model_dump())
+            charmed_bind.set(config.model_dump())
         except snap.SnapError as e:
             error_msg = (
                 f"An exception occurred when configuring {constants.DNS_SNAP_NAME}. Reason: {e}"

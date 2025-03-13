@@ -1,4 +1,4 @@
-# Bind Snap
+# Bind Snap TEST TEST TEST
 
 This snap is meant to be the workload of the [bind-operator](https://github.com/canonical/bind-operator) charm.  
 

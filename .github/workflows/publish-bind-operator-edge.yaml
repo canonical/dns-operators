@@ -1,4 +1,4 @@
-name: Publish to edge
+name: Publish bind-operator to edge
 
 on:
   push:

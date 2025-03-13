@@ -3,7 +3,7 @@ name: Bind-operator tests
 on:
   pull_request:
     paths:
-      - './bind-operator/**'
+      - 'bind-operator/**'
 
 jobs:
   unit-tests:

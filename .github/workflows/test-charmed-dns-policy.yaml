@@ -3,7 +3,7 @@ name: Charmed-dns-policy tests
 on:
   pull_request:
     paths:
-      - './charmed-dns-policy/**'
+      - 'charmed-dns-policy/**'
 
 jobs:
   django-tests:

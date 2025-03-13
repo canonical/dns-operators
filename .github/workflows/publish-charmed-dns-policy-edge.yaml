@@ -6,7 +6,7 @@ on:
       - main
       - track/*
     paths:
-      - './charmed-dns-policy/**'
+      - 'charmed-dns-policy/**'
 
 jobs:
   publish-to-edge-charmed-dns-policy:

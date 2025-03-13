@@ -3,7 +3,7 @@ name: Dns-policy-operator tests
 on:
   pull_request:
     paths:
-      - './dns-policy-operator/**'
+      - 'dns-policy-operator/**'
 
 jobs:
   unit-tests:

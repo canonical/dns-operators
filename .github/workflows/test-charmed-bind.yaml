@@ -3,7 +3,7 @@ name: Charmed-bind tests
 on:
   pull_request:
     paths:
-      - './charmed-bind/**'
+      - 'charmed-bind/**'
 
 jobs:
   shellcheck:

@@ -6,7 +6,7 @@ on:
       - main
       - track/*
     paths:
-      - './charmed-bind/**'
+      - 'charmed-bind/**'
 
 jobs:
   publish-to-edge-charmed-bind:

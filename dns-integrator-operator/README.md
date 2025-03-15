@@ -1,53 +1,36 @@
-<!--
-Avoid using this README file for information that is maintained or published elsewhere, e.g.:
+[![CharmHub Badge](https://charmhub.io/bind/badge.svg)](https://charmhub.io/dns-integrator)
+[![Publish to edge](https://github.com/canonical/dns-operators/actions/workflows/publish_charm.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/publish_charm.yaml)
+[![Promote charm](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml)
+[![Discourse Status](https://img.shields.io/discourse/status?server=https%3A%2F%2Fdiscourse.charmhub.io&style=flat&label=CharmHub%20Discourse)](https://discourse.charmhub.io)
 
-* metadata.yaml > published on Charmhub
-* documentation > published on (or linked to from) Charmhub
-* detailed contribution guide > documentation or CONTRIBUTING.md
+# Dns Integrator Operator
 
-Use links instead.
--->
+A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+deploying and managing a DNS record requests integrator on bare metal.
 
-# is-charms-template
-<!-- Use this space for badges -->
-
-Describe your charm in 1-2 sentences. Include the software that the charm deploys (if applicable), and the substrate (VM/K8s).
-
-Like any Juju charm, this charm supports one-line deployment, configuration, integration, scaling, and more. For Charmed {Name}, this includes:
-* list or summary of app-specific features
-
-For information about how to deploy, integrate, and manage this charm, see the Official [is-charms-template Documentation](external link).
+This charm simplifies the resource record requests creation towards an already deployed DNS charm
+accepting the `dns_record` interface.
 
 ## Get started
-<!--Briefly summarize what the user will achieve in this guide.-->
 
-<!--Indicate software and hardware prerequisites-->
+The charm can be deployed to any machine model by pulling it from [charmhub](https://charmhub.io/dns-integrator):
+```
+juju deploy dns-integrator --channel=latest/edge
+```
 
-### (Optional) Set up
-<!--Steps for setting up the environment (e.g. via Multipass).-->
-
-### (Optional) Deploy
-<!--Steps for deploying the charm.-->
+You can then integrate it with any charm supporting the requirer side of the `dns_record` interface.  
+Use the configuration of the charm to decide which resource record requests you want to send through the integration.
 
 ### Basic operations
-<!--Brief walkthrough of performing standard configurations or operations-->
 
-<!--(Optional) Link to the `charmcraft.yaml` file-->
-
-## (Optional) Integrations
-<!-- Information about particularly relevant interfaces, endpoints or libraries related to the charm. For example, peer relation endpoints required by other charms for integration.--> 
+No actions are available as this charm is meant to be operated through its integrations.  
+It can integrate with any requirer charm implementing the [dns_record interface](https://canonical.github.io/charm-relation-interfaces/interfaces/dns_record/v0/).
 
 ## Learn more
-* [Read more]() <!--Link to the charm's official documentation-->
-* [Developer documentation]() <!--Link to any developer documentation-->
-* [Official webpage]() <!--(Optional) Link to official webpage/blog/marketing content--> 
-* [Troubleshooting]() <!--(Optional) Link to a page or section about troubleshooting/FAQ-->
+* [Read more](https://charmhub.io/dns-integrator/docs)
+* [Official webpage](https://charmhub.io/dns-integrator)
 
 ## Project and community
-* [Issues]() <!--Link to GitHub issues (if applicable)-->
-* [Contributing]() <!--Link to any contribution guides--> 
-* [Matrix]() <!--Link to contact info (if applicable), e.g. Matrix channel-->
-* [Launchpad]() <!--Link to Launchpad (if applicable)-->
-
-## (Optional) Licensing and trademark
-
+* [Issues](https://github.com/canonical/dns-operators/issues)
+* [Contributing](https://charmhub.io/bind/docs/how-to-contribute)
+* [Matrix](https://chat.charmhub.io/charmhub/channels/charm-dev)

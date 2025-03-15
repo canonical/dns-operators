@@ -12,7 +12,7 @@ This charm simplifies configuration of a DNS server by providing a single point
 of configuration for all the requirers using the same DNS server. It can be
 deployed on virtual machines or bare metal.
 
-As such, the charm makes it easy to manage and propagate DNS configuration, while
+As such, the charm makes it easy to manage and propagate DNS configuration while
 giving the freedom to deploy on the substrate of their choice.
 
 For DevOps or SRE teams this charm will make operating any charm requiring dynamic DNS
@@ -20,18 +20,18 @@ configuration simple and straightforward through Juju's clean interface.
 
 ## Get started
 
-The charm can be deployed to any machine model by pulling it from [charmhub](https://charmhub.io/bind):
+The charm can be deployed to any machine model by pulling it from [Charmhub](https://charmhub.io/bind):
 ```
 juju deploy bind --channel=latest/edge
 ```
 
-You can then integrate it with any charm supporting the requirer side of the `dns_record` interface and the bind operator will
+You can then integrate it with any charm supporting the requirer side of the `dns_record` interface, and the bind operator will
 start serving those DNS records.
 
 ### Basic operations
 
 No actions are available as this charm is meant to be operated through its integrations.  
-It can integrate with any requirer charm implementing the [dns_record interface](https://canonical.github.io/charm-relation-interfaces/interfaces/dns_record/v0/).
+The charm can integrate with any requirer charm implementing the [dns_record interface](https://canonical.github.io/charm-relation-interfaces/interfaces/dns_record/v0/).
 
 ## Learn more
 * [Read more](https://charmhub.io/bind/docs)
@@ -40,4 +40,4 @@ It can integrate with any requirer charm implementing the [dns_record interface]
 ## Project and community
 * [Issues](https://github.com/canonical/dns-operators/issues)
 * [Contributing](https://charmhub.io/bind/docs/how-to-contribute)
-* [Matrix](https://chat.charmhub.io/charmhub/channels/charm-dev)
+* [Matrix](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)

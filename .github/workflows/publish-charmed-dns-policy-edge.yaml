@@ -23,6 +23,6 @@ jobs:
       channel: latest/edge
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
     secrets:
-      snap-store-token: ${{ secrets.CHARMED_DNS_POLICY_EDGE_SNAPCRAFT_TOKEN }}
+      snap-store-token: ${{ secrets.SNAP_STORE_TOKEN }}
     permissions:
       contents: write  # Needed to create git tags

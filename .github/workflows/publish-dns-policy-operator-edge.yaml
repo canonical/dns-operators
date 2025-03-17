@@ -1,0 +1,15 @@
+name: Publish dns-policy-operator to edge
+
+on:
+  push:
+    branches:
+      - main
+      - track/*
+
+jobs:
+  publish-to-edge-dns-policy-operator:
+    uses: canonical/operator-workflows/.github/workflows/publish_charm.yaml@main
+    secrets: inherit
+    with:
+      channel: latest/edge
+      working-directory: ./dns-policy-operator

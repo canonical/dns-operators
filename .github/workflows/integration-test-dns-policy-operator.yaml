@@ -1,7 +1,9 @@
-name: Integration tests
+name: Dns-policy-operator integration tests
 
 on:
   pull_request:
+    paths:
+      - 'dns-policy-operator/**'
 
 jobs:
   integration-tests:
@@ -12,4 +14,4 @@ jobs:
       self-hosted-runner-label: "edge"
       juju-channel: 3.6/stable
       provider: lxd
-      working-directory: ./bind-operator
+      working-directory: ./dns-policy-operator

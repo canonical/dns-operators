@@ -1,0 +1,15 @@
+name: Publish dns-integrator-operator to edge
+
+on:
+  push:
+    branches:
+      - main
+      - track/*
+
+jobs:
+  publish-to-edge-dns-integrator-operator:
+    uses: canonical/operator-workflows/.github/workflows/publish_charm.yaml@main
+    secrets: inherit
+    with:
+      channel: latest/edge
+      working-directory: ./dns-integrator-operator

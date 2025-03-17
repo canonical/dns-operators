@@ -13,24 +13,23 @@ accepting the `dns_record` interface.
 
 ## Get started
 
-The charm can be deployed to any machine model by pulling it from [charmhub](https://charmhub.io/dns-integrator):
+The charm can be deployed to any machine model by pulling it from [Charmhub](https://charmhub.io/dns-integrator):
 ```
 juju deploy dns-integrator --channel=latest/edge
 ```
 
 You can then integrate it with any charm supporting the requirer side of the `dns_record` interface.  
-Use the configuration of the charm to decide which resource record requests you want to send through the integration.
+Use the configuration of the charm to decide which resource record requests you want to send to the requirer charm.
 
 ### Basic operations
 
 No actions are available as this charm is meant to be operated through its integrations.  
-It can integrate with any requirer charm implementing the [dns_record interface](https://canonical.github.io/charm-relation-interfaces/interfaces/dns_record/v0/).
+The charm can integrate with any requirer charm implementing the [dns_record interface](https://canonical.github.io/charm-relation-interfaces/interfaces/dns_record/v0/).
 
 ## Learn more
 * [Read more](https://charmhub.io/dns-integrator/docs)
-* [Official webpage](https://charmhub.io/dns-integrator)
 
 ## Project and community
 * [Issues](https://github.com/canonical/dns-operators/issues)
-* [Contributing](https://charmhub.io/bind/docs/how-to-contribute)
+* [Contribute](https://github.com/canonical/dns-operators/blob/main/CONTRIBUTING.md)
 * [Matrix](https://chat.charmhub.io/charmhub/channels/charm-dev)

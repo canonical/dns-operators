@@ -10,7 +10,7 @@ The snap can be installed directly from the Snap Store.
 
 
 ### Build the Snap
-The steps outlined below are based on the assumption that you are building the snap with the latest LTS of Ubuntu.  If you are using another version of Ubuntu or another operating system, the process may be different.
+The steps outlined below are based on the assumption that you are building the snap with the latest LTS of Ubuntu. If you are using another version of Ubuntu or another operating system, the process may be different.
 
 #### Clone repository
 ```bash

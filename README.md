@@ -27,3 +27,4 @@ suggestions, fixes and constructive feedback.
 * [Get support](https://discourse.charmhub.io/)
 * [Issues](https://github.com/canonical/dns-charms/issues)
 * [Matrix](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)
+* [Contribute](https://github.com/canonical/dns-operators/blob/main/CONTRIBUTING.md)

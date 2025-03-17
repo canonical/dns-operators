@@ -34,5 +34,5 @@ sudo snap install ./charmed-bind_*.snap --devmode
 
 ## Project and community
 * [Issues](https://github.com/canonical/dns-operators/issues)
-* [Contributing](https://charmhub.io/bind/docs/how-to-contribute)
+* [Contribute](https://github.com/canonical/dns-operators/blob/main/CONTRIBUTING.md)
 * [Matrix](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)

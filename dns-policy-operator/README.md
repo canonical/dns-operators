@@ -41,5 +41,5 @@ This charm will be give your reviewers the ability to manage all the DNS record 
 
 ## Project and community
 * [Issues](https://github.com/canonical/dns-operators/issues)
-* [Contributing](https://charmhub.io/bind/docs/how-to-contribute)
+* [Contribute](https://github.com/canonical/dns-operators/blob/main/CONTRIBUTING.md)
 * [Matrix](https://chat.charmhub.io/charmhub/channels/charm-dev)

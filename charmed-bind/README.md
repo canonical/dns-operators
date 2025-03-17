@@ -8,8 +8,8 @@ This snap is meant to be the workload of the [bind-operator](https://github.com/
 The snap can be installed directly from the Snap Store.  
 [![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/charmed-bind)
 
-
 ### Build the Snap
+Instead of installing the snap from the Snap Store, you can build it yourself.  
 The steps outlined below are based on the assumption that you are building the snap with the latest LTS of Ubuntu. If you are using another version of Ubuntu or another operating system, the process may be different.
 
 #### Clone repository

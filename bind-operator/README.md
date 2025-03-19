@@ -35,7 +35,7 @@ The charm can integrate with any requirer charm implementing the [dns_record int
 
 ## Learn more
 * [Read more](https://charmhub.io/bind/docs)
-* [Official webpage](https://charmhub.io/bind)
+* [Official webpage](https://www.isc.org/bind/)
 
 ## Project and community
 * [Issues](https://github.com/canonical/dns-operators/issues)

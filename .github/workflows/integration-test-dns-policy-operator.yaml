@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'dns-policy-operator/**'
+      - '.github/workflows/integration-test-dns-policy-operator.yaml'
 
 jobs:
   integration-tests:

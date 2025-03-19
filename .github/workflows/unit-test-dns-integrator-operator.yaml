@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'dns-integrator-operator/**'
+      - '.github/workflows/unit-test-dns-integrator-operator.yaml'
 
 jobs:
   unit-tests:

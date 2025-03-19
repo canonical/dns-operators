@@ -42,11 +42,6 @@ provides:
     interface: dns_record
 
 parts:
-  app:
-    plugin: dump
-    source: .
-    prime:
-      - dns-policy-app_*_amd64.snap
   charm:
     build-snaps:
       - rustup

@@ -142,7 +142,7 @@ class DnsPolicyCharm(ops.CharmBase):
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install event."""
         self.unit.status = ops.MaintenanceStatus("Preparing dns-policy-app")
-        self.dns_policy.setup(self.unit.name)
+        self.dns_policy.setup()
         self._timer.start(
             self.unit.name,
             "reconcile",

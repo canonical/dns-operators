@@ -178,51 +178,38 @@ class DnsPolicyService:
             logger.error(error_msg)
             raise StatusError(error_msg) from e
 
-    def setup(self, unit_name: str) -> None:
-        """Prepare the machine.
-
-        Args:
-            unit_name: The name of the current unit
-        """
+    def setup(self) -> None:
+        """Prepare the machine."""
         # Check if the snap is already installed
         cache = snap.SnapCache()
         if constants.DNS_SNAP_NAME in cache:
             return
-        # The location of the snap is hardcoded for now.
-        # This will be soon replaced by retrieving the published snap from the snap store.
-        self._install_snap_package_from_file(
-            (
-                f"/var/lib/juju/agents/unit-{unit_name.replace('/', '-')}/charm/"
-                "dns-policy-app_0.1_amd64.snap"
-            )
+        self._install_snap_package(
+            snap_name=constants.DNS_SNAP_NAME,
+            snap_channel=constants.SNAP_PACKAGES[constants.DNS_SNAP_NAME]["channel"],
         )
 
-    def _install_snap_package_from_file(self, snap_path: str) -> None:
+    def _install_snap_package(
+        self, snap_name: str, snap_channel: str, refresh: bool = False
+    ) -> None:
         """Installs snap package.
 
         Args:
-            snap_path: The path to the snap to install, can be blank.
+            snap_name: the snap package to install
+            snap_channel: the snap package channel
+            refresh: whether to refresh the snap if it's already present.
 
         Raises:
             InstallError: when encountering a SnapError or a SnapNotFoundError
         """
         try:
-            # Installing the charm via subprocess.
-            # Calling subprocess here is not a security issue.
-            logger.info(
-                "Installing from custom dns-policy snap located: %s",
-                snap_path,
-            )
-            subprocess.check_output(["sudo", "snap", "install", snap_path, "--dangerous"])  # nosec
-        except (snap.SnapError, snap.SnapNotFoundError) as e:
-            error_msg = f"An exception occurred when installing {snap_path}. Reason: {e}"
-            logger.exception(error_msg)
-            raise InstallError(error_msg) from e
-        except subprocess.CalledProcessError as e:
-            error_msg = (
-                f"An exception occurred when installing {snap_path}. "
-                f"Reason: {e}. Output: {e.output}"
-            )
+            snap_cache = snap.SnapCache()
+            snap_package = snap_cache[snap_name]
+
+            if not snap_package.present or refresh:
+                snap_package.ensure(snap.SnapState.Latest, channel=snap_channel)
+        except (snap.SnapError, snap.SnapNotFoundError, subprocess.CalledProcessError) as e:
+            error_msg = f"An exception occurred when installing {snap_name}. Reason: {e}"
             logger.exception(error_msg)
             raise InstallError(error_msg) from e
 

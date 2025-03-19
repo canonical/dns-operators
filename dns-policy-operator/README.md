@@ -3,14 +3,14 @@
 [![Promote charm](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml)
 [![Discourse Status](https://img.shields.io/discourse/status?server=https%3A%2F%2Fdiscourse.charmhub.io&style=flat&label=CharmHub%20Discourse)](https://discourse.charmhub.io)
 
-# Dns Policy Operator
+# DNS Policy Operator
 
 A [subordinate](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/charm/index.html#subordinate) [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
 enabling a policy layer on top of a DNS charm like [Bind](https://github.com/canonical/dns-operators/tree/main/bind-operator).
 
 After deploying the Bind operator, you may want to restrict the possibility of any charm integrating with it and freely modifying the DNS records it serves. You may want to add formal human approval for each incoming DNS resource record request. That's when you want to use the DNS Policy charm.
 
-By deploying this charm and integrating it with the Bind operator, you create a policy layer that can be operated using a web interface and/or an API, all provided by the Django workload operated by it.
+By deploying this charm and integrating it with the Bind operator, you create a policy layer that can be operated using a web interface or an API, all provided by the Django workload operated by the charm.
 
 ## Get started
 
@@ -21,8 +21,8 @@ juju deploy dns-policy --channel=latest/edge
 
 You then need to integrate it with a charm supporting the `dns_record` interface for it to work as it is a subordinate charm.  
 
-Before beeing able to review incoming dns record requests, you will need to create a reviewer account.  
-To do that, use the `create-reviewer` command and then log in using it's credentials to the dns-policy interface.  
+Before being able to review incoming DNS record requests, you will need to create a reviewer account.  
+To do that, use the `create-reviewer` command and then log in using its credentials to the dns-policy interface.  
 The charm can integrate with any requirer charm implementing the [dns_record interface](https://canonical.github.io/charm-relation-interfaces/interfaces/dns_record/v0/).
 This charm will be give your reviewers the ability to manage all the DNS record requests from those requirer. Only one provider can be integrated.
 
@@ -30,7 +30,7 @@ This charm will be give your reviewers the ability to manage all the DNS record 
 
 #### Create a reviewer
 
-Once the charm deployed and running, you can create a reviewer with the following command:  
+Once the charm is deployed and running, you can create a reviewer with the following command:  
 `juju run <dns-policy-unit> create-reviewer username=<reviewer-username> email=<reviewer-email>`  
 The action will generate a password and display it once the user has been created.
 

@@ -53,14 +53,14 @@ using the `allowed-hosts` configuration.
 Example: `juju config dns-policy allowed-hosts="1.2.3.4"`  
 This will restrict incoming requests to only `1.2.3.4`.
 
-More informations about allowed hosts in the [Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#allowed-hosts).
+See more information about allowed hosts in the [Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#allowed-hosts).
 
 #### Set logging
 
 The workload snap and underlying Django application can be set to debug mode by setting the debug configuration.  
 Example: `juju config dns-policy debug=true`  
 
-More informations about debug mode in the [Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#debug).
+See more information about debug mode in the [Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#debug).
 
 ## Learn more
 * [Read more](https://charmhub.io/dns-policy/docs)

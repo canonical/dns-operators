@@ -3,7 +3,7 @@
 [![Promote charm](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml)
 [![Discourse Status](https://img.shields.io/discourse/status?server=https%3A%2F%2Fdiscourse.charmhub.io&style=flat&label=CharmHub%20Discourse)](https://discourse.charmhub.io)
 
-# Dns Integrator Operator
+# DNS Integrator Operator
 
 A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
 deploying and managing a DNS record requests integrator on bare metal.

@@ -18,7 +18,7 @@ git clone git@github.com:canonical/dns-operators.git
 cd dns-operators/charmed-dns-policy
 ```
 
-#### install and configure prerequisites
+#### Install and configure prerequisites
 ```bash
 sudo snap install snapcraft
 sudo snap install lxd

@@ -72,6 +72,15 @@ class DnsPolicyConfig(pydantic.BaseModel):
 
     This is used to translate information from the current charm state into valid configuration
     for the dns-policy workload app.
+
+    Attrs:
+        debug: transmitted to the workload as a string
+        allowed_hosts: sent as a json string to the workload
+        database_host: host of the db
+        database_port: port of the db
+        database_name: name of the db
+        database_password: password of the db
+        database_user: user of the db
     """
 
     debug: bool = False
@@ -84,7 +93,11 @@ class DnsPolicyConfig(pydantic.BaseModel):
 
     @pydantic.model_serializer
     def ser_model(self) -> dict[str, str]:
-        """Make sure to serialize to a dict[str, str]."""
+        """Make sure to serialize to a dict[str, str].
+
+        Returns:
+            The serialized dict representing this model
+        """
         return {
             "debug": "true" if self.debug else "false",
             "allowed-hosts": json.dumps(self.allowed_hosts),
@@ -142,6 +155,9 @@ class DnsPolicyService:
     def status(self) -> bool:
         """Get the status of the snap service.
 
+        Raises:
+            StatusError: If the status could not be retrieved
+
         Returns:
             true if the service is active
         """
@@ -176,7 +192,7 @@ class DnsPolicyService:
         # This will be soon replaced by retrieving the published snap from the snap store.
         self._install_snap_package_from_file(
             (
-                f"/var/lib/juju/agents/unit-{unit_name.replace('/','-')}/charm/"
+                f"/var/lib/juju/agents/unit-{unit_name.replace('/', '-')}/charm/"
                 "dns-policy-app_0.1_amd64.snap"
             )
         )
@@ -236,10 +252,9 @@ class DnsPolicyService:
 
         Args:
             cmd: command to execute by django's manage script
-            env: environment
 
         Raises:
-            CommandError if the command call errors
+            CommandError: if the command call errors
 
         Returns:
             The resulting output of the command's execution
@@ -256,7 +271,14 @@ class DnsPolicyService:
             raise CommandError(str(e)) from e
 
     def get_api_root_token(self) -> str:
-        """Get API root token."""
+        """Get API root token.
+
+        Raises:
+            RootTokenError: if the root token could not be retrieved
+
+        Returns:
+            the API root token
+        """
         try:
             res = self.command("get_root_token")
             tokens = json.loads(res)
@@ -273,11 +295,8 @@ class DnsPolicyService:
             token: root token for the API
             record_requests: list of record requests from the relations
 
-        Returns:
-            True if the request succeeded False otherwise
-
         Raises:
-            ApiError if the request errors
+            ApiError: if the request errors
         """
         try:
             req = requests.post(
@@ -303,7 +322,8 @@ class DnsPolicyService:
             A list of RequirerEntry to update the relations
 
         Raises:
-            ApiError if the request errors
+            ApiError: if the request errors
+            GetApprovedRecordRequestsError: if the requests errors
         """
         try:
             req = requests.get(

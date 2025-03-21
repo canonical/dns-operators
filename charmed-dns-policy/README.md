@@ -1,15 +1,15 @@
-# Dns-policy Snap
+# DNS-policy snap
 
 This snap is meant to be the workload of the [dns-policy-operator](https://github.com/canonical/dns-operators/dns-policy-operator) charm.  
 
 ## Get started
 
-### Install the Snap
-The snap can be installed directly from the Snap Store.  
-[![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/charmed-dns-policy)
+### Install the snap
+The snap can be installed directly from the snap store.  
+[![Get it from the snap store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/charmed-dns-policy)
 
 
-### Build the Snap
+### Build the snap
 The steps outlined below are based on the assumption that you are building the snap with the latest LTS of Ubuntu. If you are using another version of Ubuntu or another operating system, the process may be different.
 
 #### Clone repository
@@ -24,7 +24,7 @@ sudo snap install snapcraft
 sudo snap install lxd
 sudo lxd init --auto
 ```
-#### Pack and install the Snap
+#### Pack and install the snap
 ```bash
 snapcraft pack
 sudo snap install ./charmed-dns-policy_*.snap --devmode

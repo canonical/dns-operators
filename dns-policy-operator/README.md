@@ -3,7 +3,7 @@
 [![Promote charm](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml)
 [![Discourse Status](https://img.shields.io/discourse/status?server=https%3A%2F%2Fdiscourse.charmhub.io&style=flat&label=CharmHub%20Discourse)](https://discourse.charmhub.io)
 
-# DNS Policy Operator
+# DNS policy operator
 
 A [subordinate](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/charm/index.html#subordinate) [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
 enabling a policy layer on top of a DNS charm like [Bind](https://github.com/canonical/dns-operators/tree/main/bind-operator).
@@ -34,9 +34,8 @@ Once the charm is deployed and running, you can create a reviewer with the follo
 `juju run <dns-policy-unit> create-reviewer username=<reviewer-username> email=<reviewer-email>`  
 The action will generate a password and display it once the user has been created.
 
-Example:
+Example for `juju run dns-policy/0 create-reviewer username=reviewer email=reviewer@example.com`:
 ```
-$ juju run dns-policy/0 create-reviewer username=reviewer email=reviewer@example.com
 Running operation 3 with 1 task
   - task 4 on unit-dns-policy-0
 
@@ -50,7 +49,10 @@ result: |
 
 The workload of the DNS policy charm is a Django application. As such, it can be restricted on incoming requests
 using the `allowed-hosts` configuration.  
-Example: `juju config dns-policy allowed-hosts="1.2.3.4"`  
+Example:
+```
+juju config dns-policy allowed-hosts="1.2.3.4"
+```
 This will restrict incoming requests to only `1.2.3.4`.
 
 See more information about allowed hosts in the [Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#allowed-hosts).
@@ -58,7 +60,10 @@ See more information about allowed hosts in the [Django documentation](https://d
 #### Set logging
 
 The workload snap and underlying Django application can be set to debug mode by setting the debug configuration.  
-Example: `juju config dns-policy debug=true`  
+Example:
+```
+juju config dns-policy debug=true
+```
 
 See more information about debug mode in the [Django documentation](https://docs.djangoproject.com/en/5.1/ref/settings/#debug).
 

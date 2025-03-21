@@ -11,14 +11,14 @@ on:
 jobs:
   publish-to-edge-charmed-bind:
     name: Build snap
-    uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v31.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v31.0.1
     with:
       path-to-snap-project-directory: ./charmed-bind
 
     name: Release snap
     needs:
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/release_snap.yaml@v31.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/release_snap.yaml@v31.0.1
     with:
       channel: latest/edge
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}

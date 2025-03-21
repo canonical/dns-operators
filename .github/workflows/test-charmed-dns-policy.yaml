@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'charmed-dns-policy/**'
+      - '.github/workflows/test-charmed-dns-policy.yaml'
 
 jobs:
   django-tests:

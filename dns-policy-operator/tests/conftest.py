@@ -10,7 +10,7 @@ def pytest_addoption(parser):
     Args:
         parser: Pytest parser.
     """
-    parser.addoption("--dns-policy-charm-file", action="store", default=None)
+    parser.addoption("--charm-file", action="store", default=None)
     parser.addoption("--bind-charm-file", action="store", default=None)
     parser.addoption(
         "--use-existing",

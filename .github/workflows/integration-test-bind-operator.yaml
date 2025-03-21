@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'bind-operator/**'
+      - '.github/workflows/integration-test-bind-operator.yaml'
 
 jobs:
   integration-tests:

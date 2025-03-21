@@ -58,7 +58,7 @@ async def dns_policy_fixture(
 
     resources: dict = {}
 
-    if charm := pytestconfig.getoption("--dns-policy-charm-file"):
+    if charm := pytestconfig.getoption("--charm-file"):
         application = await model.deploy(
             f"./{charm}",
             application_name=dns_policy_name,

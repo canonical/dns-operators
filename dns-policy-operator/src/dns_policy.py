@@ -72,6 +72,15 @@ class DnsPolicyConfig(pydantic.BaseModel):
 
     This is used to translate information from the current charm state into valid configuration
     for the dns-policy workload app.
+
+    Attrs:
+        debug: transmitted to the workload as a string
+        allowed_hosts: sent as a json string to the workload
+        database_host: host of the db
+        database_port: port of the db
+        database_name: name of the db
+        database_password: password of the db
+        database_user: user of the db
     """
 
     debug: bool = False
@@ -84,7 +93,11 @@ class DnsPolicyConfig(pydantic.BaseModel):
 
     @pydantic.model_serializer
     def ser_model(self) -> dict[str, str]:
-        """Make sure to serialize to a dict[str, str]."""
+        """Make sure to serialize to a dict[str, str].
+
+        Returns:
+            The serialized dict representing this model
+        """
         return {
             "debug": "true" if self.debug else "false",
             "allowed-hosts": json.dumps(self.allowed_hosts),
@@ -142,6 +155,9 @@ class DnsPolicyService:
     def status(self) -> bool:
         """Get the status of the snap service.
 
+        Raises:
+            StatusError: If the status could not be retrieved
+
         Returns:
             true if the service is active
         """
@@ -162,51 +178,38 @@ class DnsPolicyService:
             logger.error(error_msg)
             raise StatusError(error_msg) from e
 
-    def setup(self, unit_name: str) -> None:
-        """Prepare the machine.
-
-        Args:
-            unit_name: The name of the current unit
-        """
+    def setup(self) -> None:
+        """Prepare the machine."""
         # Check if the snap is already installed
         cache = snap.SnapCache()
         if constants.DNS_SNAP_NAME in cache:
             return
-        # The location of the snap is hardcoded for now.
-        # This will be soon replaced by retrieving the published snap from the snap store.
-        self._install_snap_package_from_file(
-            (
-                f"/var/lib/juju/agents/unit-{unit_name.replace('/','-')}/charm/"
-                "dns-policy-app_0.1_amd64.snap"
-            )
+        self._install_snap_package(
+            snap_name=constants.DNS_SNAP_NAME,
+            snap_channel=constants.SNAP_PACKAGES[constants.DNS_SNAP_NAME]["channel"],
         )
 
-    def _install_snap_package_from_file(self, snap_path: str) -> None:
+    def _install_snap_package(
+        self, snap_name: str, snap_channel: str, refresh: bool = False
+    ) -> None:
         """Installs snap package.
 
         Args:
-            snap_path: The path to the snap to install, can be blank.
+            snap_name: the snap package to install
+            snap_channel: the snap package channel
+            refresh: whether to refresh the snap if it's already present.
 
         Raises:
             InstallError: when encountering a SnapError or a SnapNotFoundError
         """
         try:
-            # Installing the charm via subprocess.
-            # Calling subprocess here is not a security issue.
-            logger.info(
-                "Installing from custom dns-policy snap located: %s",
-                snap_path,
-            )
-            subprocess.check_output(["sudo", "snap", "install", snap_path, "--dangerous"])  # nosec
-        except (snap.SnapError, snap.SnapNotFoundError) as e:
-            error_msg = f"An exception occurred when installing {snap_path}. Reason: {e}"
-            logger.exception(error_msg)
-            raise InstallError(error_msg) from e
-        except subprocess.CalledProcessError as e:
-            error_msg = (
-                f"An exception occurred when installing {snap_path}. "
-                f"Reason: {e}. Output: {e.output}"
-            )
+            snap_cache = snap.SnapCache()
+            snap_package = snap_cache[snap_name]
+
+            if not snap_package.present or refresh:
+                snap_package.ensure(snap.SnapState.Latest, channel=snap_channel)
+        except (snap.SnapError, snap.SnapNotFoundError, subprocess.CalledProcessError) as e:
+            error_msg = f"An exception occurred when installing {snap_name}. Reason: {e}"
             logger.exception(error_msg)
             raise InstallError(error_msg) from e
 
@@ -236,10 +239,9 @@ class DnsPolicyService:
 
         Args:
             cmd: command to execute by django's manage script
-            env: environment
 
         Raises:
-            CommandError if the command call errors
+            CommandError: if the command call errors
 
         Returns:
             The resulting output of the command's execution
@@ -256,7 +258,14 @@ class DnsPolicyService:
             raise CommandError(str(e)) from e
 
     def get_api_root_token(self) -> str:
-        """Get API root token."""
+        """Get API root token.
+
+        Raises:
+            RootTokenError: if the root token could not be retrieved
+
+        Returns:
+            the API root token
+        """
         try:
             res = self.command("get_root_token")
             tokens = json.loads(res)
@@ -273,11 +282,8 @@ class DnsPolicyService:
             token: root token for the API
             record_requests: list of record requests from the relations
 
-        Returns:
-            True if the request succeeded False otherwise
-
         Raises:
-            ApiError if the request errors
+            ApiError: if the request errors
         """
         try:
             req = requests.post(
@@ -303,7 +309,8 @@ class DnsPolicyService:
             A list of RequirerEntry to update the relations
 
         Raises:
-            ApiError if the request errors
+            ApiError: if the request errors
+            GetApprovedRecordRequestsError: if the requests errors
         """
         try:
             req = requests.get(

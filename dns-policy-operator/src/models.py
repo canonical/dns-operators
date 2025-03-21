@@ -19,6 +19,7 @@ class DnsEntry(pydantic.BaseModel):
         record_class: example: "IN"
         record_type: example: "A"
         record_data: example: "42.42.42.42"
+        status: example: "pending"
     """
 
     domain: str = pydantic.Field(min_length=1)

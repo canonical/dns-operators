@@ -73,6 +73,11 @@ class DnsPolicyCharm(ops.CharmBase):
         self.unit.status = ops.ActiveStatus()
 
     def _on_reconcile(self, _: ReconcileEvent) -> None:
+        """Reconcile incoming requests with the workload.
+
+        Raises:
+            TooManyRelatedAppsError: Raised when related to multiple providers
+        """
         if not self.model.unit.is_leader():
             return
         relation_data = self.dns_record_provider.get_remote_relation_data()
@@ -114,6 +119,7 @@ class DnsPolicyCharm(ops.CharmBase):
 
         Args:
             relation_data: input relation data
+
         Returns:
             A list of DnsEntry
         """
@@ -136,7 +142,7 @@ class DnsPolicyCharm(ops.CharmBase):
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install event."""
         self.unit.status = ops.MaintenanceStatus("Preparing dns-policy-app")
-        self.dns_policy.setup(self.unit.name)
+        self.dns_policy.setup()
         self._timer.start(
             self.unit.name,
             "reconcile",
@@ -150,22 +156,15 @@ class DnsPolicyCharm(ops.CharmBase):
         )
 
     def _on_database_created(self, _: DatabaseCreatedEvent) -> None:
-        """Handle database created.
-
-        Args:
-            event: Event triggering the database created handler.
-        """
+        """Handle database created."""
         self._handle_database_endpoint_changes()
 
     def _on_database_endpoints_changed(self, _: DatabaseEndpointsChangedEvent) -> None:
-        """Handle endpoints change.
-
-        Args:
-            event: Event triggering the endpoints changed handler.
-        """
+        """Handle endpoints change."""
         self._handle_database_endpoint_changes()
 
     def _handle_database_endpoint_changes(self) -> None:
+        """Handle a database endpoint change."""
         self.unit.status = ops.MaintenanceStatus("Preparing database")
         self.dns_policy.configure(
             dns_policy.DnsPolicyConfig.from_charm(self, self._database.get_relation_data())

@@ -3,7 +3,7 @@
 
 """File containing constants to be used in the charm."""
 
-DNS_SNAP_NAME = "dns-policy-app"
+DNS_SNAP_NAME = "charmed-dns-policy"
 DNS_SNAP_SERVICES = ["nginx", "gunicorn"]
 SNAP_PACKAGES = {
     DNS_SNAP_NAME: {"channel": "edge"},

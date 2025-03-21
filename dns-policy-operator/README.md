@@ -31,7 +31,9 @@ This charm will be give your reviewers the ability to manage all the DNS record 
 #### Create a reviewer
 
 Once the charm is deployed and running, you can create a reviewer with the following command:  
-`juju run <dns-policy-unit> create-reviewer username=<reviewer-username> email=<reviewer-email>`  
+```
+juju run <dns-policy-unit> create-reviewer username=<reviewer-username> email=<reviewer-email>
+```
 The action will generate a password and display it once the user has been created.
 
 Example for `juju run dns-policy/0 create-reviewer username=reviewer email=reviewer@example.com`:

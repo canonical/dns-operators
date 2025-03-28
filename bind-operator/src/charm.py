@@ -87,7 +87,7 @@ class BindCharm(ops.CharmBase):
             # we assume that we need to regenerate the configuration
             return
         if dns_data.has_changed(relation_data, topology, last_valid_state):
-            self.bind.update_zonefiles_and_reload(relation_data, topology)
+            self.bind.update_zonefiles_and_reload(relation_data, topology, self.config)
 
     def _on_peer_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
         """Handle peer relation joined event."""
@@ -102,7 +102,7 @@ class BindCharm(ops.CharmBase):
         relation_data = self._get_remote_relation_data()
         if relation_data is None:
             return
-        self.bind.update_zonefiles_and_reload(relation_data, topology)
+        self.bind.update_zonefiles_and_reload(relation_data, topology, self.config)
 
     def _on_dns_record_relation_changed(self, event: ops.RelationChangedEvent) -> None:
         """Handle dns_record relation changed.
@@ -146,7 +146,7 @@ class BindCharm(ops.CharmBase):
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install."""
         self.unit.status = ops.MaintenanceStatus("Preparing bind")
-        self.bind.setup(self.unit.name)
+        self.bind.setup(self.unit.name, self.config)
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start."""
@@ -159,7 +159,7 @@ class BindCharm(ops.CharmBase):
     def _on_upgrade_charm(self, _: ops.UpgradeCharmEvent) -> None:
         """Handle upgrade-charm."""
         self.unit.status = ops.MaintenanceStatus("Upgrading dependencies")
-        self.bind.setup(self.unit.name)
+        self.bind.setup(self.unit.name, self.config)
 
     def _on_leader_elected(self, _: ops.LeaderElectedEvent) -> None:
         """Handle leader-elected event."""
@@ -194,7 +194,7 @@ class BindCharm(ops.CharmBase):
             except ValueError as err:
                 logger.info("Validation error of the relation data: %s", err)
                 return
-            self.bind.update_zonefiles_and_reload(relation_data, topology)
+            self.bind.update_zonefiles_and_reload(relation_data, topology, self.config)
 
     def _check_and_may_become_active(self, topology: models.Topology) -> bool:
         """Check the active unit status and may become active if need be.

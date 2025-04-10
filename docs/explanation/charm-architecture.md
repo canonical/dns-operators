@@ -48,3 +48,62 @@ UpdateRelStyle(ingress, tls-policy, $textColor="grey", $lineColor="grey", $offse
 UpdateRelStyle(operator, dns-policy, $offsetY="-40", $offsetX="-60")
 UpdateRelStyle(operator, tls-policy, $offsetY="-200", $offsetX="-155")
 ```
+
+```mermaid
+C4Container
+title DNS charms components
+
+UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="2")
+
+Rel(operator, charmed-dns-policy, "API", "approve/denies requests")
+
+Component(postgresql, "Postgresql")
+Person(operator, "Operator")
+
+Component(empty1, "")
+Component(empty2, "")
+Component(empty3, "")
+UpdateElementStyle(empty1,  $bgColor="#0000", $borderColor="#0000")
+UpdateElementStyle(empty2,  $bgColor="#0000", $borderColor="#0000")
+UpdateElementStyle(empty3,  $bgColor="#0000", $borderColor="#0000")
+
+Component(dns-integrator, "DNS integrator")
+Rel(dns-integrator, dns-policy, "dns_record")
+UpdateRelStyle(dns-integrator, dns-policy, $textColor="green", $lineColor="green")
+
+
+Rel(charmed-dns-policy, postgresql, "database")
+UpdateRelStyle(charmed-dns-policy, postgresql, $textColor="blue", $lineColor="blue")
+
+Container_Boundary(machine-1, "Machine 1") { 
+
+  Component(charmed-dns-policy, "DNS policy snap")
+
+  Component(empty6, "")
+  UpdateElementStyle(empty6,  $bgColor="#0000", $borderColor="#0000")
+
+  Component(charmed-bind, "Bind snap")
+
+  Component(empty0, "")
+  UpdateElementStyle(empty0,  $bgColor="#0000", $borderColor="#0000")
+
+  Component(empty5, "")
+  UpdateElementStyle(empty5,  $bgColor="#0000", $borderColor="#0000")
+
+  Component(empty7, "")
+  UpdateElementStyle(empty7,  $bgColor="#0000", $borderColor="#0000")
+
+  Component(dns-policy, "DNS policy charm")
+
+  Component(empty8, "")
+  UpdateElementStyle(empty8,  $bgColor="#0000", $borderColor="#0000")
+
+  Component(bind, "Bind charm")
+
+  Rel(dns-policy, bind, "dns_record")
+  UpdateRelStyle(dns-policy, bind, $textColor="green", $lineColor="green")
+
+  Rel(bind, charmed-bind, "API", "Update DNS records")
+  Rel(dns-policy, charmed-dns-policy, "API", "Update DNS requests")
+}
+```

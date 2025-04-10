@@ -10,18 +10,20 @@ The following diagram shows how these charms are intended to be used with other 
 C4Context
 title DNS charms story
 
+UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="2")
+
 Container_Boundary(is-model, "IS model") {
   
-  Component(bind, "Bind charm")
+  Component(tls-policy, "TLS policy")
   Component(dns-policy, "DNS policy")
-
+  
   Rel(dns-policy, bind, "dns_record")
   UpdateRelStyle(dns-policy, bind, $textColor="green", $lineColor="green", $offsetX="-20", $offsetY="10")
-
-  Component(httpreq, "HTTP Request Lego Provider")
+  
   Component(lego, "Lego")
-  Component(tls-policy, "TLS policy")
-
+  Component(bind, "Bind charm")
+  Component(httpreq, "HTTP Request Lego Provider")
+  
   Rel(httpreq, bind, "dns_record")
   Rel(lego, httpreq, "API")
   Rel(tls-policy, lego, "tls-certificates")

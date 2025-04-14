@@ -5,6 +5,9 @@ on:
     paths:
       - 'dns-integrator-operator/**'
       - '.github/workflows/unit-test-dns-integrator-operator.yaml'
+  push:
+    branches:
+      - main
 
 jobs:
   unit-tests:

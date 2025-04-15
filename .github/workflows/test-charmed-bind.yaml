@@ -5,6 +5,9 @@ on:
     paths:
       - 'charmed-bind/**'
       - '.github/workflows/test-charmed-bind.yaml'
+  push:
+    branches:
+      - main
 
 jobs:
   shellcheck:

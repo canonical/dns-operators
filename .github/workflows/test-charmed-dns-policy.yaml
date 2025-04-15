@@ -5,6 +5,9 @@ on:
     paths:
       - 'charmed-dns-policy/**'
       - '.github/workflows/test-charmed-dns-policy.yaml'
+  push:
+    branches:
+      - main
 
 jobs:
   django-tests:

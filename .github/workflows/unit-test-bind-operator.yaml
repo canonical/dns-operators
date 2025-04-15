@@ -5,6 +5,9 @@ on:
     paths:
       - 'bind-operator/**'
       - '.github/workflows/unit-test-bind-operator.yaml'
+  push:
+    branches:
+      - main
 
 jobs:
   unit-tests:

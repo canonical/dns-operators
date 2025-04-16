@@ -7,25 +7,28 @@ on:
         required: true
 
 jobs:
-  - name: Checkout
-    uses: actions/checkout@v4
-  - name: Set up environment
-    run: |
-      sudo snap install lxd
-      sudo adduser "$USER" lxd
-      # `newgrp` does not work in GitHub Actions; use `sudo --user` instead
-      sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd waitready
-      sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd init --auto
-      # Workaround for Docker & LXD on same machine
-      sudo iptables -F FORWARD
-      sudo iptables -P FORWARD ACCEPT
-      sudo snap install charmcraft --classic
-  - run: snap list
-  - name: Pack, upload and release charm
-    run: |
-      cd ./bind-operator
-      charmcraft pack -v
-      charmcraft upload *.charm
-      charmcraft release bind --channel=latest/edge
-    env:
-      CHARMCRAFT_AUTH: ${{ secrets.CHARMHUB_TOKEN }}
+  Publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up environment
+        run: |
+          sudo snap install lxd
+          sudo adduser "$USER" lxd
+          # `newgrp` does not work in GitHub Actions; use `sudo --user` instead
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd waitready
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd init --auto
+          # Workaround for Docker & LXD on same machine
+          sudo iptables -F FORWARD
+          sudo iptables -P FORWARD ACCEPT
+          sudo snap install charmcraft --classic
+      - run: snap list
+      - name: Pack, upload and release charm
+        run: |
+          cd ./bind-operator
+          charmcraft pack -v
+          charmcraft upload *.charm
+          charmcraft release bind --channel=latest/edge
+        env:
+          CHARMCRAFT_AUTH: ${{ secrets.CHARMHUB_TOKEN }}

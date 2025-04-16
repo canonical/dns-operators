@@ -1,12 +1,10 @@
 name: Publish charmed-dns-policy to edge
 
 on:
-  push:
-    branches:
-      - main
-      - track/*
-    paths:
-      - 'charmed-dns-policy/**'
+  workflow_dispatch:
+    secrets:
+      SNAP_STORE_TOKEN:
+        required: true
 
 jobs:
   publish-to-edge-charmed-dns-policy:

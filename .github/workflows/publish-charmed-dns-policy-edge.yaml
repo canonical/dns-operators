@@ -19,6 +19,7 @@ jobs:
       - build
     uses: canonical/data-platform-workflows/.github/workflows/release_snap.yaml@v31.0.1
     with:
+      path-to-snap-project-directory: ./charmed-dns-policy
       channel: latest/edge
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
     secrets:

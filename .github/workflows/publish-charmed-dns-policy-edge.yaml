@@ -7,12 +7,13 @@ on:
         required: true
 
 jobs:
-  publish-to-edge-charmed-dns-policy:
+  build:
     name: Build snap
     uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v31.0.1
     with:
       path-to-snap-project-directory: ./charmed-dns-policy
 
+  release:
     name: Release snap
     needs:
       - build

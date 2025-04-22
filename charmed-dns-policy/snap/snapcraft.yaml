@@ -9,8 +9,9 @@ summary: Dns policy app
 description: |
   This snap bundles the DNS policy django application to be included in the dns-policy-operator.
 confinement: strict
-architectures:
-  - build-on: [amd64]
+platforms:
+  amd64:
+    build-on: [amd64]
     build-for: [amd64]
 
 system-usernames:

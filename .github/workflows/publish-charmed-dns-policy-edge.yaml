@@ -17,12 +17,21 @@ jobs:
     name: Release snap
     needs:
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/release_snap.yaml@v31.0.1
-    with:
-      path-to-snap-project-directory: ./charmed-dns-policy
-      channel: latest/edge
-      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
-    secrets:
-      snap-store-token: ${{ secrets.SNAP_STORE_TOKEN }}
-    permissions:
-      contents: write  # Needed to create git tags
+    steps:
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
+      - run: snap list
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download snap package(s)
+        uses: actions/download-artifact@v4.2.1
+        with:
+          pattern: ${{ needs.build.outputs.artifact-prefix }}-*
+          merge-multiple: true
+      - name: Publish the snap
+        run: |
+          cd ./charmed-dns-policy
+          snapcraft upload --release="latest/edge" charmed-dns-policy_*.snap
+        env:
+          SNAPCRAFT_STORE_AUTH: candid
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_STORE_TOKEN }}

@@ -11,16 +11,25 @@ jobs:
     name: Release snap
     runs-on: ubuntu-latest
     steps:
-      - name: Install snapcraft
-        run: sudo snap install snapcraft --classic
+      - name: Set up environment
+        run: |
+          sudo snap install lxd
+          sudo adduser "$USER" lxd
+          # `newgrp` does not work in GitHub Actions; use `sudo --user` instead
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd waitready
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd init --auto
+          # Workaround for Docker & LXD on same machine
+          sudo iptables -F FORWARD
+          sudo iptables -P FORWARD ACCEPT
+          sudo snap install snapcraft --classic
       - run: snap list
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build and publish the snap
         run: |
           cd ./charmed-dns-policy
-          snapcraft --verbose
-          snapcraft upload --release="latest/edge" charmed-dns-policy_*.snap
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- snapcraft --verbose
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- snapcraft upload --release="latest/edge" charmed-dns-policy_*.snap
         env:
           SNAPCRAFT_STORE_AUTH: candid
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_STORE_TOKEN }}

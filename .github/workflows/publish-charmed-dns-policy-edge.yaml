@@ -7,31 +7,19 @@ on:
         required: true
 
 jobs:
-  build:
-    name: Build snap
-    uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v31.0.1
-    with:
-      path-to-snap-project-directory: ./charmed-dns-policy
-
-  release:
+  publish:
     name: Release snap
     runs-on: ubuntu-latest
-    needs:
-      - build
     steps:
       - name: Install snapcraft
         run: sudo snap install snapcraft --classic
       - run: snap list
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Download snap package(s)
-        uses: actions/download-artifact@v4.2.1
-        with:
-          pattern: ${{ needs.build.outputs.artifact-prefix }}-*
-          merge-multiple: true
-      - name: Publish the snap
+      - name: Build and publish the snap
         run: |
           cd ./charmed-dns-policy
+          snapcraft --verbose
           snapcraft upload --release="latest/edge" charmed-dns-policy_*.snap
         env:
           SNAPCRAFT_STORE_AUTH: candid

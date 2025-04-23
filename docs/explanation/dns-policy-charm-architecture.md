@@ -3,7 +3,7 @@
 The following diagram shows the different modules of this charm
 and how they interact with each other.
 
-```
+```mermaid
 C4Component
 title DNS policy charm Components
 

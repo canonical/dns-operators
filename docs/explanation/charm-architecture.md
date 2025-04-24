@@ -113,7 +113,7 @@ Container_Boundary(machine-1, "Machine 1") {
   Component(bind, "Bind charm")
 
   Rel(dns-policy, bind, "dns_record")
-  UpdateRelStyle(dns-policy, bind, $textColor="green", $lineColor="green")
+  UpdateRelStyle(dns-policy, bind, $textColor="green", $lineColor="green", $offsetY="10")
 
   Rel(bind, charmed-bind, "API", "Update DNS records")
   Rel(dns-policy, charmed-dns-policy, "API", "Update DNS requests")

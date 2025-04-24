@@ -85,7 +85,7 @@ UpdateRelStyle(dns-integrator, dns-policy, $textColor="green", $lineColor="green
 
 
 Rel(charmed-dns-policy, postgresql, "database")
-UpdateRelStyle(charmed-dns-policy, postgresql, $textColor="blue", $lineColor="blue")
+UpdateRelStyle(charmed-dns-policy, postgresql, $textColor="blue", $lineColor="blue", $offsetX="10")
 
 Container_Boundary(machine-1, "Machine 1") { 
 

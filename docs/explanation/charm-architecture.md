@@ -18,7 +18,7 @@ Container_Boundary(is-model, "IS model") {
   Component(dns-policy, "DNS policy")
   
   Rel(dns-policy, bind, "dns_record")
-  UpdateRelStyle(dns-policy, bind, $textColor="green", $lineColor="green", $offsetX="-20", $offsetY="10")
+  UpdateRelStyle(dns-policy, bind, $textColor="green", $lineColor="green", $offsetX="10", $offsetY="20")
   
   Component(lego, "Lego")
   Component(bind, "Bind charm")

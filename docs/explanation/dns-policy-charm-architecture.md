@@ -48,7 +48,7 @@ UpdateElementStyle(timer, $fontColor="black", $bgColor="lightblue", $borderColor
 
 The `src/charm.py` file is the default entry point for the DNS Policy charm and contains the `DnsPolicyCharm` Python class, which inherits from `CharmBase`. `CharmBase` is the base class from which all charms are formed, defined by the [Ops](https://juju.is/docs/sdk/ops) Python framework for developing charms.
 
-> See more in the Juju docs: [Charm](https://documentation.ubuntu.com/juju/latest/user/reference/charm/)
+> See more in the Juju docs: [Charm](https://documentation.ubuntu.com/juju/3.6/user/reference/charm/)
 
 In the `__init__` method of `DnsPolicyCharm`, the charm sets up observers for various events that are relevant to its operation. This ensures that the charm can respond appropriately to changes in its environment, such as configuration updates or relation changes.
 

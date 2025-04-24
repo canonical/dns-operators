@@ -58,7 +58,7 @@ For example, when a user changes the charm's configuration using the Juju CLI, s
 juju config dns-policy allowed-hosts='example.com'
 ```
 
-a config-changed event is emitted. The charm's __init__ method has already set up an observer for this event, typically with a line like:
+Here, a config-changed event is emitted. The charm's `__init__` method has already set up an observer for this event, typically with a line like:
 ```
 self.framework.observe(self.on.config_changed, self._on_config_changed)
 ```

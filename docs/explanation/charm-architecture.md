@@ -27,9 +27,9 @@ Container_Boundary(is-model, "IS model") {
   Rel(httpreq, bind, "dns_record")
   Rel(lego, httpreq, "API")
   Rel(tls-policy, lego, "tls-certificates")
-  UpdateRelStyle(httpreq, bind, $textColor="green", $lineColor="green", $offsetX="10")
-  UpdateRelStyle(lego, httpreq, $textColor="purple", $lineColor="purple", $offsetY="10")
-  UpdateRelStyle(tls-policy, lego, $textColor="red", $lineColor="red")
+  UpdateRelStyle(httpreq, bind, $textColor="green", $lineColor="green", $offsetX="0")
+  UpdateRelStyle(lego, httpreq, $textColor="purple", $lineColor="purple", $offsetY="10", $offsetX="10")
+  UpdateRelStyle(tls-policy, lego, $textColor="red", $lineColor="red", $offsetX="10")
 }
 
 Container_Boundary(app-model, "App model") {

@@ -45,16 +45,12 @@ Container_Boundary(app-model, "App model") {
 
 Rel(ingress, dns-policy, "dns_record")
 Rel(ingress, tls-policy, "tls-certificates")
-UpdateRelStyle(ingress, dns-policy, $textColor="green", $lineColor="green")
-UpdateRelStyle(ingress, tls-policy, $textColor="red", $lineColor="red")
+UpdateRelStyle(ingress, dns-policy, $textColor="green", $lineColor="green", $offsetX="30", $offsetY="-10")
+UpdateRelStyle(ingress, tls-policy, $textColor="red", $lineColor="red", $offsetX="-120", $offsetY="-10")
 
 Person(operator, "Operator")
 Rel(operator, dns-policy, "approve/denies requests")
-UpdateRelStyle(ingress, dns-policy, $textColor="grey", $lineColor="grey", $offsetX="50")
-
 Rel(operator, tls-policy, "approve/denies requests")
-UpdateRelStyle(ingress, tls-policy, $textColor="grey", $lineColor="grey", $offsetY="20")
-
 UpdateRelStyle(operator, dns-policy, $offsetY="-40", $offsetX="-60")
 UpdateRelStyle(operator, tls-policy, $offsetY="-200", $offsetX="-155")
 ```

@@ -1,4 +1,4 @@
-# Charm architecture
+# Project architecture
 
 DNS operators are a family of charms used to integrate a fully functional DNS solution in [Juju](https://juju.is/).
 The core charm is the bind-operator, which acts as a primary DNS server.

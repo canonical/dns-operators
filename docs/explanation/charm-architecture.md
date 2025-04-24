@@ -56,7 +56,7 @@ UpdateRelStyle(operator, tls-policy, $offsetY="-200", $offsetX="-155")
 ```
 
 The bind-operator is usually deployed with dns-policy to enable human and/or automated approval of incoming DNS record requests.
-The workload of dns-policy is a Django application packaged as a snap with additional tooling. Since both the workloads of bind-operator and dns-policy
+The workload of dns-policy is a Django application packaged as a snap with additional tooling. Since the workloads of both bind-operator and dns-policy
 are snaps, they can work on the same machine. It was therefore decided to make dns-policy a subordinate charm.
 
 The following diagram shows the interactions between bind-operator, dns-policy, and external components of a typical deployment of the DNS charms:

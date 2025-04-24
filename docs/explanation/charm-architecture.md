@@ -126,7 +126,7 @@ Container_Boundary(machine-1, "Machine 1") {
 }
 ```
 
-After having deployed and related all the DNS charms in one model, you should see the following with `juju status --relations`:
+After having deployed and integrated all the DNS charms in one model, you should see the following output with `juju status --relations`:
 ```
 Model    Controller  Cloud/Region         Version  SLA          Timestamp
 machine  lxd         localhost/localhost  3.6.5    unsupported  13:14:27-04:00

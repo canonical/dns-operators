@@ -62,7 +62,7 @@ UpdateElementStyle(exceptions, $fontColor="black", $bgColor="lightblue", $border
 ## Scaling behavior
 
 When Bind is scaled, only one unit gets the `active` status, all the others are in `standby`. A new `active` unit is elected whenever the previous one goes down.  
-The `active` unit is the one updating the zone configuration of its workload and has Bind working as a primary authoritative server over them.  
+The `active` unit updates the zone configuration of its workload and has Bind working as a primary authoritative server over them.  
 All the `standby` units have Bind working as a secondary server, replicating the records via the usual DNS zone transfer.
 
 ## Charm code overview

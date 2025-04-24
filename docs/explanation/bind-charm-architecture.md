@@ -21,10 +21,10 @@ Container_Boundary(bind-operator, "Bind Operator") {
     Component(empty5, "")
     Component(models, "models.py", "Module", "Defines data models using Pydantic")
     Component(empty7, "")
-    Component(bind, "bind.py", "Module", "Controls BIND workload execution")
+    Component(bind, "bind.py", "Module", "Controls Bind workload execution")
     Component(empty6, "")
     Component(constants, "constants.py", "Module", "Defines constant values")
-    Component(templates, "templates.py", "Module", "Provides templates for BIND configuration files")
+    Component(templates, "templates.py", "Module", "Provides templates for Bind configuration files")
 
     UpdateElementStyle(empty1,  $bgColor="#0000", $borderColor="#0000")
     UpdateElementStyle(empty2,  $bgColor="#0000", $borderColor="#0000")

@@ -160,4 +160,4 @@ postgresql:restart              postgresql:restart                  rolling_op  
 postgresql:upgrade              postgresql:upgrade                  upgrade            peer
 ```
 
-You can here observe that the DNS policy charm is a subordinate one: it will be deployed on the same machine as the Bind charm as soon as it is related to it.
+You can here observe that the DNS policy charm is a subordinate one: It will be deployed on the same machine as the Bind charm as soon as it is integrated to it.

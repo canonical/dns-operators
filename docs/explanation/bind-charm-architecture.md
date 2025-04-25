@@ -73,6 +73,6 @@ The `src/charm.py` is the default entry point for a charm and has the `BindCharm
 
 ## Workload
 
-The workload of this charm is a snap whose source code is in the `charmed-bind` directory of the `dns-operators` repository. The workload is operated through the `src/bind.py` module which is able to set up, start, stop, restart, and change the workload configuration files.  
+The workload of this charm is a snap whose source code is in the `charmed-bind` directory of the [dns-operators repository](https://github.com/canonical/dns-operators). The workload is operated through the `src/bind.py` module which is able to set up, start, stop, restart, and change the workload configuration files.  
 The workload doesn't communicate with the charm. It merely executes the charm's orders.  
-Outside of the snap, the charm also sets up a systemd timer to awaken every minute through the `ReloadBindEvent`. The hook responding to it makes sure that the configuration of Bind is up to date with the charm's relations.
+Outside of the snap, the charm also sets up a systemd timer to awaken every minute through the custom event `ReloadBindEvent`. The hook responding to this event makes sure that the configuration of Bind is up to date with the charm's relations.

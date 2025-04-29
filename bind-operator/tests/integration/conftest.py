@@ -4,7 +4,7 @@
 """Integration tests fixtures."""
 
 import pathlib
-import subprocess
+import subprocess  # nosec B404
 import typing
 
 import pytest

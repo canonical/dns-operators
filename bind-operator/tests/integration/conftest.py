@@ -3,12 +3,13 @@
 
 """Integration tests fixtures."""
 
-import typing
-import pytest_asyncio
-import yaml
-import pytest
 import pathlib
 import subprocess
+import typing
+
+import pytest
+import pytest_asyncio
+import yaml
 from pytest_operator.plugin import Model, OpsTest
 
 
@@ -32,7 +33,7 @@ def model_fixture(ops_test: OpsTest) -> Model:
 
 
 @pytest.fixture(scope="module", name="charm_file")
-def charm_file(metadata: dict[str, typing.Any], pytestconfig: pytest.Config):
+def charm_file_fixture(metadata: dict[str, typing.Any], pytestconfig: pytest.Config):
     """Pytest fixture that packs the charm and returns the filename, or --charm-file if set."""
     charm_file = pytestconfig.getoption("--charm-file")
     if charm_file:
@@ -55,7 +56,6 @@ def charm_file(metadata: dict[str, typing.Any], pytestconfig: pytest.Config):
 
 @pytest_asyncio.fixture(scope="module", name="app")
 async def app_fixture(
-    ops_test: OpsTest,
     app_name: str,
     pytestconfig: pytest.Config,
     model: Model,

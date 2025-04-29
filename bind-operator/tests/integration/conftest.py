@@ -31,7 +31,7 @@ def model_fixture(ops_test: OpsTest) -> Model:
     return ops_test.model
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module", name="charm_file")
 def charm_file(metadata: dict[str, typing.Any], pytestconfig: pytest.Config):
     """Pytest fixture that packs the charm and returns the filename, or --charm-file if set."""
     charm_file = pytestconfig.getoption("--charm-file")

@@ -7,10 +7,9 @@ import json
 import logging
 from unittest.mock import patch
 
-import ops
-from ops import testing
 import pytest
 import scenario
+from ops import testing
 from scenario.context import _Event  # needed for custom events for now
 
 import tests.unit.helpers

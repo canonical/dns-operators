@@ -32,8 +32,8 @@ Only `dns-policy` is using an external database to store its data, through a `po
 ### Back up PostgreSQL
 
 Follow the instructions of the PostgreSQL charm:
- - For [postgresql-k8s](https://charmhub.io/postgresql-k8s/docs/h-create-backup).
- - For [postgresql](https://charmhub.io/postgresql/docs/h-create-backup).
+ - For [`postgresql-k8s`](https://charmhub.io/postgresql-k8s/docs/h-create-backup).
+ - For [`postgresql`](https://charmhub.io/postgresql/docs/h-create-backup).
 
 If you plan to restore PostgreSQL in a different model or cluster, you will need
 to also back up the cluster passwords. See:

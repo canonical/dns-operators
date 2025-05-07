@@ -12,7 +12,7 @@ The DNS charms have security-related configurations, and misconfiguring them can
 
 ### bind-operator
 
-No configuration available.
+No security-related configurations available.
 
 ### dns-policy
 

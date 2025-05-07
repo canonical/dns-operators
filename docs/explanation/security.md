@@ -4,7 +4,7 @@ This document outlines common risks and possible best practices specifically for
 focuses on configurations and protections available through the charms themselves.
 
 The overall best practice is to [keep your charms updated](https://documentation.ubuntu.com/juju/3.6/reference/juju-cli/list-of-juju-cli-commands/refresh/) to the latest version available.  
-A good understanding of [the DNS system](https://bind9.readthedocs.io/en/stable/chapter1.html) is welcome.
+A good understanding of [the DNS system](https://bind9.readthedocs.io/en/stable/chapter1.html) is also helpful.
 
 ## Configuration
 

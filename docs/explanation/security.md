@@ -23,7 +23,7 @@ some of Django's configurations.
 
 ### dns-integrator
 
-No security related configuration available
+No security-related configurations available.
 
 ## Data
 

@@ -8,7 +8,7 @@ A good understanding of [the DNS system](https://bind9.readthedocs.io/en/stable/
 
 ## Configuration
 
-The DNS charms can be configured and misconfiguring them can lead to security vulnerabilities.  
+The DNS charms have security-related configurations, and misconfiguring them can lead to vulnerabilities.  
 
 ### bind-operator
 

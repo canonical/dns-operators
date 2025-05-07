@@ -46,6 +46,12 @@ Follow the instructions given by PostgreSQL:
  - For `postgresql-k8s`: [local restore](https://charmhub.io/postgresql/docs/h-restore-backup), [foreign backup](https://charmhub.io/postgresql/docs/h-migrate-cluster).
  - For `postgresql`: [local restore](https://charmhub.io/postgresql/docs/h-restore-backup), [foreign backup](https://charmhub.io/postgresql/docs/h-migrate-cluster).
 
+## Reviewers
+
+`dns-policy` exposes a way to create reviewers through the `create-reviewer` action.  
+This will create a user and output its password in the terminal. Make sure to copy it to a safe location as it is the only time it will be displayed.  
+If someone gains reviewer access to the policy application, they will be able to accept and deny DNS record requests.
+
 ## Upstream
 
 The DNS charms use external software to work properly.  

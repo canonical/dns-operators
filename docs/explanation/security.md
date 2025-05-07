@@ -27,7 +27,7 @@ No security-related configurations available.
 
 ## Data
 
-Only the dns-policy is using an external database to store its data, through a postgresql interface.
+Only `dns-policy` is using an external database to store its data, through a `postgresql` interface.
 
 ### Back up PostgreSQL
 

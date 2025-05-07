@@ -37,8 +37,8 @@ Follow the instructions of the PostgreSQL charm:
 
 If you plan to restore PostgreSQL in a different model or cluster, you will need
 to also back up the cluster passwords. See:
- - For [postgresql-k8s](https://charmhub.io/postgresql-k8s/docs/h-migrate-cluster).
- - For [postgresql](https://charmhub.io/postgresql/docs/h-migrate-cluster).
+ - For [`postgresql-k8s`](https://charmhub.io/postgresql-k8s/docs/h-migrate-cluster).
+ - For [`postgresql`](https://charmhub.io/postgresql/docs/h-migrate-cluster).
 
 ### Restore PostgreSQL
 

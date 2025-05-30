@@ -1,0 +1,33 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: dns-resolver
+display-name: DNS resolver charm
+summary: DNS resolver charm
+docs: https://discourse.charmhub.io/t/bind-documentation-overview/13753
+issues: https://github.com/canonical/dns-operators/issues
+maintainers: 
+  - https://launchpad.net/~canonical-is-devops
+source: https://github.com/canonical/dns-operators
+description: |
+  A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+  deploying and managing a DNS resolver charm on bare metal.
+assumes:
+  - juju >= 3.1
+peers:
+  dns-resolver-peers:
+    interface: bind-instance
+type: charm
+bases:
+  - build-on:
+    - name: ubuntu
+      channel: "22.04"
+    run-on:
+    - name: ubuntu
+      channel: "22.04"
+parts:
+  charm:
+    build-snaps:
+      - rustup
+    override-build: |
+      rustup default stable
+      craftctl default

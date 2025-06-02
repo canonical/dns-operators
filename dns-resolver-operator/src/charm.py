@@ -58,7 +58,7 @@ class DnsResolverCharm(ops.CharmBase):
         Reloading is used to take new configuration into account.
 
         """
-        self.bind.update_zonefiles_and_reload()
+        self.bind.update_config_and_reload()
 
     def _on_collect_status(self, event: ops.CollectStatusEvent) -> None:
         """Handle collect status event.

@@ -39,17 +39,17 @@ NAMED_CONF_SECONDARY_ZONE_DEF_TEMPLATE = (
     "primaries {{ {primary_ip} }}; }};\n"
 )
 
-NAMED_CONF_RESOLVER_TEMPLATE = """
+NAMED_CONF_OPTIONS_TEMPLATE = """
 options {{
     dnssec-validation no;
-    allow-query {{ {allow_query} }};
+    allow-query {{ {allow_query}; }};
     recursion yes;
-    allow-recursion {{ {allow_query} }};
-    allow-query-cache {{ {allow_query} }};
+    allow-recursion {{ {allow_query}; }};
+    allow-query-cache {{ {allow_query}; }};
     allow-transfer {{ none; }};
     notify no;
     forwarders {{}};
-}}
+}};
 """
 
 DISPATCH_EVENT_SERVICE = """[Unit]

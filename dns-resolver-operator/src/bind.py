@@ -113,7 +113,7 @@ class BindService:
         self._install_bind_reload_service(unit_name)
         # We need to put the service zone in place so we call
         # the following with an empty relation and topology.
-        self.update_zonefiles_and_reload()
+        self.update_config_and_reload()
 
     def _install_bind_reload_service(self, unit_name: str) -> None:
         """Install the bind reload service.
@@ -163,10 +163,22 @@ class BindService:
             encoding="utf-8",
         )
 
-    def update_zonefiles_and_reload(self) -> None:
-        """Update the zonefiles from bind's config and reload bind."""
+    def update_config_and_reload(self) -> None:
+        """Update bind's config and reload bind."""
         start_time = time.time_ns()
-        logger.debug("Starting update of zonefiles")
+        logger.debug("Starting update of config")
+
+        # Write the named.conf.local file
+        self._write_file(
+            pathlib.Path(constants.DNS_CONFIG_DIR) / "named.conf.local",
+            self._generate_named_conf_local(),
+        )
+
+        # Write the named.conf.options file
+        self._write_file(
+            pathlib.Path(constants.DNS_CONFIG_DIR) / "named.conf.options",
+            self._generate_named_conf_options(),
+        )
 
         # Reload charmed-bind config (only if already started).
         # When stopped, we assume this was on purpose.
@@ -199,6 +211,17 @@ class BindService:
             logger.exception(error_msg)
             raise InstallError(error_msg) from e
 
+    def _generate_named_conf_options(self) -> str:
+        """Generate the content of `named.conf.options`.
+
+        Returns:
+            The content of `named.conf.options`
+        """
+        content: str = templates.NAMED_CONF_OPTIONS_TEMPLATE.format(
+            allow_query="0.0.0.0/0",
+        )
+        return content
+
     def _generate_named_conf_local(self) -> str:
         """Generate the content of `named.conf.local`.
 
@@ -207,10 +230,6 @@ class BindService:
         """
         # It's good practice to include rfc1918
         content: str = f'include "{constants.DNS_CONFIG_DIR}/zones.rfc1918";\n'
-        # Add options
-        content += templates.NAMED_CONF_RESOLVER_TEMPLATE.format(
-            allow_query="0.0.0.0/0",
-        )
         # Include a zone specifically used for some services tests
         content += templates.NAMED_CONF_PRIMARY_ZONE_DEF_TEMPLATE.format(
             name=f"{constants.ZONE_SERVICE_NAME}",

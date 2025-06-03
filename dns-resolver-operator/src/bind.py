@@ -163,8 +163,14 @@ class BindService:
             encoding="utf-8",
         )
 
-    def update_config_and_reload(self, zones: list[str] = [], ips: list[str] = []) -> None:
+    def update_config_and_reload(
+        self, zones: list[str] | None = None, ips: list[str] | None = None
+    ) -> None:
         """Update bind's config and reload bind."""
+        if zones is None:
+            zones = []
+        if ips is None:
+            ips = []
         start_time = time.time_ns()
         logger.debug("Starting update of config")
 
@@ -231,7 +237,7 @@ class BindService:
         )
         return content
 
-    def _generate_named_conf_local(self, zones, ips) -> str:
+    def _generate_named_conf_local(self, zones: list[str], ips: list[str]) -> str:
         """Generate the content of `named.conf.local`.
 
         Returns:

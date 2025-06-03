@@ -53,7 +53,11 @@ options {{
 """
 
 NAMED_CONF_FORWARDER_TEMPLATE = (
-    'zone "{zone}" {{ ' "type forward;" "forward only;" "forwarders {{ {forwarders_ips} }}; }};\n"
+    'zone "{zone}" {{ '
+    "type forward;"
+    "forward only;"
+    "forwarders {{ {forwarders_ips} }}; "
+    "}};\n"
 )
 
 DISPATCH_EVENT_SERVICE = """[Unit]

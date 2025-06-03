@@ -70,6 +70,10 @@ class DnsResolverCharm(ops.CharmBase):
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle changed configuration event."""
+        self.bind.update_config_and_reload(
+            self.config["zones"].split(","),
+            self.config["ips"].split(","),
+        )
 
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install."""

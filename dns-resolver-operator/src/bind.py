@@ -163,15 +163,23 @@ class BindService:
             encoding="utf-8",
         )
 
-    def update_config_and_reload(self) -> None:
+    def update_config_and_reload(self, zones: list[str] = [], ips: list[str] = []) -> None:
         """Update bind's config and reload bind."""
         start_time = time.time_ns()
         logger.debug("Starting update of config")
 
+        # Write the service.test file
+        self._write_file(
+            pathlib.Path(constants.DNS_CONFIG_DIR) / f"db.{constants.ZONE_SERVICE_NAME}",
+            templates.ZONE_SERVICE.format(
+                serial=int(time.time() / 60),
+            ),
+        )
+
         # Write the named.conf.local file
         self._write_file(
             pathlib.Path(constants.DNS_CONFIG_DIR) / "named.conf.local",
-            self._generate_named_conf_local(),
+            self._generate_named_conf_local(zones, ips),
         )
 
         # Write the named.conf.options file
@@ -217,12 +225,13 @@ class BindService:
         Returns:
             The content of `named.conf.options`
         """
-        content: str = templates.NAMED_CONF_OPTIONS_TEMPLATE.format(
+        content: str = ""
+        content += templates.NAMED_CONF_OPTIONS_TEMPLATE.format(
             allow_query="0.0.0.0/0",
         )
         return content
 
-    def _generate_named_conf_local(self) -> str:
+    def _generate_named_conf_local(self, zones, ips) -> str:
         """Generate the content of `named.conf.local`.
 
         Returns:
@@ -236,6 +245,14 @@ class BindService:
             absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{constants.ZONE_SERVICE_NAME}",
             zone_transfer_ips="",
         )
+        # Add zones forwarding requests to our authoritative deployment
+        for zone in zones:
+            if zone.strip() == "":
+                continue
+            content += templates.NAMED_CONF_FORWARDER_TEMPLATE.format(
+                zone=f"{zone}",
+                forwarders_ips=";".join(ips) + ";",
+            )
         return content
 
     def _bind_config_ip_list(self, ips: list[pydantic.IPvAnyAddress]) -> str:

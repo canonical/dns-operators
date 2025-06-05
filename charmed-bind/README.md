@@ -4,6 +4,8 @@ This snap is meant to be the workload of the [bind-operator](https://github.com/
 
 ## Get started
 
+The following instructions will show you how to deploy the snap.
+
 ### Install the snap
 The snap can be installed directly from the snap store.  
 [![Get it from the snap store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/charmed-bind)

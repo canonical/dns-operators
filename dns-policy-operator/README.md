@@ -23,10 +23,12 @@ You then need to integrate it with a charm supporting the `dns_record` interface
 
 Before being able to review incoming DNS record requests, you will need to create a reviewer account.  
 To do that, use the `create-reviewer` command and then log in using its credentials to the dns-policy interface.  
-The charm can integrate with any requirer charm implementing the [dns_record interface](https://canonical.github.io/charm-relation-interfaces/interfaces/dns_record/v0/).
+The charm can integrate with any requirer charm implementing the [`dns_record` interface](https://canonical.github.io/charm-relation-interfaces/interfaces/dns_record/v0/).
 This charm will be give your reviewers the ability to manage all the DNS record requests from those requirer. Only one provider can be integrated.
 
 ### Basic operations
+
+These operations can be done once the charm is deployed.
 
 #### Create a reviewer
 

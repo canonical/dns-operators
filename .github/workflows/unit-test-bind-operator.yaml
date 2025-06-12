@@ -17,3 +17,4 @@ jobs:
       self-hosted-runner: false
       self-hosted-runner-label: "edge"
       working-directory: ./bind-operator
+      vale-style-check: true

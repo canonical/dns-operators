@@ -14,18 +14,12 @@ source venv/bin/activate
 This project uses `tox` for managing test environments. There are some pre-configured environments
 that can be used for linting and formatting code when you're preparing contributions to the charm:
 
-```shell
-# update your code according to linting rules
-tox run -e format
-# code style
-tox run -e lint
-# unit tests
-tox run -e unit
-# integration tests
-tox run -e integration
-# runs 'format', 'lint', and 'unit' environments
-tox
-```
+* `tox`: Runs all of the basic checks (`lint`, `unit`, `static`, and `coverage-report`).
+* `tox -e fmt`: Runs formatting using `black` and `isort`.
+* `tox -e lint`: Runs a range of static code analysis to check the code.
+* `tox -e static`: Runs other checks such as `bandit` for security issues.
+* `tox -e unit`: Runs the unit tests.
+* `tox -e integration`: Runs the integration tests.
 
 ## Build the charm
 

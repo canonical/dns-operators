@@ -182,7 +182,9 @@ async def generate_anycharm_relation(
         args["to"] = machine
     any_charm = await ops_test.model.deploy("any-charm", storage=None, **args)
     await ops_test.model.wait_for_idle(apps=[any_charm.name])
-    await ops_test.model.add_relation(f"{any_charm.name}", f"{app.name}")
+    await ops_test.model.add_relation(
+        f"{any_charm.name}:require-dns-record", f"{app.name}:dns-record"
+    )
     await change_anycharm_relation(ops_test, any_charm.units[0], dns_entries)
 
 

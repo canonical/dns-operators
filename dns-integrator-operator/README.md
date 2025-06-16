@@ -24,7 +24,7 @@ Use the configuration of the charm to decide which resource record requests you 
 ### Basic operations
 
 No actions are available as this charm is meant to be operated through its integrations.  
-The charm can integrate with any requirer charm implementing the [dns_record interface](https://canonical.github.io/charm-relation-interfaces/interfaces/dns_record/v0/).
+The charm can integrate with any requirer charm implementing the [`dns_record` interface](https://canonical.github.io/charm-relation-interfaces/interfaces/dns_record/v0/).
 
 ## Learn more
 * [Read more](https://charmhub.io/dns-integrator/docs)

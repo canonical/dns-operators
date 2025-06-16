@@ -1,25 +1,25 @@
 name: Publish charmed-bind to edge
 
 on:
-  push:
-    branches:
-      - main
-      - track/*
-    paths:
-      - 'charmed-bind/**'
+  workflow_dispatch:
+    secrets:
+      SNAP_STORE_TOKEN:
+        required: true
 
 jobs:
-  publish-to-edge-charmed-bind:
+  build:
     name: Build snap
-    uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v31.0.1
+    uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v32.1.0
     with:
       path-to-snap-project-directory: ./charmed-bind
 
+  release:
     name: Release snap
     needs:
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/release_snap.yaml@v31.0.1
+    uses: canonical/data-platform-workflows/.github/workflows/release_snap.yaml@v32.1.0
     with:
+      path-to-snap-project-directory: ./charmed-bind
       channel: latest/edge
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
     secrets:

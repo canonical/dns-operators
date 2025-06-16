@@ -5,6 +5,9 @@ on:
     paths:
       - 'dns-policy-operator/**'
       - '.github/workflows/integration-test-dns-policy-operator.yaml'
+  push:
+    branches:
+      - main
 
 jobs:
   integration-tests:

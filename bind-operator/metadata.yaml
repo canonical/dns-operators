@@ -28,6 +28,8 @@ assumes:
 provides:
   dns-record:
     interface: dns_record
+  dns-authority:
+    interface: dns_authority
 peers:
   bind-peers:
     interface: bind-instance

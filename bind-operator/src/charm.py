@@ -12,6 +12,7 @@ import typing
 
 import ops
 from charms.bind.v0 import dns_record
+from charms.dns_authority.v0 import dns_authority
 
 import constants
 import dns_data
@@ -43,6 +44,7 @@ class BindCharm(ops.CharmBase):
         super().__init__(*args)
         self.bind = BindService()
         self.dns_record = dns_record.DNSRecordProvides(self)
+        self.dns_authority = dns_authority.DNSAuthorityProvides(self)
 
         self.on.define_event("reload_bind", events.ReloadBindEvent)
 
@@ -53,6 +55,9 @@ class BindCharm(ops.CharmBase):
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(
             self.on.dns_record_relation_changed, self._on_dns_record_relation_changed
+        )
+        self.framework.observe(
+            self.on.dns_authority_relation_joined, self._on_dns_authority_relation_joined
         )
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
         self.framework.observe(self.on.reload_bind, self._on_reload_bind)
@@ -103,6 +108,28 @@ class BindCharm(ops.CharmBase):
         if relation_data is None:
             return
         self.bind.update_zonefiles_and_reload(relation_data, topology)
+
+    def _on_dns_authority_relation_joined(self, event: ops.RelationChangedEvent) -> None:
+        """Handle dns_authority relation changed.
+
+        Args:
+            event: Event triggering the relation changed handler.
+
+        """
+        relation = self.model.get_relation(self.dns_authority.relation_name, event.relation.id)
+        topology = self._topology()
+        ips = topology.standby_units_ip or topology.units_ip
+        relation_data = self._get_remote_relation_data()
+        if relation_data is None:
+            return
+        zones = dns_data.dns_record_relations_data_to_zones(relation_data)
+        if self.unit.is_leader():
+            self.dns_authority.update_relation_data(
+                relation,
+                dns_authority.DNSAuthorityRelationData(
+                    addresses=ips, zones=[zone.domain for zone in zones]
+                ),
+            )
 
     def _on_dns_record_relation_changed(self, event: ops.RelationChangedEvent) -> None:
         """Handle dns_record relation changed.

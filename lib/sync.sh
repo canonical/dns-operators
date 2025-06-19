@@ -1,12 +1,23 @@
 #!/bin/sh
 
+set -e
+
 LIB_DIR="$(cd "$( dirname "$0" )" && pwd)"
 REPO_ROOT="$(cd "$LIB_DIR/.." && pwd)"
+
+for project in \
+  "bind-operator" \
+  "dns-policy-operator"
+do
+  mkdir -p "$REPO_ROOT/$project/lib/charms"
+  cp -fr "$LIB_DIR/charms/bind" "$REPO_ROOT/$project/lib/charms/"
+done
 
 for project in \
   "bind-operator" \
   "dns-integrator-operator" \
   "dns-policy-operator"
 do
-  cp -r "$LIB_DIR/charms/bind" "$REPO_ROOT/$project/lib/charms/"
+  mkdir -p "$REPO_ROOT/$project/lib/charms"
+  cp -fr "$LIB_DIR/charms/dns_record" "$REPO_ROOT/$project/lib/charms/"
 done

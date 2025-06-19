@@ -1,7 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""DNS record library unit tests"""
+"""DNS record library unit tests."""
 
 import json
 import uuid

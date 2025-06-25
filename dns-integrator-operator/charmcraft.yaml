@@ -49,4 +49,3 @@ config:
         [host_label] [domain] [ttl] [record_class] [record_type] [record_data]
       default: ""
       type: string
-charm-libs: []

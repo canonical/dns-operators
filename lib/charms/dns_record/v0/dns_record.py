@@ -180,40 +180,26 @@ class Record(pydantic.BaseModel):
             return str(value)
         return str(value.value)
 
-    # Validator for record_data
-    @classmethod
-    @pydantic.field_validator("record_data")
-    def validate_record_data(
-        cls, value: str | pydantic.IPvAnyAddress, info: pydantic.ValidationInfo
-    ) -> str | pydantic.IPvAnyAddress:
-        """Validate record_data based on record_type.
-
-        Args:
-            value: input value
-            info: information about the current model
-
-        Raises:
-            ValueError: when the input value could not be validated
+    @pydantic.model_validator(mode="after")
+    def validate_model(self) -> "Record":
+        """Validate the model.
 
         Returns:
-            The validated value
+            A validated Record model
+
+        Raises:
+            ValueError: if there is an issue in the model data
         """
-        record_type = info.data.get("record_type")
+        value = self.record_data
+        record_type = self.record_type
         if record_type in (RecordType.A, RecordType.AAAA):
-            if isinstance(value, pydantic.IPvAnyAddress):
-                return value
+            if isinstance(value, pydantic.networks.IPvAnyAddress):
+                return self
             if isinstance(value, str):
                 try:
                     # mypy is confused by the fact that pydantic interfaces
                     # an external class
-                    return pydantic.IPv4Address(value)  # type: ignore
-                except ValueError:
-                    pass
-
-                try:
-                    # mypy is confused by the fact that pydantic interfaces
-                    # an external class
-                    return pydantic.IPv6Address(value)  # type: ignore
+                    pydantic.networks.IPvAnyAddress(value)  # type: ignore
                 except ValueError as e:
                     raise ValueError(
                         "record_data must be a valid IP address for record_type A or AAAA"
@@ -226,7 +212,7 @@ class Record(pydantic.BaseModel):
         # For other record types, ensure it's a string
         if not isinstance(value, str):
             raise ValueError("record_data must be a string for non-A/AAAA record types")
-        return value
+        return self
 
 
 class RecordRequest(pydantic.BaseModel):
@@ -240,9 +226,24 @@ class RecordRequest(pydantic.BaseModel):
     """
 
     uuid: uuid_module.UUID
-    status: Status
+    status: Status | None = None
     description: str | None = None
-    record: Record | None
+    record: Record | None = None
+
+    @pydantic.model_validator(mode="after")
+    def validate_model(self) -> "RecordRequest":
+        """Validate the model.
+
+        Returns:
+            A validated RecordRequest model
+
+        Raises:
+            ValueError: if there is an issue in the model data
+        """
+        if self.record is None:
+            if self.status is None:
+                raise ValueError("A record request must have a status if no record is defined")
+        return self
 
     def serialize_as_response(self) -> dict[str, str]:
         """Serialize the RecordRequest as a response.
@@ -291,29 +292,20 @@ class DNSRecordBase(ops.Object):
         self.charm = charm
         self.relation_name = relation_name
 
-    def get_relation_data(self) -> list[RecordRequest] | None:
-        """Retrieve the remote relation data.
+    @staticmethod
+    def _handle_relation_data(data: dict[str, typing.Any]) -> list[RecordRequest]:
+        """Transform relation data into a list of RecordRequest.
+
+        Args:
+            data: relation data
 
         Returns:
-            the relation data.
-
-        Raises:
-            ValueError: if the relation data could not be parsed.
+            list of RecordRequest
         """
-        relation = self.model.get_relation(self.relation_name)
-        if not relation:
-            return None
-        relation_data: ops.RelationDataContent = relation.data[relation.app]
-        data: dict = {k: json.loads(v) for k, v in relation_data.items()}
-
         # Regroup data for each entry based on the uuid
         entries: dict[str, dict[str, typing.Any]] = collections.defaultdict(dict)
         for entry in data["dns_entries"]:
-            try:
-                entries[entry["uuid"]] |= json.loads(entry)
-            except json.JSONDecodeError as ex:
-                logger.warning("Invalid relation data %s", ex)
-                raise ValueError from ex
+            entries[entry["uuid"]] |= entry
 
         # Create a record for each entry
         for entry in entries.values():
@@ -321,9 +313,32 @@ class DNSRecordBase(ops.Object):
                 # This works based on the fact that pydantic will ignore extra fields in the input
                 entry["record"] = Record.model_validate(entry)
             except pydantic.ValidationError:
+                # If we could not create a record, this is not an issue, let's just continue
                 continue
 
-        return [RecordRequest.model_validate(entry) for entry in entries]
+        # Create a record request for each entry
+        rr_entries: list[RecordRequest] = []
+        for entry in entries.values():
+            try:
+                rr = RecordRequest.model_validate(entry)
+                rr_entries.append(rr)
+            except pydantic.ValidationError:
+                # If we could not create a record request, this is not an issue, let's just continue
+                continue
+
+        return rr_entries
+
+    def get_relation_data(self) -> list[RecordRequest] | None:
+        """Retrieve the remote relation data.
+
+        Returns:
+            the relation data.
+        """
+        relation = self.model.get_relation(self.relation_name)
+        if not relation:
+            return None
+        relation_data: ops.RelationDataContent = relation.data[relation.app]
+        return self._handle_relation_data({k: json.loads(v) for k, v in relation_data.items()})
 
 
 class DNSRecordRequires(DNSRecordBase):
@@ -350,6 +365,60 @@ class DNSRecordRequires(DNSRecordBase):
         except ops.SecretNotFoundError:
             charm.app.add_secret({"namespace": str(uuid_module.uuid4())}, label=secret_label)
 
+    @staticmethod
+    def _create_record_request(
+        namespace: uuid_module.UUID,
+        data: typing.Iterable[str] | str,
+        *,
+        status: str = str(Status.UNKNOWN),
+        description: str = "",
+    ) -> RecordRequest:
+        """Create a new RecordRequest.
+
+        Args:
+            namespace: uuid namespace for the request
+            data: Iterable or string with the information
+            status: Optional status
+            description: Optional description
+
+        Return:
+            A newly created recordRequest
+
+        Raise:
+            CreateRecordRequestError: when failing to create the RecordRequest
+        """
+        try:
+            if isinstance(data, str):
+                data = tuple(data.split())
+            data = list(itertools.islice(data, 6))
+            if len(data) < 6:
+                raise CreateRecordRequestError(f"Incorrect input: {data}")
+            (host_label, domain, ttl, record_class, record_type, record_data) = data
+            return RecordRequest.model_validate(
+                {
+                    "uuid": uuid_module.uuid5(
+                        namespace,
+                        " ".join(
+                            (host_label, domain, ttl, record_class, record_type, record_data)
+                        ),
+                    ),
+                    "record": Record.model_validate(
+                        {
+                            "host_label": host_label,
+                            "domain": domain,
+                            "ttl": int(ttl),
+                            "record_class": record_class,
+                            "record_type": record_type,
+                            "record_data": record_data,
+                        }
+                    ),
+                    "status": status,
+                    "description": description,
+                }
+            )
+        except ValueError as e:
+            raise CreateRecordRequestError(f"Incorrect input: {data}") from e
+
     def create_record_request(
         self,
         data: typing.Iterable[str] | str,
@@ -375,37 +444,12 @@ class DNSRecordRequires(DNSRecordBase):
             secret_content: dict[str, str] = secret.get_content()
         except ops.SecretNotFoundError as e:
             raise CreateRecordRequestError("Namespace not found !") from e
-        try:
-            if isinstance(data, str):
-                data = tuple(data.split())
-            data = list(itertools.islice(data, 6))
-            if len(data) < 6:
-                raise CreateRecordRequestError(f"Incorrect input: {data}")
-            (host_label, domain, ttl, record_class, record_type, record_data) = data
-            return RecordRequest.model_validate(
-                {
-                    "uuid": uuid_module.uuid5(
-                        uuid_module.UUID(secret_content["namespace"]),
-                        " ".join(
-                            (host_label, domain, ttl, record_class, record_type, record_data)
-                        ),
-                    ),
-                    "record": Record.model_validate(
-                        {
-                            "host_label": host_label,
-                            "domain": domain,
-                            "ttl": int(ttl),
-                            "record_class": record_class,
-                            "record_type": record_type,
-                            "record_data": record_data,
-                        }
-                    ),
-                    "status": status,
-                    "description": description,
-                }
-            )
-        except ValueError as e:
-            raise CreateRecordRequestError(f"Incorrect input: {data}") from e
+        return self._create_record_request(
+            uuid_module.UUID(secret_content["namespace"]),
+            data,
+            status=status,
+            description=description,
+        )
 
     def update_relation_data(
         self,

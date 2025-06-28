@@ -7,15 +7,11 @@
 
 import logging
 import typing
-import uuid
 
 import ops
-from charms.bind.v0 import dns_record
+from charms.dns_record.v0 import dns_record
 
 logger = logging.getLogger(__name__)
-
-# the following UUID is used as namespace for the uuidv5 generation
-UUID_NAMESPACE = uuid.UUID("c53fe32f-6486-4f24-9417-b79b2cb596c4")
 
 
 class DnsIntegratorCharm(ops.CharmBase):
@@ -32,6 +28,13 @@ class DnsIntegratorCharm(ops.CharmBase):
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
+        self.framework.observe(
+            self.on["dns_record"].relation_joined, self._on_dns_record_relation_joined
+        )
+
+    def _on_dns_record_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
+        """Handle dns_record relation joined."""
+        self._update_relations()
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start.
@@ -70,33 +73,21 @@ class DnsIntegratorCharm(ops.CharmBase):
             return
         try:
             for relation in self.model.relations[self.dns_record.relation_name]:
-                self.dns_record.update_relation_data(
-                    relation, self._get_dns_record_requirer_data()
-                )
+                self.dns_record.update_relation_data(relation, self._get_dns_record_data())
         except ops.model.ModelError as e:
             logger.error("ERROR while updating relation data: %s", e)
             raise
 
-    def _get_dns_record_requirer_data(self) -> dns_record.DNSRecordRequirerData:
+    def _get_dns_record_data(self) -> list[dns_record.RecordRequest]:
         """Get DNS record requirer data."""
         entries = []
         for request in str(self.config["requests"]).split("\n"):
-            data = request.split()
-            if len(data) != 6:
+            try:
+                entries.append(self.dns_record.create_record_request(request))
+            except dns_record.CreateRecordRequestError:
                 logger.error("Invalid entry ignored: '%s'", request)
                 continue
-            (host_label, domain, ttl, record_class, record_type, record_data) = data
-            entry = dns_record.RequirerEntry(
-                host_label=host_label,
-                domain=domain,
-                ttl=int(ttl),
-                record_class=record_class,
-                record_type=record_type,
-                record_data=record_data,
-                uuid=uuid.uuid5(UUID_NAMESPACE, " ".join(data)),
-            )
-            entries.append(entry)
-        return dns_record.DNSRecordRequirerData(dns_entries=entries)
+        return entries
 
 
 if __name__ == "__main__":  # pragma: nocover

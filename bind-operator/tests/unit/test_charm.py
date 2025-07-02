@@ -112,7 +112,7 @@ def test_leader_elected_changed_while_leader_not_active_dig_timeout(context, bas
         local_app_data=databag,
     )
     base_state["relations"][0] = peer_relation
-    with patch("src.charm.BindCharm._dig_query") as dig_query:
+    with patch("src.charm.topology.TopologyService._dig_query") as dig_query:
         dig_query.return_value = ""
         state = testing.State(**base_state)
         out = context.run(context.on.leader_elected(), state)
@@ -134,7 +134,7 @@ def test_leader_elected_changed_while_leader_not_active_dig_ok(context, base_sta
         local_app_data=databag,
     )
     base_state["relations"][0] = peer_relation
-    with patch("src.charm.BindCharm._dig_query") as dig_query:
+    with patch("src.charm.topology.TopologyService._dig_query") as dig_query:
         dig_query.return_value = "ok"
         state = testing.State(**base_state)
         out = context.run(context.on.leader_elected(), state)

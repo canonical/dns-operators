@@ -10,6 +10,7 @@ from unittest.mock import patch
 import ops
 import pytest
 import scenario
+import constants
 
 from src.charm import BindCharm
 
@@ -32,15 +33,20 @@ def context_fixture(tmp_path_factory):
             path: path of the file
             content: content of the file
         """
-        pathlib.Path(bind_operator_test_dir / path).write_text(
+        logger.debug("%s", pathlib.Path(bind_operator_test_dir))
+        logger.debug("%s", pathlib.Path(bind_operator_test_dir / path.relative_to(path.anchor)))
+        new_path = pathlib.Path(bind_operator_test_dir / path.relative_to(path.anchor))
+        new_path.parent.mkdir(parents=True, exist_ok=True)
+        new_path.write_text(
             content,
             encoding="utf-8",
         )
 
     with (
+        patch("bind.BindService.reload"),
+        patch("bind.BindService.setup"),
         patch("bind.BindService.start"),
         patch("bind.BindService.stop"),
-        patch("bind.BindService.setup"),
         patch("bind.BindService._write_file") as mock_write_file,
     ):
         mock_write_file.side_effect = _mock_write_file
@@ -53,7 +59,7 @@ def context_fixture(tmp_path_factory):
 def peer_relation_fixture():
     """Peer relation fixture."""
     yield scenario.PeerRelation(
-        endpoint="bind-peers",
+        endpoint=constants.PEER,
         peers_data={},
     )
 

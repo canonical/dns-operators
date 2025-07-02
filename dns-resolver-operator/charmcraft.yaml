@@ -6,10 +6,13 @@ description: |
   A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
   deploying and managing a DNS resolver charm on bare metal.
 assumes:
-  - juju >= 3.1
+  - juju >= 3.6
 peers:
   dns-resolver-peers:
-    interface: bind-instance
+    interface: dns-resolver-instance
+requires:
+  dns-authority:
+    interface: dns_authority
 type: charm
 bases:
   - build-on:

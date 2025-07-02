@@ -22,6 +22,7 @@ import dns_data
 import exceptions
 import models
 import templates
+import topology as topology_module
 
 logger = logging.getLogger(__name__)
 
@@ -180,7 +181,7 @@ class BindService:
     def update_zonefiles_and_reload(
         self,
         relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
-        topology: models.Topology | None,
+        topology: topology_module.Topology | None,
     ) -> None:
         """Update the zonefiles from bind's config and reload bind.
 
@@ -267,7 +268,7 @@ class BindService:
             raise InstallError(error_msg) from e
 
     def _zones_to_files_content(
-        self, zones: list[models.Zone], topology: models.Topology
+        self, zones: list[models.Zone], topology: topology_module.Topology
     ) -> dict[str, str]:
         """Return zone files and their content.
 
@@ -316,7 +317,7 @@ class BindService:
         return zone_files
 
     def _generate_named_conf_local(
-        self, zones: list[str], topology: models.Topology | None
+        self, zones: list[str], topology: topology_module.Topology | None
     ) -> str:
         """Generate the content of `named.conf.local`.
 

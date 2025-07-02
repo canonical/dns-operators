@@ -17,6 +17,7 @@ from charms.bind.v0.dns_record import (
 )
 
 import models
+import topology as topology_module
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ def create_dns_record_provider_data(
 
 def has_changed(
     relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
-    topology: models.Topology | None,
+    topology: topology_module.Topology | None,
     last_valid_state: dict[str, typing.Any],
 ) -> bool:
     """Check if the dns data has changed.
@@ -73,12 +74,21 @@ def has_changed(
     """
     zones = dns_record_relations_data_to_zones(relation_data)
 
-    # We assume "zones" and "topology" keys exist in last_valid_state
-    # As it was created from load_state()
+    if topology is None:
+        # We don't change anything if the topology can't be constructed
+        # This is done to favor reliability when the cluster itself is not.
+        return False
+
+    if "zones" not in last_valid_state:
+        return True
 
     if zones != last_valid_state["zones"]:
         return True
 
+    if "topology" not in last_valid_state:
+        return True
+
+    #TODO
     if topology != last_valid_state["topology"]:
         return True
 
@@ -160,7 +170,7 @@ def dns_record_relations_data_to_zones(
     return list(zones.values())
 
 
-def dump_state(zones: list[models.Zone], topology: models.Topology) -> str:
+def dump_state(zones: list[models.Zone], topology: topology_module.Topology) -> str:
     """Dump the current state.
 
     We need this cumbersome way of serializing the state because
@@ -195,6 +205,6 @@ def load_state(serialized_state: str) -> dict[str, typing.Any]:
     """
     state = json.loads(serialized_state)
     if state["topology"] is not None:
-        state["topology"] = models.Topology(**state["topology"])
+        state["topology"] = topology_module.Topology(**state["topology"])
     state["zones"] = [models.Zone(**zone) for zone in state["zones"]]
     return state

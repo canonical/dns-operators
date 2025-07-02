@@ -24,7 +24,7 @@ description: |
   For DevOps or SRE teams this charm will make operating any charm requiring dynamic DNS
   configuration simple and straightforward through Juju's clean interface.
 assumes:
-  - juju >= 3.1
+  - juju >= 3.6
 provides:
   dns-record:
     interface: dns_record

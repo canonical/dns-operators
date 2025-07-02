@@ -16,6 +16,7 @@ LIBPATCH = 1
 PYDEPS = ["pydantic>=2"]
 
 # pylint: disable=wrong-import-position
+import logging
 import json
 import re
 import typing
@@ -25,6 +26,7 @@ import pydantic
 
 DEFAULT_RELATION_NAME = "dns-authority"
 
+logger = logging.getLogger(__name__)
 
 class DNSAuthorityRelationData(pydantic.BaseModel):
     """Pydantic model representing the DNS authority relation data.
@@ -168,26 +170,12 @@ class DNSAuthorityDataAvailableEvent(ops.RelationEvent):
         return self.dns_authority_relation_data.addresses
 
 
-class DNSAuthorityRequiresEvents(ops.CharmEvents):
-    """DNSAuthority events.
-
-    This class defines the events that a DNSAuthority requirer can emit.
-
-    Attrs:
-        dns_authority_data_available: the DNSAuthorityDataAvailableEvent.
-    """
-
-    dns_authority_data_available = ops.EventSource(DNSAuthorityDataAvailableEvent)
-
-
 class DNSAuthorityRequires(ops.Object):
     """Requirer side of the DNSAuthority relation.
 
     Attrs:
         on: events the provider can emit.
     """
-
-    on = DNSAuthorityRequiresEvents()
 
     def __init__(self, charm: ops.CharmBase, relation_name: str = DEFAULT_RELATION_NAME) -> None:
         """Construct.
@@ -199,19 +187,6 @@ class DNSAuthorityRequires(ops.Object):
         super().__init__(charm, relation_name)
         self.charm = charm
         self.relation_name = relation_name
-        self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
-
-    def _on_relation_changed(self, event: ops.RelationChangedEvent) -> None:
-        """Event emitted when the relation has changed.
-
-        Args:
-            event: event triggering this handler.
-        """
-        assert event.relation.app
-        if event.relation.data[event.relation.app]:
-            self.on.dns_authority_data_available.emit(
-                event.relation, app=event.app, unit=event.unit
-            )
 
     def get_relation_data(self) -> DNSAuthorityRelationData | None:
         """Retrieve the relation data.
@@ -245,20 +220,16 @@ class DNSAuthorityProvides(ops.Object):
         self.charm = charm
         self.relation_name = relation_name
 
-    @property
-    def relations(self) -> list[ops.Relation]:
-        """The list of Relation instances associated with this relation_name.
-
-        Returns:
-            List of relations to this charm.
-        """
-        return list(self.model.relations[self.relation_name])
-
-    def update_relation_data(self, relation: ops.Relation, data: DNSAuthorityRelationData) -> None:
+    def update_relation_data(self, data: DNSAuthorityRelationData) -> None:
         """Update the relation data.
 
         Args:
             relation: the relation for which to update the data.
             data: a DNSAuthorityRelationData instance wrapping the data to be updated.
         """
+        try:
+            relation = self.model.relations[self.relation_name][0]
+        except IndexError:
+            logger.warning("Relation %s not ready yet", self.relation_name)
+            return
         relation.data[self.charm.model.app].update(data.to_relation_data())

@@ -16,6 +16,7 @@ import events
 import exceptions
 import models
 from bind import BindService
+from charms.dns_authority.v0 import dns_authority
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,7 @@ class DnsResolverCharm(ops.CharmBase):
         """
         super().__init__(*args)
         self.bind = BindService()
+        self.dns_authority = dns_authority.DNSAuthorityRequires(self)
 
         self.on.define_event("reload_bind", events.ReloadBindEvent)
 
@@ -49,6 +51,12 @@ class DnsResolverCharm(ops.CharmBase):
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
         self.framework.observe(self.on.reload_bind, self._on_reload_bind)
+        self.framework.observe(
+            self.on.dns_authority_relation_joined, self._on_dns_authority_relation_joined
+        )
+        self.framework.observe(
+            self.on.dns_authority_relation_changed, self._on_dns_authority_relation_changed
+        )
         self.unit.open_port("tcp", 53)  # Bind DNS
         self.unit.open_port("udp", 53)  # Bind DNS
 
@@ -67,6 +75,16 @@ class DnsResolverCharm(ops.CharmBase):
             event: Event triggering the collect-status hook
         """
         self.bind.collect_status(event)
+
+    def _on_dns_authority_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
+        """Handle changed relation joined event."""
+        data = self.dns_authority.get_relation_data()
+        logger.debug("joined: %s", data)
+
+    def _on_dns_authority_relation_changed(self, _: ops.RelationChangedEvent) -> None:
+        """Handle changed relation changed event."""
+        data = self.dns_authority.get_relation_data()
+        logger.debug("changed: %s", data)
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle changed configuration event."""

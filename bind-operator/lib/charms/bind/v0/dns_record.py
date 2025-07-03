@@ -554,7 +554,9 @@ class DNSRecordRequires(ops.Object):
             event: event triggering this handler.
         """
         if event.relation.app is None:
-            logger.warning("RelationChangedEvent: event.relation.app is not defined. This should not happen")
+            logger.warning(
+                "RelationChangedEvent: event.relation.app is not defined. This should not happen"
+            )
         relation_data = event.relation.data[event.relation.app]
         if relation_data and self._is_remote_relation_data_valid(event.relation):
             self.on.dns_record_request_processed.emit(

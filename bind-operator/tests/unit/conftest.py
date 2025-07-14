@@ -10,8 +10,8 @@ from unittest.mock import patch
 import ops
 import pytest
 import scenario
-import constants
 
+import constants
 from src.charm import BindCharm
 
 logger = logging.getLogger(__name__)

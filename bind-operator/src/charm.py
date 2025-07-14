@@ -58,50 +58,17 @@ class BindCharm(ops.CharmBase):
 
     def _on_topology_changed(self, _: topology.TopologyChangedEvent) -> None:
         """Handle topology changed events."""
-        # If we are not the active unit, there's nothing to do
-        try:
-            t = self.topology.dump()
-        except topology.TopologyUnavailableError:
-            return
-        if not t.is_current_unit_active:
-            return
-        self._update_dns_authority_relation()
-        relation_data = self._get_remote_relation_data()
-        if relation_data is None:
-            return
-        self.bind.update_zonefiles_and_reload(relation_data, t)
+        self._reconcile()
 
     def _on_reload_bind(self, _: events.ReloadBindEvent) -> None:
-        """Handle periodic reload bind event.
-
-        Reloading is used to take new configuration into account.
-
-        """
-        relation_data = self._get_remote_relation_data()
-        if relation_data is None:
-            return
-
-        # Load the last valid state
-        try:
-            last_valid_state = dns_data.load_state(
-                pathlib.Path(constants.DNS_CONFIG_DIR, "state.json").read_text(encoding="utf-8")
-            )
-        except FileNotFoundError:
-            # If we can't load the previous state,
-            # we assume that we need to regenerate the configuration
-            return
-        try:
-            t = self.topology.dump()
-        except topology.TopologyUnavailableError:
-            return
-        if dns_data.has_changed(relation_data, t, last_valid_state):
-            self.bind.update_zonefiles_and_reload(relation_data, t)
+        """Handle periodic reload bind event."""
+        self._reconcile()
 
     def _on_dns_authority_relation_joined(self, _: ops.RelationChangedEvent) -> None:
         """Handle dns_authority relation changed."""
-        self._update_dns_authority_relation()
+        self._reconcile()
 
-    def _update_dns_authority_relation(self) -> None:
+    def _reconcile(self) -> None:
         """Update dns authority relation."""
         try:
             t = self.topology.dump()
@@ -117,6 +84,22 @@ class BindCharm(ops.CharmBase):
                 addresses=ips, zones=[zone.domain for zone in zones]
             )
             self.dns_authority.update_relation_data(data)
+
+        relation_data = self._get_remote_relation_data()
+        if relation_data is None:
+            return
+
+        # Load the last valid state
+        try:
+            last_valid_state = dns_data.load_state(
+                pathlib.Path(constants.DNS_CONFIG_DIR, "state.json").read_text(encoding="utf-8")
+            )
+        except FileNotFoundError:
+            # If we can't load the previous state,
+            # we assume that we need to regenerate the configuration
+            return
+        if dns_data.has_changed(relation_data, t, last_valid_state):
+            self.bind.update_zonefiles_and_reload(relation_data, t)
 
     def _on_dns_record_relation_changed(self, event: ops.RelationChangedEvent) -> None:
         """Handle dns_record relation changed.
@@ -155,6 +138,7 @@ class BindCharm(ops.CharmBase):
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle changed configuration event."""
+        self._reconcile()
 
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install."""

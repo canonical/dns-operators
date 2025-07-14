@@ -289,15 +289,17 @@ class BindService:
                 serial=int(time.time() / 60),
             )
 
-            # By default, we hide the active unit.
-            # So only the standbies are used to respond to queries and receive NOTIFY events
-            # If we have no standby unit (a single unit deployment)
-            # then use current unit IP instead
-            ip_list: list[pydantic.IPvAnyAddress] = topology.standby_units_ip or [
-                topology.current_unit_ip
-            ]
+            # If an public ip is configured, we use it for our NS records
+            if topology.public_ips:
+                ns_ip_list: list[pydantic.IPvAnyAddress] = topology.public_ips
+            else:
+                # By default, we hide the active unit.
+                # So only the standbies are used to respond to queries and receive NOTIFY events
+                # If we have no standby unit (a single unit deployment)
+                # then use current unit IP instead
+                ns_ip_list = topology.standby_units_ip or [topology.current_unit_ip]
             # We sort the list to hopefully present the NS in a stable order in the file
-            for ip in sorted(ip_list):
+            for ip in sorted(ns_ip_list):
                 content += templates.ZONE_APEX_NS_TEMPLATE.format(
                     # We convert the IP to an int and use that as the NS record number
                     # This way, we generate a somewhat stable list of NS records

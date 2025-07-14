@@ -10,13 +10,13 @@ import time
 import typing
 
 import ops
+from charms.dns_authority.v0 import dns_authority
 
 import constants
 import events
 import exceptions
 import models
 from bind import BindService
-from charms.dns_authority.v0 import dns_authority
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,6 @@ class DnsResolverCharm(ops.CharmBase):
         self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
-        self.framework.observe(self.on.reload_bind, self._on_reload_bind)
         self.framework.observe(
             self.on.dns_authority_relation_joined, self._on_dns_authority_relation_joined
         )
@@ -59,14 +58,6 @@ class DnsResolverCharm(ops.CharmBase):
         )
         self.unit.open_port("tcp", 53)  # Bind DNS
         self.unit.open_port("udp", 53)  # Bind DNS
-
-    def _on_reload_bind(self, _: events.ReloadBindEvent) -> None:
-        """Handle periodic reload bind event.
-
-        Reloading is used to take new configuration into account.
-
-        """
-        self.bind.update_config_and_reload()
 
     def _on_collect_status(self, event: ops.CollectStatusEvent) -> None:
         """Handle collect status event.
@@ -80,11 +71,19 @@ class DnsResolverCharm(ops.CharmBase):
         """Handle changed relation joined event."""
         data = self.dns_authority.get_relation_data()
         logger.debug("joined: %s", data)
+        if data is not None:
+            self.bind.update_config_and_reload(data.zones, [str(a) for a in data.addresses])
+        else:
+            self.bind.update_config_and_reload()
 
     def _on_dns_authority_relation_changed(self, _: ops.RelationChangedEvent) -> None:
         """Handle changed relation changed event."""
         data = self.dns_authority.get_relation_data()
         logger.debug("changed: %s", data)
+        if data is not None:
+            self.bind.update_config_and_reload(data.zones, [str(a) for a in data.addresses])
+        else:
+            self.bind.update_config_and_reload()
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle changed configuration event."""

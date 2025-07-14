@@ -74,7 +74,7 @@ class Command(BaseCommand):
             }
         )
         if not created:
-            self.stdout.write(self.style.WARNING(f'User {options['username']} already exists'))
+            self.stdout.write(self.style.WARNING(f'User {options["username"]} already exists'))
             return
 
         user.set_password(password)
@@ -82,6 +82,6 @@ class Command(BaseCommand):
 
         reviewer_group, _ = Group.objects.get_or_create(name='Reviewers')
         user.groups.add(reviewer_group)
-        self.stdout.write(self.style.SUCCESS(f'User {options['username']} created successfully'))
+        self.stdout.write(self.style.SUCCESS(f'User {options["username"]} created successfully'))
         if options["generate_password"]:
             self.stdout.write(self.style.SUCCESS(f'Generated password: {password}'))

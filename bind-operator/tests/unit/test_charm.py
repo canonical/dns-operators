@@ -7,6 +7,7 @@ import json
 import logging
 from unittest.mock import patch
 
+import ops
 import pytest
 import scenario
 from ops import testing
@@ -261,7 +262,10 @@ def test_dns_record_relation_changed_without_conflict(context, base_state):
             out_uuids = {x["uuid"] for x in data}
             # check that all the records from the requirer data are approved
             assert out_uuids == in_uuids
-    assert out.unit_status == testing.ActiveStatus()
+    # Only testing if the unit has an Active status without checking the status description
+    # This is done since we don't want to test if the unit reports as being the "active" one
+    # (it's not relevant to this test).
+    assert isinstance(out.unit_status, ops.ActiveStatus)
 
 
 @pytest.mark.usefixtures("context")

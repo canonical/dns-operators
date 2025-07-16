@@ -275,25 +275,24 @@ class BindCharm(ops.CharmBase):
         try:
             relation_data = self.dns_record.get_remote_relation_data()
         except ValueError as err:
+            # If we can't get the relation data, we stop here the reconcile loop
+            # If the issue comes from the fact that the controller is not joinable,
+            # better is to continue with the current state rather than crashing later.
             logger.info("Validation error of the relation data: %s", err)
             return
 
-        # If we're the active unit, update our config based on dns_record relation's data
-        # Non-active units replicate the config through zone transfer
-        if topology.is_current_unit_active:
-            try:
-                # Load the last valid state
-                last_valid_state = dns_data.load_state(
-                    pathlib.Path(constants.DNS_CONFIG_DIR, "state.json").read_text(
-                        encoding="utf-8"
-                    )
-                )
-            except FileNotFoundError:
-                # If we can't load the previous state,
-                # we assume that we need to regenerate the configuration
-                last_valid_state = {}
-            if dns_data.has_changed(relation_data, topology, last_valid_state):
-                self.bind.update_zonefiles_and_reload(relation_data, topology)
+        # Update our workload configuration based on relation data and topology
+        try:
+            # Load the last valid state
+            last_valid_state = dns_data.load_state(
+                pathlib.Path(constants.DNS_CONFIG_DIR, "state.json").read_text(encoding="utf-8")
+            )
+        except FileNotFoundError:
+            # If we can't load the previous state,
+            # we assume that we need to regenerate the configuration
+            last_valid_state = {}
+        if dns_data.has_changed(relation_data, topology, last_valid_state):
+            self.bind.update_zonefiles_and_reload(relation_data, topology)
 
         # Update dns_record relation's data if we are the leader
         if self.unit.is_leader():

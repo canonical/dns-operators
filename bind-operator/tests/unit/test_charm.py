@@ -229,7 +229,7 @@ def test_dns_record_relation_changed_without_conflict(context, base_state):
     """
     arrange: base state with some relation
     act: run dns record relation changed
-    assert: status is active
+    assert: unit is active
     """
     record_requirers_data = tests.unit.helpers.dns_record_requirers_data_from_integration_datasets(
         [

@@ -572,8 +572,7 @@ class DNSRecordRequires(ops.Object):
         Args:
             dns_record_requirer_data: DNSRecordRequirerData wrapping the data to be updated.
         """
-        relation = self.model.get_relation(self.relation_name)
-        if relation is not None:
+        for relation in self.model.relations[self.relation_name]:
             relation_data = dns_record_requirer_data.to_relation_data()
             relation.data[self.charm.model.app].update(relation_data)
 
@@ -700,8 +699,7 @@ class DNSRecordProvides(ops.Object):
             dns_record_provider_data: a DNSRecordProviderData instance wrapping the data to be
                 updated.
         """
-        relation = self.model.get_relation(self.relation_name)
-        if relation is not None:
+        for relation in self.model.relations[self.relation_name]:
             relation_data = dns_record_provider_data.to_relation_data()
             relation.data[self.charm.model.app].update(relation_data)
 

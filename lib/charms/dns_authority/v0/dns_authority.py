@@ -16,8 +16,8 @@ LIBPATCH = 1
 PYDEPS = ["pydantic>=2"]
 
 # pylint: disable=wrong-import-position
-import logging
 import json
+import logging
 import re
 import typing
 
@@ -27,6 +27,7 @@ import pydantic
 DEFAULT_RELATION_NAME = "dns-authority"
 
 logger = logging.getLogger(__name__)
+
 
 class DNSAuthorityRelationData(pydantic.BaseModel):
     """Pydantic model representing the DNS authority relation data.
@@ -39,7 +40,7 @@ class DNSAuthorityRelationData(pydantic.BaseModel):
     addresses: list[pydantic.IPvAnyAddress]
     zones: list[str]
 
-    @pydantic.root_validator(pre=True)
+    @pydantic.model_validator(mode="before")
     @classmethod
     def ensure_uniqueness(cls, values: dict[str, typing.Any]) -> dict[str, typing.Any]:
         """Ensure addresses and zones are unique.
@@ -50,10 +51,12 @@ class DNSAuthorityRelationData(pydantic.BaseModel):
         Returns:
             validated values
         """
-        if "addresses" in values:
-            values["addresses"] = list(set(values["addresses"]))
-        if "zones" in values:
-            values["zones"] = list(set(values["zones"]))
+        if "addresses" in values and isinstance(values["addresses"], list):
+            values["addresses"] = list(dict.fromkeys(values["addresses"]))
+        else:
+            raise ValueError("Incorrect input for 'addresses'")
+        if "zones" in values and isinstance(values["zones"], list):
+            values["zones"] = list(dict.fromkeys(values["zones"]))
         return values
 
     @pydantic.field_validator("zones")
@@ -145,11 +148,7 @@ class DNSAuthorityRelationData(pydantic.BaseModel):
 
 
 class DNSAuthorityRequires(ops.Object):
-    """Requirer side of the DNSAuthority relation.
-
-    Attrs:
-        on: events the provider can emit.
-    """
+    """Requirer side of the DNSAuthority relation."""
 
     def __init__(self, charm: ops.CharmBase, relation_name: str = DEFAULT_RELATION_NAME) -> None:
         """Construct.
@@ -180,7 +179,6 @@ class DNSAuthorityProvides(ops.Object):
     Attrs:
         charm: the provider charm
         relation_name: the relation name
-        relations: the list of relation instances associated with the relation name
     """
 
     def __init__(self, charm: ops.CharmBase, relation_name: str = DEFAULT_RELATION_NAME) -> None:
@@ -198,8 +196,7 @@ class DNSAuthorityProvides(ops.Object):
         """Update the relation data.
 
         Args:
-            relation: the relation for which to update the data.
-            data: a DNSAuthorityRelationData instance wrapping the data to be updated.
+            data: a DNSAuthorityRelationData instance.
         """
         try:
             relation = self.model.relations[self.relation_name][0]

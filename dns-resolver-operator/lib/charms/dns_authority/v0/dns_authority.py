@@ -16,8 +16,8 @@ LIBPATCH = 1
 PYDEPS = ["pydantic>=2"]
 
 # pylint: disable=wrong-import-position
-import logging
 import json
+import logging
 import re
 import typing
 
@@ -27,6 +27,7 @@ import pydantic
 DEFAULT_RELATION_NAME = "dns-authority"
 
 logger = logging.getLogger(__name__)
+
 
 class DNSAuthorityRelationData(pydantic.BaseModel):
     """Pydantic model representing the DNS authority relation data.
@@ -39,7 +40,7 @@ class DNSAuthorityRelationData(pydantic.BaseModel):
     addresses: list[pydantic.IPvAnyAddress]
     zones: list[str]
 
-    @pydantic.root_validator(pre=True)
+    @pydantic.model_validator(mode="before")
     @classmethod
     def ensure_uniqueness(cls, values: dict[str, typing.Any]) -> dict[str, typing.Any]:
         """Ensure addresses and zones are unique.
@@ -50,10 +51,12 @@ class DNSAuthorityRelationData(pydantic.BaseModel):
         Returns:
             validated values
         """
-        if "addresses" in values:
-            values["addresses"] = list(set(values["addresses"]))
-        if "zones" in values:
-            values["zones"] = list(set(values["zones"]))
+        if "addresses" in values and isinstance(values["addresses"], list):
+            values["addresses"] = list(dict.fromkeys(values["addresses"]))
+        else:
+            raise ValueError("Incorrect input for 'addresses'")
+        if "zones" in values and isinstance(values["zones"], list):
+            values["zones"] = list(dict.fromkeys(values["zones"]))
         return values
 
     @pydantic.field_validator("zones")
@@ -116,7 +119,7 @@ class DNSAuthorityRelationData(pydantic.BaseModel):
         return json.dumps([str(x) for x in addresses])
 
     def to_relation_data(self) -> dict[str, str]:
-        """Convert an instance of DNSAuthorityDataAvailableEvent to the relation representation.
+        """Convert an instance of DNSAuthorityRelationData to the relation representation.
 
         Returns:
             Dict containing the representation.
@@ -144,38 +147,8 @@ class DNSAuthorityRelationData(pydantic.BaseModel):
         )
 
 
-class DNSAuthorityDataAvailableEvent(ops.RelationEvent):
-    """DNSAuthority event emitted when relation data has changed.
-
-    Attrs:
-        dns_authority_relation_data: the DNS authority relation data
-        zones: the zones upon which the provider has authority
-        addresses: the ips of the units of the provider
-    """
-
-    @property
-    def dns_authority_relation_data(self) -> DNSAuthorityRelationData:
-        """Get a DNSAuthorityRelationData for the relation data."""
-        assert self.relation.app
-        return DNSAuthorityRelationData.from_relation_data(self.relation.data[self.relation.app])
-
-    @property
-    def zones(self) -> list[str]:
-        """Get the zones from the relation data."""
-        return self.dns_authority_relation_data.zones
-
-    @property
-    def addresses(self) -> list[pydantic.IPvAnyAddress]:
-        """Get the addresses from the relation data."""
-        return self.dns_authority_relation_data.addresses
-
-
 class DNSAuthorityRequires(ops.Object):
-    """Requirer side of the DNSAuthority relation.
-
-    Attrs:
-        on: events the provider can emit.
-    """
+    """Requirer side of the DNSAuthority relation."""
 
     def __init__(self, charm: ops.CharmBase, relation_name: str = DEFAULT_RELATION_NAME) -> None:
         """Construct.
@@ -206,7 +179,6 @@ class DNSAuthorityProvides(ops.Object):
     Attrs:
         charm: the provider charm
         relation_name: the relation name
-        relations: the list of relation instances associated with the relation name
     """
 
     def __init__(self, charm: ops.CharmBase, relation_name: str = DEFAULT_RELATION_NAME) -> None:
@@ -224,8 +196,7 @@ class DNSAuthorityProvides(ops.Object):
         """Update the relation data.
 
         Args:
-            relation: the relation for which to update the data.
-            data: a DNSAuthorityRelationData instance wrapping the data to be updated.
+            data: a DNSAuthorityRelationData instance.
         """
         try:
             relation = self.model.relations[self.relation_name][0]

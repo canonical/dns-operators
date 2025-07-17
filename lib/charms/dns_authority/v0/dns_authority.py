@@ -116,7 +116,7 @@ class DNSAuthorityRelationData(pydantic.BaseModel):
         return json.dumps([str(x) for x in addresses])
 
     def to_relation_data(self) -> dict[str, str]:
-        """Convert an instance of DNSAuthorityDataAvailableEvent to the relation representation.
+        """Convert an instance of DNSAuthorityRelationData to the relation representation.
 
         Returns:
             Dict containing the representation.
@@ -142,32 +142,6 @@ class DNSAuthorityRelationData(pydantic.BaseModel):
             zones=json.loads(relation_data.get("zones", "[]")),
             addresses=json.loads(relation_data.get("addresses", "[]")),
         )
-
-
-class DNSAuthorityDataAvailableEvent(ops.RelationEvent):
-    """DNSAuthority event emitted when relation data has changed.
-
-    Attrs:
-        dns_authority_relation_data: the DNS authority relation data
-        zones: the zones upon which the provider has authority
-        addresses: the ips of the units of the provider
-    """
-
-    @property
-    def dns_authority_relation_data(self) -> DNSAuthorityRelationData:
-        """Get a DNSAuthorityRelationData for the relation data."""
-        assert self.relation.app
-        return DNSAuthorityRelationData.from_relation_data(self.relation.data[self.relation.app])
-
-    @property
-    def zones(self) -> list[str]:
-        """Get the zones from the relation data."""
-        return self.dns_authority_relation_data.zones
-
-    @property
-    def addresses(self) -> list[pydantic.IPvAnyAddress]:
-        """Get the addresses from the relation data."""
-        return self.dns_authority_relation_data.addresses
 
 
 class DNSAuthorityRequires(ops.Object):

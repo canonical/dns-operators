@@ -11,9 +11,11 @@ on:
 
 jobs:
   unit-tests:
-    uses: canonical/operator-workflows/.github/workflows/test.yaml@main
+    uses: canonical/operator-workflows/.github/workflows/test.yaml@check-lib-check
     secrets: inherit
     with:
       self-hosted-runner: false
       self-hosted-runner-label: "edge"
       working-directory: ./dns-integrator-operator
+      vale-style-check: true
+      require-check-lib: false

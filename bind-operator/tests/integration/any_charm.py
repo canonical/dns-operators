@@ -33,7 +33,7 @@ class AnyCharm(AnyCharmBase):
         """
         super().__init__(*args, **kwargs)
         self.on.define_event("reload_data", ReloadDataEvent)
-        self.dns_record = DNSRecordRequires(self)
+        self.dns_record = DNSRecordRequires(self, "require-dns-record")
         self.framework.observe(self.on.reload_data, self._on_reload_data)
 
     def _on_reload_data(self, _: ReloadDataEvent) -> None:

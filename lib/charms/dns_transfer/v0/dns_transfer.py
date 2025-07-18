@@ -84,6 +84,7 @@ PYDEPS = ["pydantic>=2"]
 # pylint: disable=wrong-import-position
 import json
 import logging
+import re
 from enum import Enum
 from typing import Any, Optional, cast
 
@@ -93,6 +94,7 @@ import pydantic
 logger = logging.getLogger(__name__)
 
 DEFAULT_RELATION_NAME = "dns-transfer"
+VALID_NAME_RFC952 = re.compile(r"^[a-zA-Z]([a-zA-Z0-9-]+[.]?)*[a-zA-Z0-9]$")
 
 
 class TransportSecurity(str, Enum):
@@ -147,6 +149,28 @@ class DNSTransferProviderData(pydantic.BaseModel):
             list with unique values.
         """
         return list(set(v))
+
+    # pydantic wants 'self' as first argument
+    @pydantic.field_validator("remote_hostname")
+    def validate_hostname(cls, v: Any) -> Any:  # noqa: N805 pylint: disable=E0213
+        """Deduplicate zones.
+
+        Args:
+            v: value
+
+        Returns:
+            hostname.
+
+        Raises:
+            ValueError: if hostname is not RFC 952 valid name.
+        """
+        if v is None:
+            return v
+        if len(v) > 24:
+            raise ValueError("remote_hostname exceeds 24 characters (RFC 952)")
+        if not VALID_NAME_RFC952.fullmatch(v):
+            raise ValueError("remote_hostname does not match RFC 952 rules")
+        return v
 
     def to_relation_data(self) -> dict[str, str]:
         """Convert an instance of DNSTransferProviderData to the relation representation.

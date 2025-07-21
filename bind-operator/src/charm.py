@@ -72,53 +72,18 @@ class BindCharm(ops.CharmBase):
         Reloading is used to take new configuration into account.
 
         """
-        relation_data = self._get_remote_relation_data()
-        if relation_data is None:
-            return
-        topology = self._topology()
-
-        # Load the last valid state
-        try:
-            last_valid_state = dns_data.load_state(
-                pathlib.Path(constants.DNS_CONFIG_DIR, "state.json").read_text(encoding="utf-8")
-            )
-        except FileNotFoundError:
-            # If we can't load the previous state,
-            # we assume that we need to regenerate the configuration
-            return
-        if dns_data.has_changed(relation_data, topology, last_valid_state):
-            self.bind.update_zonefiles_and_reload(relation_data, topology)
+        self._reconcile()
 
     def _on_peer_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
         """Handle peer relation joined event."""
-        try:
-            topology = self._topology()
-        except (PeerRelationUnavailableError, PeerRelationNetworkUnavailableError) as err:
-            logger.info("Could not retrieve network topology: %s", err)
-            return
-        # If we are not the active unit, there's nothing to do
-        if not topology.is_current_unit_active:
-            return
-        relation_data = self._get_remote_relation_data()
-        if relation_data is None:
-            return
-        self.bind.update_zonefiles_and_reload(relation_data, topology)
+        self._reconcile()
 
-    def _on_dns_record_relation_changed(self, event: ops.RelationChangedEvent) -> None:
-        """Handle dns_record relation changed.
-
-        Args:
-            event: Event triggering the relation changed handler.
-
-        """
-        relation_data = self._get_remote_relation_data()
-        if relation_data is None:
-            return
-        self.unit.status = ops.MaintenanceStatus("Handling new relation requests")
-        dns_record_provider_data = dns_data.create_dns_record_provider_data(relation_data)
-        relation = self.model.get_relation(self.dns_record.relation_name, event.relation.id)
+    def _on_dns_record_relation_changed(self, _: ops.RelationChangedEvent) -> None:
+        """Handle dns_record relation changed."""
+        # Checking if we are the leader is also done in reconcile
+        # but doing it here avoids some unnecessary computations of reconcile for this case
         if self.unit.is_leader():
-            self.dns_record.update_relation_data(relation, dns_record_provider_data)
+            self._reconcile()
 
     def _on_collect_status(self, event: ops.CollectStatusEvent) -> None:
         """Handle collect status event.
@@ -163,10 +128,7 @@ class BindCharm(ops.CharmBase):
 
     def _on_leader_elected(self, _: ops.LeaderElectedEvent) -> None:
         """Handle leader-elected event."""
-        # We check that we are still the leader when starting to process this event
-        topology = self._topology()
-        if self.unit.is_leader() and not topology.is_current_unit_active:
-            self._check_and_may_become_active(topology)
+        self._reconcile()
 
     def _on_peer_relation_departed(self, event: ops.RelationDepartedEvent) -> None:
         """Handle the peer relation departed event.
@@ -178,23 +140,7 @@ class BindCharm(ops.CharmBase):
         if event.departing_unit == self.model.unit:
             return
 
-        try:
-            topology = self._topology()
-        except (PeerRelationUnavailableError, PeerRelationNetworkUnavailableError) as err:
-            logger.info("Could not retrieve network topology: %s", err)
-            return
-
-        # We check that we are still the leader when starting to process this event
-        if not topology.is_current_unit_active:
-            if self.unit.is_leader():
-                self._check_and_may_become_active(topology)
-        else:
-            try:
-                relation_data = self.dns_record.get_remote_relation_data()
-            except ValueError as err:
-                logger.info("Validation error of the relation data: %s", err)
-                return
-            self.bind.update_zonefiles_and_reload(relation_data, topology)
+        self._reconcile()
 
     def _check_and_may_become_active(self, topology: models.Topology) -> bool:
         """Check the active unit status and may become active if need be.
@@ -312,6 +258,46 @@ class BindCharm(ops.CharmBase):
             "Relation data retrieval duration (ms): %s", (time.time_ns() - start_time) / 1e6
         )
         return relation_data
+
+    def _reconcile(self) -> None:  # noqa: C901
+        """Reconciles."""
+        # Retrieve the current topology of units
+        try:
+            topology = self._topology()
+        except (PeerRelationUnavailableError, PeerRelationNetworkUnavailableError) as err:
+            logger.info("Could not retrieve network topology: %s", err)
+            return
+
+        # If we're the leader and not active, check that the active unit is doing well
+        if self.unit.is_leader() and not topology.is_current_unit_active:
+            self._check_and_may_become_active(topology)
+
+        try:
+            relation_data = self.dns_record.get_remote_relation_data()
+        except KeyError as err:
+            # If we can't get the relation data, we stop here the reconcile loop
+            # If the issue comes from the fact that the controller is not joinable,
+            # better is to continue with the current state rather than crashing later.
+            logger.info("Relation error: %s", err)
+            return
+
+        # Update our workload configuration based on relation data and topology
+        try:
+            # Load the last valid state
+            last_valid_state = dns_data.load_state(
+                pathlib.Path(constants.DNS_CONFIG_DIR, "state.json").read_text(encoding="utf-8")
+            )
+        except FileNotFoundError:
+            # If we can't load the previous state,
+            # we assume that we need to regenerate the configuration
+            last_valid_state = {}
+        if dns_data.has_changed(relation_data, topology, last_valid_state):
+            self.bind.update_zonefiles_and_reload(relation_data, topology)
+
+        # Update dns_record relation's data if we are the leader
+        if self.unit.is_leader():
+            dns_record_provider_data = dns_data.create_dns_record_provider_data(relation_data)
+            self.dns_record.update_remote_relation_data(dns_record_provider_data)
 
 
 if __name__ == "__main__":  # pragma: nocover

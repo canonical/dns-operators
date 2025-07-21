@@ -73,13 +73,10 @@ def has_changed(
     """
     zones = dns_record_relations_data_to_zones(relation_data)
 
-    # We assume "zones" and "topology" keys exist in last_valid_state
-    # As it was created from load_state()
-
-    if zones != last_valid_state["zones"]:
+    if "zones" not in last_valid_state or zones != last_valid_state["zones"]:
         return True
 
-    if topology != last_valid_state["topology"]:
+    if "topology" not in last_valid_state or topology != last_valid_state["topology"]:
         return True
 
     return False

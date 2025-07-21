@@ -274,11 +274,11 @@ class BindCharm(ops.CharmBase):
 
         try:
             relation_data = self.dns_record.get_remote_relation_data()
-        except ValueError as err:
+        except KeyError as err:
             # If we can't get the relation data, we stop here the reconcile loop
             # If the issue comes from the fact that the controller is not joinable,
             # better is to continue with the current state rather than crashing later.
-            logger.info("Validation error of the relation data: %s", err)
+            logger.info("Relation error: %s", err)
             return
 
         # Update our workload configuration based on relation data and topology

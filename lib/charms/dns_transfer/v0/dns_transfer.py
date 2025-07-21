@@ -156,10 +156,10 @@ class DNSTransferProviderData(pydantic.BaseModel):
         """Deduplicate zones.
 
         Args:
-            v: value
+            v: The input value provided for the `remote_hostname` field.
 
         Returns:
-            hostname.
+            A validated hostname.
 
         Raises:
             ValueError: if hostname is not RFC 952 valid name.

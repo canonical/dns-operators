@@ -8,8 +8,8 @@ import logging
 import pytest
 
 import dns_data
-import models
 import tests.unit.helpers
+import topology as topology_module
 
 logger = logging.getLogger(__name__)
 
@@ -216,7 +216,9 @@ def test_has_changed(
         [(record_requirer_data, None) for record_requirer_data in record_requirers_data_before]
     )
     topology_before = (
-        models.Topology(**topology_data_before) if topology_data_before is not None else None
+        topology_module.Topology(**topology_data_before)
+        if topology_data_before is not None
+        else None
     )
     serialized_state = dns_data.dump_state(zones, topology_before)
 
@@ -228,7 +230,11 @@ def test_has_changed(
 
     assert expected_has_changed == dns_data.has_changed(
         [(record_requirer_data, None) for record_requirer_data in record_requirers_data_after],
-        models.Topology(**topology_data_after) if topology_data_after is not None else None,
+        (
+            topology_module.Topology(**topology_data_after)
+            if topology_data_after is not None
+            else None
+        ),
         dns_data.load_state(serialized_state),
     )
 
@@ -277,7 +283,7 @@ def test_load_dump_state(integration_datasets, topology_data):
     zones = dns_data.dns_record_relations_data_to_zones(  # pylint: disable=protected-access
         [(record_requirer_data, None) for record_requirer_data in record_requirers_data]
     )
-    topology = models.Topology(**topology_data) if topology_data is not None else None
+    topology = topology_module.Topology(**topology_data) if topology_data is not None else None
 
     serialized = dns_data.dump_state(zones, topology)
     state = dns_data.load_state(serialized)

@@ -29,7 +29,7 @@ def test_start_without_peer_relation(context, base_state):
     base_state["relations"] = []
     state = testing.State(**base_state)
     out = context.run(context.on.start(), state)
-    assert out.unit_status == testing.WaitingStatus("Peer relation is not available")
+    assert out.unit_status == testing.WaitingStatus("Topology is not available")
 
 
 @pytest.mark.usefixtures("context")

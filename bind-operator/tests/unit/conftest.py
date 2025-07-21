@@ -11,6 +11,7 @@ import ops
 import pytest
 import scenario
 
+import constants
 from src.charm import BindCharm
 
 logger = logging.getLogger(__name__)
@@ -56,7 +57,7 @@ def context_fixture(tmp_path_factory):
 def peer_relation_fixture():
     """Peer relation fixture."""
     yield scenario.PeerRelation(
-        endpoint="bind-peers",
+        endpoint=constants.PEER,
         peers_data={},
     )
 

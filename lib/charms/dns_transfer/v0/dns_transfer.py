@@ -269,7 +269,7 @@ class DNSTransferRequires(ops.Object):
         """Construct.
 
         Args:
-            charm: the provider charm.
+            charm: the requirer charm.
             relation_name: the relation name.
         """
         super().__init__(charm, relation_name)

@@ -153,7 +153,7 @@ class DNSTransferProviderData(pydantic.BaseModel):
     # pydantic wants 'self' as first argument
     @pydantic.field_validator("remote_hostname")
     def validate_hostname(cls, v: Any) -> Any:  # noqa: N805 pylint: disable=E0213
-        """Deduplicate zones.
+        """Validate hostname against RFC 952
 
         Args:
             v: The input value provided for the `remote_hostname` field.

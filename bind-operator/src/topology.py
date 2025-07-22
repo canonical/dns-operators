@@ -80,7 +80,7 @@ class TopologyEvents(ops.CharmEvents):
     topology_changed = ops.EventSource(TopologyChangedEvent)
 
 
-class TopologyService(ops.Object):
+class TopologyObserver(ops.Object):
     """Topology service class.
 
     Attrs:

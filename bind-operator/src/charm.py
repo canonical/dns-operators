@@ -34,7 +34,7 @@ class BindCharm(ops.CharmBase):
         super().__init__(*args)
         self.bind = BindService()
         self.dns_record = dns_record.DNSRecordProvides(self)
-        self.topology = topology.TopologyService(self, constants.PEER)
+        self.topology = topology.TopologyObserver(self, constants.PEER)
 
         self.on.define_event("reload_bind", events.ReloadBindEvent)
 

@@ -465,6 +465,12 @@ def test_handle_relation_data_skips_invalid_pydantic_record():
     ),
 )
 def test_validate_record(data: dict, valid: bool):
+    """Validate records.
+
+    Args:
+        data: input test data
+        valid: is the test data expected to be valid
+    """
     if valid:
         try:
             record = dns_record.Record.model_validate(data)

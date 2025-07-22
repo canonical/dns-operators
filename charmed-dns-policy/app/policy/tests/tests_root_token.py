@@ -39,7 +39,7 @@ class TestRootToken(TestCase):
 
         # Verify that the access token can be used to authenticate
         token = AccessToken(access_token)
-        self.assertEqual(token.payload['user_id'], self.internal_user.id)
+        self.assertEqual(int(token.payload['user_id']), self.internal_user.id)
 
         # Verify that the refresh token can be used to refresh the access token
         new_refresh_token = RefreshToken(refresh_token)

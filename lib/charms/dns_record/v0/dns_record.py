@@ -34,7 +34,7 @@ import pydantic
 logger = logging.getLogger(__name__)
 
 DEFAULT_RELATION_NAME = "dns-record"
-DEFAULT_SECRET_LABEL = "dns-record"  #nosec
+DEFAULT_SECRET_LABEL = "dns-record"  # nosec
 
 
 class DnsRecordError(Exception):

@@ -94,7 +94,41 @@ import pydantic
 logger = logging.getLogger(__name__)
 
 DEFAULT_RELATION_NAME = "dns-transfer"
-VALID_NAME_RFC952 = re.compile(r"^[a-zA-Z]([a-zA-Z0-9-]+[.]?)*[a-zA-Z0-9]$")
+
+
+def validate_zone_or_hostname(zone: str) -> None:
+    """Validate zone or hostname.
+
+    Args:
+        zone: zone or hostname string.
+
+    Raises:
+        ValueError: if zone or hostname is invalid.
+    """
+    # Our main references are RFC 1034 and 2181
+    #    RFC 1034: https://datatracker.ietf.org/doc/html/rfc1034#section-3.1
+    #    RFC 2181: https://datatracker.ietf.org/doc/html/rfc2181#section-11
+    label_pattern = r"^[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$"
+    # RFC1034: "To simplify implementations,
+    # the total number of octets that represent a domain name is limited to 255"
+    if len(zone.encode("ascii")) > 255:
+        raise ValueError(f"DNS zone name exceeds 255 octets: {zone}")
+
+    # Split zone into labels
+    labels = zone.strip(".").split(".")
+    if not labels or ".." in zone:
+        raise ValueError(f"Invalid DNS zone name format: {zone}")
+
+    # Validate each label
+    for label in labels:
+        # RFC1034: "Each node has a label, which is zero to 63 octets in length"
+        if len(label) < 1 or len(label) > 63:
+            raise ValueError(
+                f"Label length must be 1-63 characters in zone: {zone}, label: {label}"
+            )
+        # Check label content with regex
+        if not re.match(label_pattern, label, re.IGNORECASE):
+            raise ValueError(f"Invalid label in zone: {zone}, label: {label}")
 
 
 class TransportSecurity(str, Enum):
@@ -153,24 +187,34 @@ class DNSTransferProviderData(pydantic.BaseModel):
     # pydantic wants 'self' as first argument
     @pydantic.field_validator("remote_hostname")
     def validate_hostname(cls, v: Any) -> Any:  # noqa: N805 pylint: disable=E0213
-        """Validate hostname against RFC 952
+        """Validate hostname against RFC 952.
 
         Args:
             v: The input value provided for the `remote_hostname` field.
 
         Returns:
             A validated hostname.
-
-        Raises:
-            ValueError: if hostname is not RFC 952 valid name.
         """
         if v is None:
             return v
-        if len(v) > 24:
-            raise ValueError("remote_hostname exceeds 24 characters (RFC 952)")
-        if not VALID_NAME_RFC952.fullmatch(v):
-            raise ValueError("remote_hostname does not match RFC 952 rules")
+        validate_zone_or_hostname(v)
         return v
+
+    @pydantic.field_validator("zones")
+    @classmethod
+    def validate_zones(cls, zones: list[str]) -> list[str]:
+        """Validate the input zones.
+
+        Args:
+            zones: list of DNS zone names.
+
+        Returns:
+            A list of DNS zone names.
+        """
+        for zone in zones:
+            validate_zone_or_hostname(zone)
+
+        return zones
 
     def to_relation_data(self) -> dict[str, str]:
         """Convert an instance of DNSTransferProviderData to the relation representation.

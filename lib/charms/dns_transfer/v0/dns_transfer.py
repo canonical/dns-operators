@@ -59,10 +59,12 @@ class DNSTransferProviderCharm(ops.CharmBase):
             addresses.extend(dns_secondary_data.addresses)
 
     def _on_config_changed(self, event: ops.Event) -> None:
-        provider_data = DNSTransferProviderData()
-        provider_data.addresses = self.addresses()
-        provider_data.transport = self.transport()
-        provider_data.zones = self.zones()
+        data = {
+            "addresses": self.addresses(),
+            "transport": self.transport(),
+            "zones": self.zones(),
+        }
+        provider_data = DNSTransferProviderData.model_validate(data)
         for relation in self.model.relations[self.dns_transfer.relation_name]:
             self.dns_transfer.update_relation_data(relation, provider_data)
 

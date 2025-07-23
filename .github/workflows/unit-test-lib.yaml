@@ -1,10 +1,10 @@
-name: Dns-integrator-operator tests
+name: Lib tests
 
 on:
   pull_request:
     paths:
-      - 'dns-integrator-operator/**'
-      - '.github/workflows/unit-test-dns-integrator-operator.yaml'
+      - 'lib/**'
+      - '.github/workflows/unit-test-lib.yaml'
   push:
     branches:
       - main
@@ -16,6 +16,5 @@ jobs:
     with:
       self-hosted-runner: false
       self-hosted-runner-label: "edge"
-      working-directory: ./dns-integrator-operator
+      working-directory: ./lib
       vale-style-check: true
-      require-check-lib: false

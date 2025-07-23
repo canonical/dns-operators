@@ -13,6 +13,7 @@ do
   cp -fr "$LIB_DIR/charms/bind" "$REPO_ROOT/$project/lib/charms/"
 done
 
+# shellcheck disable=SC2043
 for project in \
   "dns-integrator-operator"
 do

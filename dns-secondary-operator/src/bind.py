@@ -246,7 +246,7 @@ class BindService:
         content += templates.NAMED_CONF_SECONDARY_ZONE_DEF_TEMPLATE.format(
             name=f"{constants.ZONE_SERVICE_NAME}",
             absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{constants.ZONE_SERVICE_NAME}",
-            zone_transfer_ips="",
+            primary_ips=ips,
         )
         # Add zones forwarding requests to our authoritative deployment
         for zone in zones:

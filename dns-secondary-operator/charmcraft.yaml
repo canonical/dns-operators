@@ -11,10 +11,7 @@ peers:
   dns-secondary-peers:
     interface: dns-secondary-instance
 requires:
-  dns-transfer-provider:
-    interface: dns_transfer
-provides:
-  dns-transfer-requirer:
+  dns-transfer:
     interface: dns_transfer
 type: charm
 bases:

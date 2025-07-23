@@ -36,7 +36,7 @@ NAMED_CONF_SECONDARY_ZONE_DEF_TEMPLATE = (
     'type secondary; file "{absolute_path}"; '
     "masterfile-format text; "
     "masterfile-style full; "
-    "primaries {{ {primary_ip} }}; }};\n"
+    "primaries {{ {primary_ips} }}; }};\n"
 )
 
 NAMED_CONF_OPTIONS_TEMPLATE = """

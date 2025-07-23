@@ -51,10 +51,10 @@ class DnsSecondaryCharm(ops.CharmBase):
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
         self.framework.observe(
-            self.on.dns_transfer_relation_joined, self._on_dns_transfer_relation_joined
+            self.on["dns-transfer"].relation_joined, self._on_dns_transfer_relation_joined
         )
         self.framework.observe(
-            self.on.dns_transfer_relation_changed, self._on_dns_transfer_relation_changed
+            self.on["dns-transfer"].relation_changed, self._on_dns_transfer_relation_changed
         )
         self.unit.open_port("tcp", 53)  # Bind DNS
         self.unit.open_port("udp", 53)  # Bind DNS

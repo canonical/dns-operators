@@ -15,10 +15,12 @@ from charms.dns_transfer.v0 import dns_transfer
 import constants
 import events
 import exceptions
-import models
+import topology
 from bind import BindService
 
 logger = logging.getLogger(__name__)
+
+STATUS_REQUIRED_INTEGRATION = "Required integration with DNS primary not found"
 
 
 class PeerRelationUnavailableError(exceptions.DnsSecondaryCharmError):
@@ -40,6 +42,7 @@ class DnsSecondaryCharm(ops.CharmBase):
         """
         super().__init__(*args)
         self.bind = BindService()
+        self.topology = topology.TopologyObserver(self, constants.PEER)
         self.dns_transfer = dns_transfer.DNSTransferRequires(self)
 
         self.on.define_event("reload_bind", events.ReloadBindEvent)
@@ -63,7 +66,7 @@ class DnsSecondaryCharm(ops.CharmBase):
             event: Event triggering the collect-status hook
         """
         if not self._has_required_integration():
-            event.add_status(ops.BlockedStatus("Required integration with DNS primary not found"))
+            event.add_status(ops.BlockedStatus(STATUS_REQUIRED_INTEGRATION))
         event.add_status(ops.ActiveStatus(""))
 
     def _on_dns_transfer_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
@@ -86,15 +89,27 @@ class DnsSecondaryCharm(ops.CharmBase):
         """Reconcile the charm."""
         if not self._has_required_integration():
             return
+
+        try:
+            t = self.topology.current()
+        except topology.TopologyUnavailableError as err:
+            logger.info("Could not retrieve network topology: %s", err)
+            return
+        if self.unit.is_leader() and not t.is_current_unit_active:
+            self._check_and_may_become_active(t)
+
         self.unit.status = ops.MaintenanceStatus("Preparing bind")
         self.bind.setup(self.unit.name)
         self.bind.start()
+
         relation = self.model.get_relation(self.dns_transfer.relation_name)
         data = self.dns_transfer.get_remote_relation_data()
         self.bind.update_config_and_reload(data.zones, [str(a) for a in data.addresses])
-        requirer_addresses = str(self.config["ips"]).split(",")
-        requirer_data = dns_transfer.DNSTransferRequirerData(addresses=requirer_addresses)
-        self.dns_transfer.update_relation_data(relation, requirer_data)
+
+        if self.unit.is_leader():
+            requirer_addresses = str(self.config["ips"]).split(",")
+            requirer_data = dns_transfer.DNSTransferRequirerData(addresses=requirer_addresses)
+            self.dns_transfer.update_relation_data(relation, requirer_data)
 
     def _has_required_integration(self) -> bool:
         """Check if dns_transfer required integration is set.
@@ -107,28 +122,28 @@ class DnsSecondaryCharm(ops.CharmBase):
             return False
         return True
 
-    def _check_and_may_become_active(self, topology: models.Topology) -> bool:
+    def _check_and_may_become_active(self, t: topology.Topology) -> bool:
         """Check the active unit status and may become active if need be.
 
         Args:
-            topology: Topology of the current deployment
+            t: Topology of the current deployment
 
         Returns:
             True if the charm is effectively the new active unit.
         """
         relation = self.model.get_relation(constants.PEER)
         assert relation is not None  # nosec
-        if not topology.active_unit_ip:
-            relation.data[self.app].update({"active-unit": str(topology.current_unit_ip)})
+        if not t.active_unit_ip:
+            relation.data[self.app].update({"active-unit": str(t.current_unit_ip)})
             return True
 
         status = self._dig_query(
-            f"@{topology.active_unit_ip} service.{constants.ZONE_SERVICE_NAME} TXT +short",
+            f"@{t.active_unit_ip} service.{constants.ZONE_SERVICE_NAME} TXT +short",
             retry=True,
             wait=1,
         )
         if status != "ok":
-            relation.data[self.app].update({"active-unit": str(topology.current_unit_ip)})
+            relation.data[self.app].update({"active-unit": str(t.current_unit_ip)})
             return True
         return False
 
@@ -165,49 +180,6 @@ class DnsSecondaryCharm(ops.CharmBase):
             time.sleep(wait)
 
         return result
-
-    def _topology(self) -> models.Topology:
-        """Create a network topology of the current deployment.
-
-        Returns:
-            A topology of the current deployment
-
-        Raises:
-            PeerRelationUnavailableError: when the peer relation does not exist
-            PeerRelationNetworkUnavailableError: when the network property does not exist
-        """
-        start_time = time.time_ns()
-        relation = self.model.get_relation(constants.PEER)
-        binding = self.model.get_binding(constants.PEER)
-        if not relation or not binding:
-            raise PeerRelationUnavailableError(
-                "Peer relation not available when trying to get topology."
-            )
-        if binding.network is None:
-            raise PeerRelationNetworkUnavailableError(
-                "Peer relation network not available when trying to get unit IP."
-            )
-
-        units_ip: list[str] = [
-            unit_data.get("private-address", "")
-            for _, unit_data in relation.data.items()
-            if unit_data.get("private-address", "") != ""
-        ]
-
-        current_unit_ip = str(binding.network.bind_address)
-        active_unit_ip = relation.data[self.app].get("active-unit")
-
-        logger.debug("active_unit_ip: %s", active_unit_ip)
-        logger.debug("current_unit_ip: %s", current_unit_ip)
-        logger.debug("units_ip: %s", units_ip)
-        logger.debug("topology retrieval duration (ms): %s", (time.time_ns() - start_time) / 1e6)
-
-        return models.Topology(
-            active_unit_ip=active_unit_ip,
-            units_ip=units_ip,
-            standby_units_ip=[ip for ip in units_ip if ip != active_unit_ip],
-            current_unit_ip=current_unit_ip,
-        )
 
 
 if __name__ == "__main__":  # pragma: nocover

@@ -14,4 +14,4 @@ ZONE_SERVICE_NAME = "service.test"
 
 SYSTEMD_SERVICES_PATH = "/etc/systemd/system/"
 
-PEER = "bind-peers"
+PEER = "dns-secondary-peers"

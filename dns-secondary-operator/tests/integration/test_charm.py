@@ -9,6 +9,8 @@ import logging
 import ops
 import pytest
 
+from charm import STATUS_REQUIRED_INTEGRATION
+
 logger = logging.getLogger(__name__)
 
 
@@ -24,7 +26,8 @@ async def test_deploy(model, charm_file, app_name, resources):
     application = await model.deploy(
         f"{charm_file}", application_name=app_name, resources=resources
     )
-    await model.wait_for_idle(apps=[application.name])
+    await model.wait_for_idle(apps=[application.name], timeout=300, status="blocked")
 
-    unit = application.units[0]
-    assert unit.workload_status == ops.model.BlockedStatus.name
+    assert application.units[0].workload_status == ops.model.BlockedStatus.name
+    status = await model.get_status()
+    assert status.applications[app_name]["status"]["info"] == STATUS_REQUIRED_INTEGRATION

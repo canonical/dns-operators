@@ -3,14 +3,16 @@
 
 """Fixtures for charm tests."""
 
+from pytest import Parser
 
-def pytest_addoption(parser):
+
+def pytest_addoption(parser: Parser):
     """Parse additional pytest options.
 
     Args:
         parser: Pytest parser.
     """
-    parser.addoption("--charm-file", action="store", default=None)
+    parser.addoption("--charm-file", action="store")
     parser.addoption("--charmed-bind-snap-file", action="store", default=None)
     parser.addoption(
         "--use-existing",

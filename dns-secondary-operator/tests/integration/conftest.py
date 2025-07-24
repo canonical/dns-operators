@@ -16,7 +16,7 @@ from pytest_operator.plugin import Model, OpsTest
 @pytest.fixture(scope="module", name="metadata")
 def fixture_metadata():
     """Provide charm metadata."""
-    yield yaml.safe_load(pathlib.Path("./metadata.yaml").read_text(encoding="UTF-8"))
+    yield yaml.safe_load(pathlib.Path("./charmcraft.yaml").read_text(encoding="UTF-8"))
 
 
 @pytest.fixture(scope="module", name="app_name")
@@ -47,19 +47,18 @@ def charm_file_fixture(metadata: dict[str, typing.Any], pytestconfig: pytest.Con
         raise OSError(f"Error packing charm: {exc}; Stderr:\n{exc.stderr}") from None
 
     app_name = metadata["name"]
-    charm_path = pathlib.Path(__file__).parent.parent.parent
+    charm_path = pathlib.Path()
     charms = [p.absolute() for p in charm_path.glob(f"{app_name}_*.charm")]
     assert charms, f"{app_name}.charm file not found"
     assert len(charms) == 1, f"{app_name} has more than one .charm file, unsure which to use"
     yield str(charms[0])
 
 
-@pytest_asyncio.fixture(scope="module", name="app")
-async def app_fixture(
+@pytest_asyncio.fixture(scope="module", name="resources")
+async def resources_fixture(
     app_name: str,
     pytestconfig: pytest.Config,
     model: Model,
-    charm_file: str,
 ):
     """Build the charm and deploys it."""
     use_existing = pytestconfig.getoption("--use-existing", default=False)
@@ -72,10 +71,4 @@ async def app_fixture(
     if pytestconfig.getoption("--charmed-bind-snap-file"):
         resources.update({"charmed-bind-snap": pytestconfig.getoption("--charmed-bind-snap-file")})
 
-    application = await model.deploy(
-        f"./{charm_file}", application_name=app_name, resources=resources
-    )
-
-    await model.wait_for_idle(apps=[application.name], status="active")
-
-    yield application
+    yield resources

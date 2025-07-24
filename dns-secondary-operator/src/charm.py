@@ -45,10 +45,7 @@ class DnsSecondaryCharm(ops.CharmBase):
         self.on.define_event("reload_bind", events.ReloadBindEvent)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
-        self.framework.observe(self.on.install, self._on_install)
-        self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.stop, self._on_stop)
-        self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
         self.framework.observe(
             self.on["dns-transfer"].relation_joined, self._on_dns_transfer_relation_joined
@@ -65,52 +62,50 @@ class DnsSecondaryCharm(ops.CharmBase):
         Args:
             event: Event triggering the collect-status hook
         """
-        self.bind.collect_status(event)
+        if not self._has_required_integration():
+            event.add_status(ops.BlockedStatus("Required integration with DNS primary not found"))
+        event.add_status(ops.ActiveStatus(""))
 
     def _on_dns_transfer_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
         """Handle changed relation joined event."""
-        self.reconcile()
+        self._reconcile()
 
     def _on_dns_transfer_relation_changed(self, _: ops.RelationChangedEvent) -> None:
         """Handle changed relation changed event."""
-        self.reconcile()
-
-    def reconcile(self) -> None:
-        """Reconcile bind with relation data."""
-        data = self.dns_transfer.get_remote_relation_data()
-        if data is not None:
-            self.bind.update_config_and_reload(data.zones, [str(a) for a in data.addresses])
-            # if tls/remote hostname, we need to set TLS here
-        else:
-            self.bind.update_config_and_reload()
+        self._reconcile()
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle changed configuration event."""
-        addresses = str(self.config["ips"]).split(",")
-        self.bind.update_config_and_reload(
-            addresses,
-        )
-        relation = self.model.get_relation(self.dns_transfer.relation_name)
-        requirer_data = dns_transfer.DNSTransferRequirerData(addresses=addresses)
-        self.dns_transfer.update_relation_data(relation, requirer_data)
-
-    def _on_install(self, _: ops.InstallEvent) -> None:
-        """Handle install."""
-        self.unit.status = ops.MaintenanceStatus("Preparing bind")
-        self.bind.setup(self.unit.name)
-
-    def _on_start(self, _: ops.StartEvent) -> None:
-        """Handle start."""
-        self.bind.start()
+        self._reconcile()
 
     def _on_stop(self, _: ops.StopEvent) -> None:
         """Handle stop."""
         self.bind.stop()
 
-    def _on_upgrade_charm(self, _: ops.UpgradeCharmEvent) -> None:
-        """Handle upgrade-charm."""
-        self.unit.status = ops.MaintenanceStatus("Upgrading dependencies")
+    def _reconcile(self) -> None:
+        """Reconcile the charm."""
+        if not self._has_required_integration():
+            return
+        self.unit.status = ops.MaintenanceStatus("Preparing bind")
         self.bind.setup(self.unit.name)
+        self.bind.start()
+        relation = self.model.get_relation(self.dns_transfer.relation_name)
+        data = self.dns_transfer.get_remote_relation_data()
+        self.bind.update_config_and_reload(data.zones, [str(a) for a in data.addresses])
+        requirer_addresses = str(self.config["ips"]).split(",")
+        requirer_data = dns_transfer.DNSTransferRequirerData(addresses=requirer_addresses)
+        self.dns_transfer.update_relation_data(relation, requirer_data)
+
+    def _has_required_integration(self) -> bool:
+        """Check if dns_transfer required integration is set.
+
+        Returns:
+            true if dns_transfer is set.
+        """
+        data = self.dns_transfer.get_remote_relation_data()
+        if data is None:
+            return False
+        return True
 
     def _check_and_may_become_active(self, topology: models.Topology) -> bool:
         """Check the active unit status and may become active if need be.

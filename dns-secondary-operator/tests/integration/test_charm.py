@@ -6,7 +6,6 @@
 
 import logging
 
-import juju.application
 import ops
 import pytest
 
@@ -15,11 +14,17 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
-async def test_lifecycle(app: juju.application.Application):
+@pytest.mark.skip_if_deployed
+async def test_deploy(model, charm_file, app_name, resources):
     """
     arrange: build and deploy the charm.
     act: nothing.
-    assert: that the charm ends up in an active state.
+    assert: charm is in blocked status.
     """
-    unit = app.units[0]
-    assert unit.workload_status == ops.model.ActiveStatus.name
+    application = await model.deploy(
+        f"{charm_file}", application_name=app_name, resources=resources
+    )
+    await model.wait_for_idle(apps=[application.name])
+
+    unit = application.units[0]
+    assert unit.workload_status == ops.model.BlockedStatus.name

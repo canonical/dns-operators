@@ -33,8 +33,10 @@ def test_config_changed(base_state: dict, tmp_path: Path, monkeypatch: MonkeyPat
 
     out = context.run(context.on.config_changed(), state)
 
-    assert out.unit_status == testing.ActiveStatus()
-    conf_path = tmp_path / "named.conf.local"
-    assert conf_path.exists()
-    content = conf_path.read_text()
-    assert f'zone "{ips}"' in content
+    assert out.unit_status == testing.BlockedStatus(
+        "Required integration with DNS primary not found"
+    )
+    # conf_path = tmp_path / "named.conf.local"
+    # assert conf_path.exists()
+    # content = conf_path.read_text()
+    # assert f'zone "{ips}"' in content

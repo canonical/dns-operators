@@ -8,7 +8,6 @@ import pathlib
 import subprocess  # nosec
 import time
 
-import ops
 import pydantic
 from charms.operator_libs_linux.v1 import systemd
 from charms.operator_libs_linux.v2 import snap
@@ -137,17 +136,6 @@ class BindService:
         )
         systemd.service_enable("dispatch-reload-bind.timer")
         systemd.service_start("dispatch-reload-bind.timer")
-
-    def collect_status(
-        self,
-        event: ops.CollectStatusEvent,
-    ) -> None:
-        """Add status for the charm based on the status of the dns record requests.
-
-        Args:
-            event: Event triggering the collect-status hook
-        """
-        event.add_status(ops.ActiveStatus())
 
     def _write_file(self, path: pathlib.Path, content: str) -> None:
         """Write a file to the filesystem.

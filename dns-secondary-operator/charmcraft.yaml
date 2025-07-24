@@ -32,6 +32,6 @@ config:
   options:
     ips:
       description: |
-        List of ips
+        List of ips that the primary DNS will allow transfer.
       default: ""
       type: string

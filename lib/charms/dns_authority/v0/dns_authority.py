@@ -1,7 +1,64 @@
 # Copyright 2025 Canonical Ltd.
 # Licensed under the Apache2.0. See LICENSE file in charm source for details.
 
-"""Library to manage the integration with an authoritative DNS charm."""
+"""Library to manage the integration between authority and resolver DNS charms.
+
+This library contains the Requires and Provides classes for handling the integration
+between two charms providing the `dns_authority` integration.
+
+### Requirer Charm
+
+The DNSAuthorityRequires provides:
+
+* an `get_relation_data" method to get data from the provider.
+
+```python
+
+from charms.dns_authority.v0.dns_authority import DNSAuthorityRequires, DNSAuthorityRelationData
+
+class DNSAuthorityRequirerCharm(ops.CharmBase):
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.dns_authority = DNSAuthorityRequires(self)
+        self.framework.observe(charm.on.dns_authority_relation_changed, self._on_relation_changed)
+        ...
+
+    def _on_relation_changed(self, _: ops.Event) -> None:
+        data = self.dns_authority.get_relation_data()
+        addresses = data.addresses
+        zones = data.zones
+```
+
+### Provider Charm
+
+Following the previous example, this is an example of the provider charm.
+
+```python
+from charms.dns_authority.v0.dns_authority import DNSAuthorityProvides, DNSAuthorityRelationData
+
+class DNSAuthorityProviderCharm(ops.CharmBase):
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.dns_authority = DNSAuthorityProvides(self)
+        self.framework.observe(charm.on.dns_authority_relation_changed, self._on_relation_changed)
+        ...
+
+    def _on_relation_changed(self, event: ops.Event) -> None:
+        addresses = []
+        for relation in self.model.relations[self.dns_authority.relation_name]:
+            dns_secondary_data = self.dns_authority.get_remote_relation_data(relation)
+            addresses.extend(dns_secondary_data.addresses)
+
+    def _on_config_changed(self, event: ops.Event) -> None:
+        data = {
+            "addresses": self.addresses(),
+            "zones": self.zones(),
+        }
+        data = DNSAuthorityRelationData.model_validate(data)
+        for relation in self.model.relations[self.dns_authority.relation_name]:
+            self.dns_authority.update_relation_data(relation, data)
+```
+"""
 
 # The unique Charmhub library identifier, never change it
 LIBID = "b2697d5736cdc98807860010f911d65d"

@@ -43,12 +43,6 @@ class DNSAuthorityProviderCharm(ops.CharmBase):
         self.framework.observe(charm.on.dns_authority_relation_changed, self._on_relation_changed)
         ...
 
-    def _on_relation_changed(self, event: ops.Event) -> None:
-        addresses = []
-        for relation in self.model.relations[self.dns_authority.relation_name]:
-            dns_secondary_data = self.dns_authority.get_remote_relation_data(relation)
-            addresses.extend(dns_secondary_data.addresses)
-
     def _on_config_changed(self, event: ops.Event) -> None:
         data = {
             "addresses": self.addresses(),

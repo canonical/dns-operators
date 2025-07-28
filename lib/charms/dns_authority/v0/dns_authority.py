@@ -1,10 +1,10 @@
 # Copyright 2025 Canonical Ltd.
 # Licensed under the Apache2.0. See LICENSE file in charm source for details.
 
-"""Library to manage the integration between authority and resolver DNS charms.
+"""Library to manage the relation between authority and resolver DNS charms.
 
-This library contains the Requires and Provides classes for handling the integration
-between two charms providing the `dns_authority` integration.
+This library contains the Requires and Provides classes for handling the relation
+between two charms providing the `dns_authority` relation.
 
 ### Requirer Charm
 

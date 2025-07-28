@@ -74,22 +74,9 @@ def has_changed(
     """
     zones = dns_record_relations_data_to_zones(relation_data)
 
-    if topology is None:
-        # We don't change anything if the topology can't be constructed
-        # This is done to favor reliability when the cluster itself is not.
-        return False
-
-    if "zones" not in last_valid_state:
+    if "zones" not in last_valid_state or zones != last_valid_state["zones"]:
         return True
 
-    if zones != last_valid_state["zones"]:
-        return True
-
-    if "topology" not in last_valid_state:
-        return True
-
-    #TODO
-    if topology != last_valid_state["topology"]:
         return True
 
     return False
@@ -170,7 +157,7 @@ def dns_record_relations_data_to_zones(
     return list(zones.values())
 
 
-def dump_state(zones: list[models.Zone], topology: topology_module.Topology) -> str:
+
     """Dump the current state.
 
     We need this cumbersome way of serializing the state because
@@ -205,6 +192,6 @@ def load_state(serialized_state: str) -> dict[str, typing.Any]:
     """
     state = json.loads(serialized_state)
     if state["topology"] is not None:
-        state["topology"] = topology_module.Topology(**state["topology"])
+    if state["topology"] is not None:
     state["zones"] = [models.Zone(**zone) for zone in state["zones"]]
     return state

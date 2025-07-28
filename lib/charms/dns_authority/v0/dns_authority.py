@@ -48,6 +48,9 @@ class DNSAuthorityRelationData(pydantic.BaseModel):
         Args:
             values: input values for the model
 
+        Raises:
+            ValueError: when validation fails
+
         Returns:
             validated values
         """

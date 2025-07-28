@@ -4,13 +4,10 @@
 """Bind charm topology logic."""
 
 import logging
-import subprocess
 import time
 
 import ops
 import pydantic
-
-import constants
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +80,7 @@ class TopologyEvents(ops.CharmEvents):
     topology_changed = ops.EventSource(TopologyChangedEvent)
 
 
-class TopologyService(ops.Object):
+class TopologyObserver(ops.Object):
     """Topology service class.
 
     Attrs:
@@ -110,7 +107,7 @@ class TopologyService(ops.Object):
             charm.on[relation_name].relation_joined, self._on_peer_relation_joined
         )
 
-    def dump(self) -> Topology:
+    def current(self) -> Topology:
         """Create a network topology of the current deployment.
 
         Returns:
@@ -158,105 +155,12 @@ class TopologyService(ops.Object):
 
     def _on_leader_elected(self, _: ops.LeaderElectedEvent) -> None:
         """Handle leader-elected event."""
-        # We check that we are still the leader when starting to process this event
-        try:
-            topology = self.dump()
-        except TopologyUnavailableError as err:
-            logger.info("Could not retrieve network topology: %s", err)
-            return
-        if self.charm.unit.is_leader() and not topology.is_current_unit_active:
-            self._check_and_may_become_active(topology)
         self.on.topology_changed.emit()
 
     def _on_peer_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
         """Handle peer relation joined event."""
-        try:
-            topology = self.dump()
-        except TopologyUnavailableError as err:
-            logger.info("Could not retrieve network topology: %s", err)
-            return
-        # If we are not the active unit, there's nothing to do
-        if not topology.is_current_unit_active:
-            return
         self.on.topology_changed.emit()
 
-    def _on_peer_relation_departed(self, event: ops.RelationDepartedEvent) -> None:
-        """Handle the peer relation departed event.
-
-        Args:
-            event: Event triggering the relation-departed hook
-        """
-        # If we are a departing unit, we don't want to interfere with electing a new active one
-        if event.departing_unit == self.model.unit:
-            return
-
-        try:
-            topology = self.dump()
-        except TopologyUnavailableError as err:
-            logger.info("Could not retrieve network topology: %s", err)
-            return
-
-        # We check that we are still the leader when starting to process this event
-        if not topology.is_current_unit_active:
-            if self.charm.unit.is_leader():
-                self._check_and_may_become_active(topology)
+    def _on_peer_relation_departed(self, _: ops.RelationDepartedEvent) -> None:
+        """Handle the peer relation departed event."""
         self.on.topology_changed.emit()
-
-    def _check_and_may_become_active(self, topology: Topology) -> bool:
-        """Check the active unit status and may become active if need be.
-
-        Args:
-            topology: Topology of the current deployment
-
-        Returns:
-            True if the charm is effectively the new active unit.
-        """
-        relation = self.model.get_relation(self.relation_name)
-        assert relation is not None  # nosec
-        if not topology.active_unit_ip:
-            relation.data[self.charm.app].update({"active-unit": str(topology.current_unit_ip)})
-            return True
-
-        status = self._dig_query(
-            f"@{topology.active_unit_ip} service.{constants.ZONE_SERVICE_NAME} TXT +short",
-            retry=True,
-            wait=1,
-        )
-        if status != "ok":
-            relation.data[self.charm.app].update({"active-unit": str(topology.current_unit_ip)})
-            return True
-        return False
-
-    def _dig_query(self, cmd: str, retry: bool = False, wait: int = 5) -> str:
-        """Query a DnsEntry with dig.
-
-        This function was created for simplicity's sake. If we need to make more DNS requests
-        in the future, we should revisit it by employing a python library.
-
-        Args:
-            cmd: The dig command to perform
-            retry: If the dig request should be retried
-            wait: duration in seconds to wait between retries
-
-        Returns: the result of the DNS query
-        """
-        result: str = ""
-        retry = False
-        for _ in range(5):
-            try:
-                result = str(
-                    subprocess.run(
-                        ["dig"] + cmd.split(" "),  # nosec
-                        capture_output=True,
-                        text=True,
-                        check=True,
-                    )
-                ).strip()
-            except subprocess.CalledProcessError as exc:
-                logger.warning("%s", exc)
-                result = ""
-            if result != "" or not retry:
-                break
-            time.sleep(wait)
-
-        return result

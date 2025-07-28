@@ -10,8 +10,8 @@ from unittest.mock import patch
 import ops
 import pytest
 import scenario
-import constants
 
+import constants
 from src.charm import BindCharm
 
 logger = logging.getLogger(__name__)
@@ -33,8 +33,6 @@ def context_fixture(tmp_path_factory):
             path: path of the file
             content: content of the file
         """
-        logger.debug("%s", pathlib.Path(bind_operator_test_dir))
-        logger.debug("%s", pathlib.Path(bind_operator_test_dir / path.relative_to(path.anchor)))
         new_path = pathlib.Path(bind_operator_test_dir / path.relative_to(path.anchor))
         new_path.parent.mkdir(parents=True, exist_ok=True)
         new_path.write_text(

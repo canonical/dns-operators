@@ -6,6 +6,7 @@
 # We need to access protected function to test them
 # pylint: disable=protected-access
 
+import ipaddress
 import json
 import logging
 
@@ -30,8 +31,8 @@ class TestDNSAuthorityRelationData:
                 },
                 {
                     "addresses": [
-                        pydantic.IPvAnyAddress("192.0.2.1"),
-                        pydantic.IPvAnyAddress("2001:db8::1"),
+                        ipaddress.IPv4Address("192.0.2.1"),
+                        ipaddress.IPv6Address("2001:db8::1"),
                     ],
                     "zones": ["example.com", "test.net"],
                 },
@@ -43,8 +44,8 @@ class TestDNSAuthorityRelationData:
                 },
                 {
                     "addresses": [
-                        pydantic.IPvAnyAddress("192.0.2.1"),
-                        pydantic.IPvAnyAddress("2001:db8::1"),
+                        ipaddress.IPv4Address("192.0.2.1"),
+                        ipaddress.IPv6Address("2001:db8::1"),
                     ],
                     "zones": ["example.com", "test.net"],
                 },
@@ -55,8 +56,22 @@ class TestDNSAuthorityRelationData:
                     "zones": ["example.com.", "another-site.org", "localhost"],
                 },
                 {
-                    "addresses": [pydantic.IPvAnyAddress("10.0.0.1")],
+                    "addresses": [ipaddress.IPv4Address("10.0.0.1")],
                     "zones": ["example.com.", "another-site.org", "localhost"],
+                },
+            ),
+            (
+                {
+                    "addresses": ["10.0.0.1"],
+                    "zones": [
+                        "xn--q9j988ogll.example",
+                    ],
+                },
+                {
+                    "addresses": [ipaddress.IPv4Address("10.0.0.1")],
+                    "zones": [
+                        "xn--q9j988ogll.example",
+                    ],
                 },
             ),
         ],
@@ -64,6 +79,7 @@ class TestDNSAuthorityRelationData:
             "Standard valid case with IPv4 and IPv6",
             "Uniqueness check for addresses and zones",
             "Valid zones including one with a trailing dot",
+            "Valid zones using punycode",
         ],
     )
     def test_dns_authority_relation_data_success(self, input_data, expected_data):
@@ -76,55 +92,22 @@ class TestDNSAuthorityRelationData:
         assert set(instance.zones) == set(expected_data["zones"])
 
     @pytest.mark.parametrize(
-        "input_data, error_message_snippet",
+        "input_data",
         [
-            (
-                {"addresses": ["192.0.2.1"], "zones": ["a" * 64 + ".com"]},
-                "Label length must be 1-63 characters",
-            ),
-            (
-                {
-                    "addresses": ["192.0.2.1"],
-                    "zones": [("a." * 127) + "example"],
-                },  # 2*127 + 7 = 261 octets
-                "DNS zone name exceeds 255 octets",
-            ),
-            (
-                {"addresses": ["192.0.2.1"], "zones": ["invalid_zone.com"]},
-                "Invalid label in zone: invalid_zone.com, label: invalid_zone",
-            ),
-            (
-                {"addresses": ["192.0.2.1"], "zones": ["-bad.com"]},
-                "Invalid label in zone: -bad.com, label: -bad",
-            ),
-            (
-                {"addresses": ["192.0.2.1"], "zones": ["bad-.com"]},
-                "Invalid label in zone: bad-.com, label: bad-",
-            ),
-            (
-                {"addresses": ["192.0.2.1"], "zones": ["test..com"]},
-                "Invalid DNS zone name format: test..com",
-            ),
-            (
-                {"addresses": ["999.999.999.999"], "zones": ["example.com"]},
-                "Input should be a valid IPv4 or IPv6 address",
-            ),
-            (
-                {"zones": ["example.com"]},
-                "Field required",  # `addresses` can be empty, this tests missing field
-            ),
-            (
-                {"addresses": None, "zones": ["example.com"]},
-                "Field required",  # `addresses` can be empty, this tests missing field
-            ),
-            (
-                {"addresses": ["1.2.3.4"]},
-                "Field required",  # `addresses` can be empty, this tests missing field
-            ),
-            (
-                {"zones": None, "addresses": ["1.2.3.4"]},
-                "Field required",  # `addresses` can be empty, this tests missing field
-            ),
+            {"addresses": ["192.0.2.1"], "zones": ["a" * 64 + ".com"]},
+            {
+                "addresses": ["192.0.2.1"],
+                "zones": [("a." * 127) + "example"],
+            },  # 2*127 + 7 = 261 octets
+            {"addresses": ["192.0.2.1"], "zones": ["invalid_zone.com"]},
+            {"addresses": ["192.0.2.1"], "zones": ["-bad.com"]},
+            {"addresses": ["192.0.2.1"], "zones": ["bad-.com"]},
+            {"addresses": ["192.0.2.1"], "zones": ["test..com"]},
+            {"addresses": ["999.999.999.999"], "zones": ["example.com"]},
+            {"zones": ["example.com"]},
+            {"addresses": None, "zones": ["example.com"]},
+            {"addresses": ["1.2.3.4"]},
+            {"zones": None, "addresses": ["1.2.3.4"]},
         ],
         ids=[
             "Label too long",
@@ -140,20 +123,23 @@ class TestDNSAuthorityRelationData:
             "'zones' field set to None",
         ],
     )
-    def test_dns_authority_relation_data_failure(self, input_data, error_message_snippet):
+    def test_dns_authority_relation_data_failure(self, input_data):
         """Test that DNSAuthorityRelationData initialization fails with invalid data."""
         with pytest.raises(pydantic.ValidationError):
             dns_authority.DNSAuthorityRelationData(**input_data)
 
     def test_serialization_and_to_relation_data(self):
         """Test the custom field serializer and the to_relation_data method."""
-        addresses = ["192.0.2.1", "2001:db8::1"]
+        addresses: list[pydantic.IPvAnyAddress] = [
+            ipaddress.IPv4Address("192.0.2.1"),
+            ipaddress.IPv6Address("2001:db8::1"),
+        ]
         zones = ["example.com", "test.net"]
         instance = dns_authority.DNSAuthorityRelationData(addresses=addresses, zones=zones)
 
         # Test the custom `to_relation_data` method
         expected_relation_data = {
-            "addresses": json.dumps(addresses),
+            "addresses": json.dumps([str(a) for a in addresses]),
             "zones": json.dumps(zones),
         }
         relation_data = instance.to_relation_data()
@@ -165,7 +151,7 @@ class TestDNSAuthorityRelationData:
         # Test the `@field_serializer` for 'addresses' via model_dump
         model_dump = instance.model_dump()
         expected_dump = {
-            "addresses": json.dumps(addresses),
+            "addresses": json.dumps([str(a) for a in addresses]),
             "zones": zones,
         }
         assert len(model_dump["addresses"]) == len(expected_dump["addresses"])

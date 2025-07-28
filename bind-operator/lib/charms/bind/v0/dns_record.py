@@ -67,7 +67,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 5
+LIBPATCH = 6
 
 PYDEPS = ["pydantic>=2"]
 
@@ -563,6 +563,19 @@ class DNSRecordRequires(ops.Object):
                 event.relation, app=event.app, unit=event.unit
             )
 
+    def update_remote_relation_data(
+        self,
+        dns_record_requirer_data: DNSRecordRequirerData,
+    ) -> None:
+        """Update the relation data.
+
+        Args:
+            dns_record_requirer_data: DNSRecordRequirerData wrapping the data to be updated.
+        """
+        for relation in self.model.relations[self.relation_name]:
+            relation_data = dns_record_requirer_data.to_relation_data()
+            relation.data[self.charm.model.app].update(relation_data)
+
     def update_relation_data(
         self,
         relation: ops.Relation,
@@ -675,6 +688,20 @@ class DNSRecordProvides(ops.Object):
                 self.on.dns_record_request_received.emit(
                     event.relation, app=event.app, unit=event.unit
                 )
+
+    def update_remote_relation_data(
+        self,
+        dns_record_provider_data: DNSRecordProviderData,
+    ) -> None:
+        """Update the relation data.
+
+        Args:
+            dns_record_provider_data: a DNSRecordProviderData instance wrapping the data to be
+                updated.
+        """
+        for relation in self.model.relations[self.relation_name]:
+            relation_data = dns_record_provider_data.to_relation_data()
+            relation.data[self.charm.model.app].update(relation_data)
 
     def update_relation_data(
         self, relation: ops.Relation, dns_record_provider_data: DNSRecordProviderData

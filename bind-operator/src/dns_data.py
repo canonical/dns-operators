@@ -77,6 +77,7 @@ def has_changed(
     if "zones" not in last_valid_state or zones != last_valid_state["zones"]:
         return True
 
+    if "topology" not in last_valid_state or topology != last_valid_state["topology"]:
         return True
 
     return False
@@ -157,7 +158,7 @@ def dns_record_relations_data_to_zones(
     return list(zones.values())
 
 
-
+def dump_state(zones: list[models.Zone], topology: topology_module.Topology) -> str:
     """Dump the current state.
 
     We need this cumbersome way of serializing the state because
@@ -192,6 +193,6 @@ def load_state(serialized_state: str) -> dict[str, typing.Any]:
     """
     state = json.loads(serialized_state)
     if state["topology"] is not None:
-    if state["topology"] is not None:
+        state["topology"] = topology_module.Topology(**state["topology"])
     state["zones"] = [models.Zone(**zone) for zone in state["zones"]]
     return state

@@ -64,6 +64,12 @@ class BindCharm(ops.CharmBase):
         """
         self._reconcile()
 
+    def _on_dns_record_relation_changed(self, _: ops.RelationChangedEvent) -> None:
+        """Handle dns_record relation changed."""
+        # Checking if we are the leader is also done in reconcile
+        # but doing it here avoids some unnecessary computations of reconcile for this case
+        if self.unit.is_leader():
+            self._reconcile()
 
     def _on_collect_status(self, event: ops.CollectStatusEvent) -> None:
         """Handle collect status event.

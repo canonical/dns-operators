@@ -10,7 +10,7 @@ between two charms providing the `dns_authority` integration.
 
 The DNSAuthorityRequires provides:
 
-* an `get_relation_data" method to get data from the provider.
+* A `get_relation_data` method to get data from the provider.
 
 ```python
 

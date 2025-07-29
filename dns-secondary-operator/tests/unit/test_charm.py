@@ -3,16 +3,22 @@
 
 """Unit tests."""
 
-from ops import testing
+from pathlib import Path
+from unittest.mock import MagicMock
 
+from ops import testing
+from pytest import MonkeyPatch
+
+import bind
+import constants
 from charm import DnsSecondaryCharm
 
 
 def test_config_changed(base_state: dict):
     """
-    arrange: prepare dns-secondary charm with ips set in config.
+    arrange: prepare dns-secondary charm.
     act: run config_changed.
-    assert: status is active and ips is set in named.conf.local
+    assert: status is blocked because there is no integration.
     """
     state = testing.State(**base_state)
     context = testing.Context(
@@ -23,4 +29,42 @@ def test_config_changed(base_state: dict):
 
     assert out.unit_status == testing.BlockedStatus(
         "Required integration with DNS primary not found"
+    )
+
+
+# pylint: disable=too-many-positional-arguments
+def test_config_changed_with_primary(
+    base_state: dict,
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    dns_transfer_relation,
+    primary_address,
+    primary_zone,
+):
+    """
+    arrange: prepare dns-secondary charm with ips set in config.
+    act: run config_changed.
+    assert: status is active and relation data (primary and zone) is set in named.conf.local
+    """
+    monkeypatch.setattr(constants, "DNS_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setattr(bind.BindService, "reload", MagicMock)
+    monkeypatch.setattr(bind.BindService, "start", MagicMock)
+    monkeypatch.setattr(bind.BindService, "setup", MagicMock)
+    base_state["relations"].append(dns_transfer_relation)
+    state = testing.State(**base_state)
+    context = testing.Context(
+        charm_type=DnsSecondaryCharm,
+    )
+
+    out = context.run(context.on.config_changed(), state)
+
+    assert out.unit_status == testing.ActiveStatus()
+    conf_path = tmp_path / "named.conf.local"
+    assert conf_path.exists()
+    content = conf_path.read_text()
+    assert f"primaries {{ {primary_address}; }}" in content
+    assert (
+        f'zone "{primary_zone}" {{ '
+        f"type forward;forward only;forwarders {{ {primary_address}; }}; "
+        f"}};" in content
     )

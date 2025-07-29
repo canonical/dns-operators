@@ -231,10 +231,11 @@ class BindService:
         # It's good practice to include rfc1918
         content: str = f'include "{constants.DNS_CONFIG_DIR}/zones.rfc1918";\n'
         # Include a zone specifically used for some services tests
+        primary_ips = "; ".join(ips) + ";"
         content += templates.NAMED_CONF_SECONDARY_ZONE_DEF_TEMPLATE.format(
             name=f"{constants.ZONE_SERVICE_NAME}",
             absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{constants.ZONE_SERVICE_NAME}",
-            primary_ips=ips,
+            primary_ips=primary_ips,
         )
         # Add zones forwarding requests to our authoritative deployment
         for zone in zones:

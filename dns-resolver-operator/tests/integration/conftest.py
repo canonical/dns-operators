@@ -3,9 +3,8 @@
 
 """Integration tests fixtures."""
 
+import asyncio
 import pathlib
-import subprocess  # nosec B404
-import typing
 
 import pytest
 import pytest_asyncio
@@ -13,16 +12,18 @@ import yaml
 from pytest_operator.plugin import Model, OpsTest
 
 
-@pytest.fixture(scope="module", name="metadata")
-def fixture_metadata():
+@pytest.fixture(scope="module", name="dns_resolver_metadata")
+def dns_resolver_metadata_fixture():
     """Provide charm metadata."""
-    yield yaml.safe_load(pathlib.Path("./metadata.yaml").read_text(encoding="UTF-8"))
+    yield yaml.safe_load(
+        pathlib.Path("../dns-resolver-operator/charmcraft.yaml").read_text(encoding="UTF-8")
+    )
 
 
-@pytest.fixture(scope="module", name="app_name")
-def fixture_app_name(metadata):
-    """Provide app name from the metadata."""
-    yield metadata["name"]
+@pytest.fixture(scope="module", name="dns_resolver_name")
+def fixture_dns_resolver_name(dns_resolver_metadata):
+    """Provide charm name from the metadata."""
+    yield dns_resolver_metadata["name"]
 
 
 @pytest.fixture(scope="module", name="model")
@@ -32,50 +33,93 @@ def model_fixture(ops_test: OpsTest) -> Model:
     return ops_test.model
 
 
-@pytest.fixture(scope="module", name="charm_file")
-def charm_file_fixture(metadata: dict[str, typing.Any], pytestconfig: pytest.Config):
-    """Pytest fixture that packs the charm and returns the filename, or --charm-file if set."""
-    charm_file = pytestconfig.getoption("--charm-file")
-    if charm_file:
-        yield charm_file
-        return
-    try:
-        subprocess.run(
-            ["charmcraft", "pack"], check=True, capture_output=True, text=True
-        )  # nosec B603, B607
-    except subprocess.CalledProcessError as exc:
-        raise OSError(f"Error packing charm: {exc}; Stderr:\n{exc.stderr}") from None
-
-    app_name = metadata["name"]
-    charm_path = pathlib.Path(__file__).parent.parent.parent
-    charms = [p.absolute() for p in charm_path.glob(f"{app_name}_*.charm")]
-    assert charms, f"{app_name}.charm file not found"
-    assert len(charms) == 1, f"{app_name} has more than one .charm file, unsure which to use"
-    yield str(charms[0])
+@pytest.fixture(scope="module", name="bind_metadata")
+def bind_metadata_fixture():
+    """Provide charm metadata."""
+    yield yaml.safe_load(
+        pathlib.Path("../bind-operator/metadata.yaml").read_text(encoding="UTF-8")
+    )
 
 
-@pytest_asyncio.fixture(scope="module", name="app")
-async def app_fixture(
-    app_name: str,
+@pytest.fixture(scope="module", name="bind_name")
+def fixture_bind_name(bind_metadata):
+    """Provide charm name from the metadata."""
+    yield bind_metadata["name"]
+
+
+@pytest_asyncio.fixture(scope="module", name="dns_resolver")
+async def dns_resolver_fixture(
+    ops_test: OpsTest,
+    dns_resolver_name: str,
     pytestconfig: pytest.Config,
     model: Model,
-    charm_file: str,
 ):
     """Build the charm and deploys it."""
     use_existing = pytestconfig.getoption("--use-existing", default=False)
     if use_existing:
-        yield model.applications[app_name]
+        yield model.applications[dns_resolver_name]
         return
 
-    resources = {}
+    resources: dict = {}
 
-    if pytestconfig.getoption("--charmed-bind-snap-file"):
-        resources.update({"charmed-bind-snap": pytestconfig.getoption("--charmed-bind-snap-file")})
+    if charm := pytestconfig.getoption("--charm-file"):
+        application = await model.deploy(
+            f"./{charm}",
+            application_name=dns_resolver_name,
+            resources=resources,
+            num_units=1,
+        )
+    else:
+        charm = await ops_test.build_charm(".")
+        application = await model.deploy(
+            charm, application_name=dns_resolver_name, resources=resources
+        )
 
-    application = await model.deploy(
-        f"./{charm_file}", application_name=app_name, resources=resources
-    )
+    yield application
+
+
+@pytest_asyncio.fixture(scope="module", name="bind")
+async def bind_fixture(
+    ops_test: OpsTest,
+    bind_name: str,
+    pytestconfig: pytest.Config,
+    model: Model,
+):
+    """Build the charm and deploys it."""
+    use_existing = pytestconfig.getoption("--use-existing", default=False)
+    if use_existing:
+        yield model.applications[bind_name]
+        return
+
+    resources: dict = {}
+
+    if charm := pytestconfig.getoption("--bind-charm-file"):
+        application = await model.deploy(
+            f"../bind-operator/{charm}", application_name=bind_name, resources=resources
+        )
+    else:
+        charm = await ops_test.build_charm("../bind-operator/")
+        application = await model.deploy(charm, application_name=bind_name, resources=resources)
 
     await model.wait_for_idle(apps=[application.name], status="active")
 
     yield application
+
+
+@pytest_asyncio.fixture(scope="module", name="full_deployment")
+async def full_deployment_fixture(
+    model: Model,
+    bind,
+    dns_resolver,
+):
+    """Add necessary integration for the deployed charms."""
+    await asyncio.gather(
+        model.add_relation(dns_resolver.name, bind.name),
+    )
+
+    await model.wait_for_idle(apps=[dns_resolver.name], status="active")
+
+    yield {
+        bind.name: bind,
+        dns_resolver.name: dns_resolver,
+    }

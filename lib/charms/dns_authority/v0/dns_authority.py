@@ -150,34 +150,8 @@ class DNSAuthorityRelationData(pydantic.BaseModel):
         )
 
 
-class DNSAuthorityRequires(ops.Object):
-    """Requirer side of the DNSAuthority relation."""
-
-    def __init__(self, charm: ops.CharmBase, relation_name: str = DEFAULT_RELATION_NAME) -> None:
-        """Construct.
-
-        Args:
-            charm: the provider charm.
-            relation_name: the relation name.
-        """
-        super().__init__(charm, relation_name)
-        self.charm = charm
-        self.relation_name = relation_name
-
-    def get_relation_data(self) -> DNSAuthorityRelationData | None:
-        """Retrieve the relation data.
-
-        Returns:
-            The relation data.
-        """
-        relation = self.model.get_relation(self.relation_name)
-        if not relation or not relation.app or not relation.data[relation.app]:
-            return None
-        return DNSAuthorityRelationData.from_relation_data(relation.data[relation.app])
-
-
-class DNSAuthorityProvides(ops.Object):
-    """Provider side of the DNSAuthority relation.
+class DNSAuthorityBase(ops.Object):
+    """Base of the DNSAuthority relation.
 
     Attrs:
         charm: the provider charm
@@ -194,6 +168,34 @@ class DNSAuthorityProvides(ops.Object):
         super().__init__(charm, relation_name)
         self.charm = charm
         self.relation_name = relation_name
+
+    def is_related(self) -> bool:
+        """Check if relation exists.
+
+        Returns:
+            True if the relation exists
+        """
+        relation = self.model.get_relation(self.relation_name)
+        return relation is not None
+
+
+class DNSAuthorityRequires(DNSAuthorityBase):
+    """Requirer side of the DNSAuthority relation."""
+
+    def get_relation_data(self) -> DNSAuthorityRelationData | None:
+        """Retrieve the relation data.
+
+        Returns:
+            The relation data.
+        """
+        relation = self.model.get_relation(self.relation_name)
+        if not relation or not relation.app or not relation.data[relation.app]:
+            return None
+        return DNSAuthorityRelationData.from_relation_data(relation.data[relation.app])
+
+
+class DNSAuthorityProvides(DNSAuthorityBase):
+    """Provider side of the DNSAuthority relation."""
 
     def update_relation_data(self, data: DNSAuthorityRelationData) -> None:
         """Update the relation data.

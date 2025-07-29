@@ -11,7 +11,3 @@ SNAP_PACKAGES = {
 DNS_CONFIG_DIR = f"/var/snap/{DNS_SNAP_NAME}/common/bind"
 
 ZONE_SERVICE_NAME = "service.test"
-
-SYSTEMD_SERVICES_PATH = "/etc/systemd/system/"
-
-PEER = "bind-peers"

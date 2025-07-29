@@ -28,15 +28,3 @@ parts:
     override-build: |
       rustup default stable
       craftctl default
-config:
-  options:
-    zones:
-      description: |
-        List of zones
-      default: ""
-      type: string
-    ips:
-      description: |
-        List of ips
-      default: ""
-      type: string

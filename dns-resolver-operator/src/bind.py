@@ -9,8 +9,6 @@ import subprocess  # nosec
 import time
 
 import ops
-import pydantic
-from charms.operator_libs_linux.v1 import systemd
 from charms.operator_libs_linux.v2 import snap
 
 import constants
@@ -100,43 +98,15 @@ class BindService:
             logger.error(error_msg)
             raise StopError(error_msg) from e
 
-    def setup(self, unit_name: str) -> None:
-        """Prepare the machine.
-
-        Args:
-            unit_name: The name of the current unit
-        """
+    def setup(self) -> None:
+        """Prepare the machine."""
         self._install_snap_package(
             snap_name=constants.DNS_SNAP_NAME,
             snap_channel=constants.SNAP_PACKAGES[constants.DNS_SNAP_NAME]["channel"],
         )
-        self._install_bind_reload_service(unit_name)
         # We need to put the service zone in place so we call
         # the following with an empty relation and topology.
         self.update_config_and_reload()
-
-    def _install_bind_reload_service(self, unit_name: str) -> None:
-        """Install the bind reload service.
-
-        Args:
-            unit_name: The name of the current unit
-        """
-        (
-            pathlib.Path(constants.SYSTEMD_SERVICES_PATH) / "dispatch-reload-bind.service"
-        ).write_text(
-            templates.DISPATCH_EVENT_SERVICE.format(
-                event="reload-bind",
-                timeout="10s",
-                unit=unit_name,
-            ),
-            encoding="utf-8",
-        )
-        (pathlib.Path(constants.SYSTEMD_SERVICES_PATH) / "dispatch-reload-bind.timer").write_text(
-            templates.SYSTEMD_SERVICE_TIMER.format(interval="1", service="dispatch-reload-bind"),
-            encoding="utf-8",
-        )
-        systemd.service_enable("dispatch-reload-bind.timer")
-        systemd.service_start("dispatch-reload-bind.timer")
 
     def collect_status(
         self,
@@ -166,7 +136,12 @@ class BindService:
     def update_config_and_reload(
         self, zones: list[str] | None = None, ips: list[str] | None = None
     ) -> None:
-        """Update bind's config and reload bind."""
+        """Update bind's config and reload bind.
+
+        Args:
+            zones: zones of the related authority servers
+            ips: ips of the related authority servers
+        """
         if zones is None:
             zones = []
         if ips is None:
@@ -257,21 +232,6 @@ class BindService:
                 continue
             content += templates.NAMED_CONF_FORWARDER_TEMPLATE.format(
                 zone=f"{zone}",
-                forwarders_ips=";".join(ips) + ";",
+                forwarders_ips=";".join(ips) + ";" if ips else "",
             )
         return content
-
-    def _bind_config_ip_list(self, ips: list[pydantic.IPvAnyAddress]) -> str:
-        """Generate a string with a list of IPs that can be used in bind's config.
-
-        This is just a helper function to keep things clean in `_generate_named_conf_local`.
-
-        Args:
-            ips: A list of IPs
-
-        Returns:
-            A ";" separated list of ips
-        """
-        if not ips:
-            return ""
-        return f"{';'.join([str(ip) for ip in ips])};"

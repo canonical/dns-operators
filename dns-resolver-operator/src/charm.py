@@ -48,7 +48,11 @@ class DnsResolverCharm(ops.CharmBase):
         Args:
             event: Event triggering the collect-status hook
         """
-        self.bind.collect_status(event)
+        if not self.dns_authority.is_related():
+            event.add_status(ops.BlockedStatus("Needs to be related with an authority charm"))
+        if not self.dns_authority.get_relation_data():
+            event.add_status(ops.WaitingStatus("DNS authority relation is not ready"))
+        event.add_status(ops.ActiveStatus())
 
     def _on_dns_authority_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
         """Handle changed relation joined event."""

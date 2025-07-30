@@ -6,7 +6,6 @@
 import logging
 import pathlib
 import subprocess  # nosec
-import time
 
 import pydantic
 from charms.operator_libs_linux.v1 import systemd
@@ -164,8 +163,6 @@ class BindService:
             zones = []
         if ips is None:
             ips = []
-        start_time = time.time_ns()
-        logger.debug("Starting update of config")
 
         # Write the named.conf.local file
         self._write_file(
@@ -184,7 +181,6 @@ class BindService:
         # We can be here following a regular reload-bind event
         # and we don't want to interfere with another operation.
         self.reload(force_start=False)
-        logger.debug("Update and reload duration (ms): %s", (time.time_ns() - start_time) / 1e6)
 
     def _install_snap_package(
         self, snap_name: str, snap_channel: str, refresh: bool = False

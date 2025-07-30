@@ -63,8 +63,4 @@ def test_config_changed_with_primary(
     assert conf_path.exists()
     content = conf_path.read_text()
     assert f"primaries {{ {primary_address}; }}" in content
-    assert (
-        f'zone "{primary_zone}" {{ '
-        f"type forward;forward only;forwarders {{ {primary_address}; }}; "
-        f"}};" in content
-    )
+    assert f'db.{primary_zone}"' in content

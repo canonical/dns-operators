@@ -232,12 +232,13 @@ class BindService:
             absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{constants.ZONE_SERVICE_NAME}",
             primary_ips=primary_ips,
         )
-        # Add zones forwarding requests to our authoritative deployment
+        # Configure zone transfer requests to fetch zones from the primary DNS
         for zone in zones:
             if zone.strip() == "":
                 continue
-            content += templates.NAMED_CONF_FORWARDER_TEMPLATE.format(
-                zone=f"{zone}",
-                forwarders_ips=";".join(ips) + ";",
+            content += templates.NAMED_CONF_SECONDARY_ZONE_DEF_TEMPLATE.format(
+                name=f"{zone}",
+                absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{zone}",
+                primary_ips=primary_ips,
             )
         return content

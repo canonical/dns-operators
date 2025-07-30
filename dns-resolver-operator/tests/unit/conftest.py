@@ -16,14 +16,23 @@ from src.charm import DnsResolverCharm
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture(name="context")
-def context_fixture(tmp_path_factory):
-    """Context fixture.
+@pytest.fixture(name="write_dir")
+def write_dir_fixture(tmp_path_factory):
+    """Write dir fixture.
 
     Args:
         tmp_path_factory: pytest tmp_path_factory fixture
     """
-    bind_operator_test_dir = tmp_path_factory.mktemp("bind_operator_test_dir")
+    return tmp_path_factory.mktemp("charm_test_dir")
+
+
+@pytest.fixture(name="context")
+def context_fixture(write_dir):
+    """Context fixture.
+
+    Args:
+        write_dir: write dir location
+    """
 
     def _mock_write_file(path: pathlib.Path, content: str):
         """Mock the write_file function.
@@ -32,15 +41,18 @@ def context_fixture(tmp_path_factory):
             path: path of the file
             content: content of the file
         """
-        pathlib.Path(bind_operator_test_dir / path).write_text(
+        new_path = pathlib.Path(write_dir / path.relative_to(path.anchor))
+        new_path.parent.mkdir(parents=True, exist_ok=True)
+        new_path.write_text(
             content,
             encoding="utf-8",
         )
 
     with (
+        patch("bind.BindService.reload"),
+        patch("bind.BindService.setup"),
         patch("bind.BindService.start"),
         patch("bind.BindService.stop"),
-        patch("bind.BindService.setup"),
         patch("bind.BindService._write_file") as mock_write_file,
     ):
         mock_write_file.side_effect = _mock_write_file

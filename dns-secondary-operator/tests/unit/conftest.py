@@ -8,6 +8,9 @@ from ops import testing
 
 from lib.charms.dns_transfer.v0.dns_transfer import DNSTransferProviderData
 
+PRIMARY_ADDRESS = "10.10.10.11"
+PRIMARY_ZONE = "test.example.com"
+
 
 @pytest.fixture(scope="function", name="base_state")
 def base_state_fixture():
@@ -22,25 +25,13 @@ def base_state_fixture():
     }
 
 
-@pytest.fixture(name="primary_address")
-def primary_address_fixture():
-    """Primary address for dns_transfer relation."""
-    return "10.10.10.11"
-
-
-@pytest.fixture(name="primary_zone")
-def primary_zone_fixture():
-    """Primary zone for dns_transfer relation."""
-    return "test.example.com"
-
-
 @pytest.fixture(name="dns_transfer_relation")
-def dns_transfer_relation_fixture(primary_address, primary_zone):
+def dns_transfer_relation_fixture():
     """Matrix auth relation fixture."""
     data = {
-        "addresses": [primary_address],
+        "addresses": [PRIMARY_ADDRESS],
         "transport": "tls",
-        "zones": [primary_zone],
+        "zones": [PRIMARY_ZONE],
     }
     provider_data = DNSTransferProviderData.model_validate(data)
     yield testing.Relation(

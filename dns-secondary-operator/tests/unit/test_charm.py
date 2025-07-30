@@ -13,6 +13,8 @@ import bind
 import constants
 from charm import DnsSecondaryCharm
 
+from .conftest import PRIMARY_ADDRESS, PRIMARY_ZONE
+
 
 def test_config_changed(base_state: dict):
     """
@@ -38,8 +40,6 @@ def test_config_changed_with_primary(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
     dns_transfer_relation,
-    primary_address,
-    primary_zone,
 ):
     """
     arrange: prepare dns-secondary charm with ips set in config.
@@ -62,5 +62,5 @@ def test_config_changed_with_primary(
     conf_path = tmp_path / "named.conf.local"
     assert conf_path.exists()
     content = conf_path.read_text()
-    assert f"primaries {{ {primary_address}; }}" in content
-    assert f'db.{primary_zone}"' in content
+    assert f"primaries {{ {PRIMARY_ADDRESS}; }}" in content
+    assert f'db.{PRIMARY_ZONE}"' in content

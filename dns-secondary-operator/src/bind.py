@@ -7,7 +7,6 @@ import logging
 import pathlib
 import subprocess  # nosec
 
-import pydantic
 from charms.operator_libs_linux.v1 import systemd
 from charms.operator_libs_linux.v2 import snap
 
@@ -242,18 +241,3 @@ class BindService:
                 forwarders_ips=";".join(ips) + ";",
             )
         return content
-
-    def _bind_config_ip_list(self, ips: list[pydantic.IPvAnyAddress]) -> str:
-        """Generate a string with a list of IPs that can be used in bind's config.
-
-        This is just a helper function to keep things clean in `_generate_named_conf_local`.
-
-        Args:
-            ips: A list of IPs
-
-        Returns:
-            A ";" separated list of ips
-        """
-        if not ips:
-            return ""
-        return f"{';'.join([str(ip) for ip in ips])};"

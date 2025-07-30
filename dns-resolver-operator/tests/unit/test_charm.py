@@ -3,6 +3,7 @@
 
 """Unit tests for the bind module."""
 
+import json
 import logging
 
 import ops
@@ -56,6 +57,27 @@ def test_start_with_relation_with_empty_data(context, base_state):
     dns_authority_relation = scenario.Relation(
         endpoint="dns-authority",
         remote_app_data={"zones": "[]", "addresses": "[]"},
+    )
+    base_state["relations"] = [dns_authority_relation]
+    state = testing.State(**base_state)
+    out = context.run(context.on.start(), state)
+    assert out.unit_status == ops.WaitingStatus("DNS authority relation is empty")
+
+
+@pytest.mark.usefixtures("context")
+@pytest.mark.usefixtures("base_state")
+def test_start_with_relation_with_some_data(context, base_state):
+    """
+    arrange: prepare some state
+    act: run event hook
+    assert: status is correct
+    """
+    dns_authority_relation = scenario.Relation(
+        endpoint="dns-authority",
+        remote_app_data={
+            "zones": json.dumps(["example.com"]),
+            "addresses": json.dumps(["1.2.3.4"]),
+        },
     )
     base_state["relations"] = [dns_authority_relation]
     state = testing.State(**base_state)

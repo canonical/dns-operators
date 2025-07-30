@@ -50,27 +50,31 @@ class DnsResolverCharm(ops.CharmBase):
         """
         if not self.dns_authority.is_related():
             event.add_status(ops.BlockedStatus("Needs to be related with an authority charm"))
-        if not self.dns_authority.get_relation_data():
+            return
+        relation_data = self.dns_authority.get_relation_data()
+        if not relation_data:
             event.add_status(ops.WaitingStatus("DNS authority relation is not ready"))
+            return
+        if not relation_data.addresses or not relation_data.zones:
+            event.add_status(ops.WaitingStatus("DNS authority relation is empty"))
+            return
         event.add_status(ops.ActiveStatus())
+
+    def _reconcile(self) -> None:
+        """Reconcile loop."""
+        data = self.dns_authority.get_relation_data()
+        if data is not None:
+            self.bind.update_config_and_reload(data.zones, [str(a) for a in data.addresses])
+        else:
+            self.bind.update_config_and_reload()
 
     def _on_dns_authority_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
         """Handle changed relation joined event."""
-        data = self.dns_authority.get_relation_data()
-        logger.debug("joined: %s", data)
-        if data is not None:
-            self.bind.update_config_and_reload(data.zones, [str(a) for a in data.addresses])
-        else:
-            self.bind.update_config_and_reload()
+        self._reconcile()
 
     def _on_dns_authority_relation_changed(self, _: ops.RelationChangedEvent) -> None:
         """Handle changed relation changed event."""
-        data = self.dns_authority.get_relation_data()
-        logger.debug("changed: %s", data)
-        if data is not None:
-            self.bind.update_config_and_reload(data.zones, [str(a) for a in data.addresses])
-        else:
-            self.bind.update_config_and_reload()
+        self._reconcile()
 
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install."""

@@ -1,4 +1,4 @@
-name: Dns-policy-operator integration tests
+name: Dns-secondary-operator integration tests
 
 on:
   pull_request:

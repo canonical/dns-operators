@@ -30,7 +30,7 @@ parts:
       craftctl default
 config:
   options:
-    ips:
+    public-ips:
       description: |
         List of ips that the primary DNS will allow transfer.
       default: ""

@@ -5,36 +5,14 @@
 
 import logging
 import pathlib
-import subprocess  # nosec
 
 from charms.operator_libs_linux.v1 import systemd
 from charms.operator_libs_linux.v2 import snap
 
 import constants
-import exceptions
 import templates
 
 logger = logging.getLogger(__name__)
-
-
-class SnapError(exceptions.DnsSecondaryCharmError):
-    """Exception raised when an action on the snap fails."""
-
-
-class ReloadError(SnapError):
-    """Exception raised when unable to reload the service."""
-
-
-class StartError(SnapError):
-    """Exception raised when unable to start the service."""
-
-
-class StopError(SnapError):
-    """Exception raised when unable to stop the service."""
-
-
-class InstallError(SnapError):
-    """Exception raised when unable to install dependencies for the service."""
 
 
 class BindService:
@@ -45,57 +23,25 @@ class BindService:
 
         Args:
             force_start: start the service even if it was inactive
-
-        Raises:
-            ReloadError: when encountering a SnapError
         """
         logger.debug("Reloading charmed bind")
-        try:
-            cache = snap.SnapCache()
-            charmed_bind = cache[constants.DNS_SNAP_NAME]
-            charmed_bind_service = charmed_bind.services[constants.DNS_SNAP_SERVICE]
-            if charmed_bind_service["active"] or force_start:
-                charmed_bind.restart(reload=True)
-        except snap.SnapError as e:
-            error_msg = (
-                f"An exception occurred when reloading {constants.DNS_SNAP_NAME}. Reason: {e}"
-            )
-            logger.error(error_msg)
-            raise ReloadError(error_msg) from e
+        cache = snap.SnapCache()
+        charmed_bind = cache[constants.DNS_SNAP_NAME]
+        charmed_bind_service = charmed_bind.services[constants.DNS_SNAP_SERVICE]
+        if charmed_bind_service["active"] or force_start:
+            charmed_bind.restart(reload=True)
 
     def start(self) -> None:
-        """Start the charmed-bind service.
-
-        Raises:
-            StartError: when encountering a SnapError
-        """
-        try:
-            cache = snap.SnapCache()
-            charmed_bind = cache[constants.DNS_SNAP_NAME]
-            charmed_bind.start()
-        except snap.SnapError as e:
-            error_msg = (
-                f"An exception occurred when stopping {constants.DNS_SNAP_NAME}. Reason: {e}"
-            )
-            logger.error(error_msg)
-            raise StartError(error_msg) from e
+        """Start the charmed-bind service."""
+        cache = snap.SnapCache()
+        charmed_bind = cache[constants.DNS_SNAP_NAME]
+        charmed_bind.start()
 
     def stop(self) -> None:
-        """Stop the charmed-bind service.
-
-        Raises:
-            StopError: when encountering a SnapError
-        """
-        try:
-            cache = snap.SnapCache()
-            charmed_bind = cache[constants.DNS_SNAP_NAME]
-            charmed_bind.stop()
-        except snap.SnapError as e:
-            error_msg = (
-                f"An exception occurred when stopping {constants.DNS_SNAP_NAME}. Reason: {e}"
-            )
-            logger.error(error_msg)
-            raise StopError(error_msg) from e
+        """Stop the charmed-bind service."""
+        cache = snap.SnapCache()
+        charmed_bind = cache[constants.DNS_SNAP_NAME]
+        charmed_bind.stop()
 
     def setup(self, unit_name: str) -> None:
         """Prepare the machine.
@@ -190,20 +136,12 @@ class BindService:
             snap_name: the snap package to install
             snap_channel: the snap package channel
             refresh: whether to refresh the snap if it's already present.
-
-        Raises:
-            InstallError: when encountering a SnapError or a SnapNotFoundError
         """
-        try:
-            snap_cache = snap.SnapCache()
-            snap_package = snap_cache[snap_name]
+        snap_cache = snap.SnapCache()
+        snap_package = snap_cache[snap_name]
 
-            if not snap_package.present or refresh:
-                snap_package.ensure(snap.SnapState.Latest, channel=snap_channel)
-        except (snap.SnapError, snap.SnapNotFoundError, subprocess.CalledProcessError) as e:
-            error_msg = f"An exception occurred when installing {snap_name}. Reason: {e}"
-            logger.exception(error_msg)
-            raise InstallError(error_msg) from e
+        if not snap_package.present or refresh:
+            snap_package.ensure(snap.SnapState.Latest, channel=snap_channel)
 
     def _generate_named_conf_options(self) -> str:
         """Generate the content of `named.conf.options`.

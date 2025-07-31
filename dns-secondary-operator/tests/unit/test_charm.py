@@ -13,7 +13,7 @@ import bind
 import constants
 from charm import DnsSecondaryCharm
 
-from .conftest import PRIMARY_ADDRESS, PRIMARY_ZONE
+from .conftest import PRIMARY_ADDRESS, PRIMARY_ZONE, PUBLIC_IPS
 
 
 def test_config_changed(base_state: dict):
@@ -44,7 +44,8 @@ def test_config_changed_with_primary(
     """
     arrange: prepare dns-secondary charm with ips set in config.
     act: run config_changed.
-    assert: status is active and relation data (primary and zone) is set in named.conf.local
+    assert: status is active, relation data (primary and zone) is set in named.conf.local
+        and public ips defined in configuration is set in the dns_transfer relation.
     """
     monkeypatch.setattr(constants, "DNS_CONFIG_DIR", str(tmp_path))
     monkeypatch.setattr(bind.BindService, "reload", MagicMock)
@@ -64,3 +65,6 @@ def test_config_changed_with_primary(
     content = conf_path.read_text()
     assert f"primaries {{ {PRIMARY_ADDRESS}; }}" in content
     assert f'db.{PRIMARY_ZONE}"' in content
+    assert out.get_relation(dns_transfer_relation.id).local_app_data == {
+        "addresses": f'["{PUBLIC_IPS}"]'
+    }

@@ -11,22 +11,12 @@ import ops
 from charms.dns_transfer.v0 import dns_transfer
 
 import constants
-import events
-import exceptions
 import topology
 from bind import BindService
 
 logger = logging.getLogger(__name__)
 
 STATUS_REQUIRED_INTEGRATION = "Required integration with DNS primary not found"
-
-
-class PeerRelationUnavailableError(exceptions.DnsSecondaryCharmError):
-    """Exception raised when the peer relation is unavailable."""
-
-
-class PeerRelationNetworkUnavailableError(exceptions.DnsSecondaryCharmError):
-    """Exception raised when the peer relation network is unavailable."""
 
 
 class DnsSecondaryCharm(ops.CharmBase):
@@ -43,52 +33,16 @@ class DnsSecondaryCharm(ops.CharmBase):
         self.topology = topology.TopologyObserver(self, constants.PEER)
         self.dns_transfer = dns_transfer.DNSTransferRequires(self)
 
-        self.on.define_event("reload_bind", events.ReloadBindEvent)
-
-        self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.config_changed, self._reconcile)
         self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
-        self.framework.observe(
-            self.on["dns-transfer"].relation_joined, self._on_dns_transfer_relation_joined
-        )
-        self.framework.observe(
-            self.on["dns-transfer"].relation_changed, self._on_dns_transfer_relation_changed
-        )
-        self.framework.observe(self.topology.on.topology_changed, self._on_topology_changed)
+        self.framework.observe(self.on["dns-transfer"].relation_joined, self._reconcile)
+        self.framework.observe(self.on["dns-transfer"].relation_changed, self._reconcile)
+        self.framework.observe(self.topology.on.topology_changed, self._reconcile)
         self.unit.open_port("tcp", 53)  # Bind DNS
         self.unit.open_port("udp", 53)  # Bind DNS
 
-    def _on_collect_status(self, event: ops.CollectStatusEvent) -> None:
-        """Handle collect status event.
-
-        Args:
-            event: Event triggering the collect-status hook
-        """
-        if not self._has_required_integration():
-            event.add_status(ops.BlockedStatus(STATUS_REQUIRED_INTEGRATION))
-        event.add_status(ops.ActiveStatus(""))
-
-    def _on_dns_transfer_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
-        """Handle changed relation joined event."""
-        self._reconcile()
-
-    def _on_dns_transfer_relation_changed(self, _: ops.RelationChangedEvent) -> None:
-        """Handle changed relation changed event."""
-        self._reconcile()
-
-    def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
-        """Handle changed configuration event."""
-        self._reconcile()
-
-    def _on_stop(self, _: ops.StopEvent) -> None:
-        """Handle stop."""
-        self.bind.stop()
-
-    def _on_topology_changed(self, _: topology.TopologyChangedEvent) -> None:
-        """Handle topology changed events."""
-        self._reconcile()
-
-    def _reconcile(self) -> None:
+    def _reconcile(self, _: ops.EventBase) -> None:
         """Reconcile the charm."""
         if not self._has_required_integration():
             return
@@ -102,9 +56,23 @@ class DnsSecondaryCharm(ops.CharmBase):
         self.bind.update_config_and_reload(data.zones, [str(a) for a in data.addresses])
 
         if self.unit.is_leader():
-            requirer_addresses = str(self.config["ips"]).split(",")
-            requirer_data = dns_transfer.DNSTransferRequirerData(addresses=requirer_addresses)
+            public_ips = self.topology.dump().public_ips
+            requirer_data = dns_transfer.DNSTransferRequirerData(addresses=public_ips)
             self.dns_transfer.update_relation_data(relation, requirer_data)
+
+    def _on_collect_status(self, event: ops.CollectStatusEvent) -> None:
+        """Handle collect status event.
+
+        Args:
+            event: Event triggering the collect-status hook
+        """
+        if not self._has_required_integration():
+            event.add_status(ops.BlockedStatus(STATUS_REQUIRED_INTEGRATION))
+        event.add_status(ops.ActiveStatus(""))
+
+    def _on_stop(self, _: ops.StopEvent) -> None:
+        """Handle stop."""
+        self.bind.stop()
 
     def _has_required_integration(self) -> bool:
         """Check if dns_transfer required integration is set.

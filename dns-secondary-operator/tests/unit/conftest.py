@@ -10,6 +10,7 @@ from lib.charms.dns_transfer.v0.dns_transfer import DNSTransferProviderData
 
 PRIMARY_ADDRESS = "10.10.10.11"
 PRIMARY_ZONE = "test.example.com"
+PUBLIC_IPS = "10.10.10.10"
 
 
 @pytest.fixture(scope="function", name="base_state")
@@ -18,7 +19,7 @@ def base_state_fixture():
     relation = testing.PeerRelation(endpoint="dns-secondary-peers")
     yield {
         "config": {
-            "ips": "10.10.10.10",
+            "public-ips": PUBLIC_IPS,
         },
         "leader": True,
         "relations": [relation],

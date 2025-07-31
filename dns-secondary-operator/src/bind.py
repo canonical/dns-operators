@@ -6,7 +6,6 @@
 import logging
 import pathlib
 
-from charms.operator_libs_linux.v1 import systemd
 from charms.operator_libs_linux.v2 import snap
 
 import constants
@@ -43,43 +42,15 @@ class BindService:
         charmed_bind = cache[constants.DNS_SNAP_NAME]
         charmed_bind.stop()
 
-    def setup(self, unit_name: str) -> None:
-        """Prepare the machine.
-
-        Args:
-            unit_name: The name of the current unit
-        """
+    def setup(self) -> None:
+        """Prepare the machine."""
         self._install_snap_package(
             snap_name=constants.DNS_SNAP_NAME,
             snap_channel=constants.SNAP_PACKAGES[constants.DNS_SNAP_NAME]["channel"],
         )
-        self._install_bind_reload_service(unit_name)
         # We need to put the service zone in place so we call
         # the following with an empty relation and topology.
         self.update_config_and_reload()
-
-    def _install_bind_reload_service(self, unit_name: str) -> None:
-        """Install the bind reload service.
-
-        Args:
-            unit_name: The name of the current unit
-        """
-        (
-            pathlib.Path(constants.SYSTEMD_SERVICES_PATH) / "dispatch-reload-bind.service"
-        ).write_text(
-            templates.DISPATCH_EVENT_SERVICE.format(
-                event="reload-bind",
-                timeout="10s",
-                unit=unit_name,
-            ),
-            encoding="utf-8",
-        )
-        (pathlib.Path(constants.SYSTEMD_SERVICES_PATH) / "dispatch-reload-bind.timer").write_text(
-            templates.SYSTEMD_SERVICE_TIMER.format(interval="1", service="dispatch-reload-bind"),
-            encoding="utf-8",
-        )
-        systemd.service_enable("dispatch-reload-bind.timer")
-        systemd.service_start("dispatch-reload-bind.timer")
 
     def _write_file(self, path: pathlib.Path, content: str) -> None:
         """Write a file to the filesystem.

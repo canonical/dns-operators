@@ -48,7 +48,7 @@ class DnsSecondaryCharm(ops.CharmBase):
             return
 
         self.unit.status = ops.MaintenanceStatus("Preparing bind")
-        self.bind.setup(self.unit.name)
+        self.bind.setup()
         self.bind.start()
 
         relation = self.model.get_relation(self.dns_transfer.relation_name)

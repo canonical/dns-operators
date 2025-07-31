@@ -7,7 +7,8 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from ops import testing
-from pytest import MonkeyPatch
+from pytest import MonkeyPatch, raises
+from scenario.errors import UncaughtCharmError
 
 import bind
 import constants
@@ -48,9 +49,9 @@ def test_config_changed_with_primary(
         and public ips defined in configuration is set in the dns_transfer relation.
     """
     monkeypatch.setattr(constants, "DNS_CONFIG_DIR", str(tmp_path))
-    monkeypatch.setattr(bind.BindService, "reload", MagicMock)
-    monkeypatch.setattr(bind.BindService, "start", MagicMock)
-    monkeypatch.setattr(bind.BindService, "setup", MagicMock)
+    monkeypatch.setattr(bind.BindService, "reload", MagicMock())
+    monkeypatch.setattr(bind.BindService, "start", MagicMock())
+    monkeypatch.setattr(bind.BindService, "setup", MagicMock())
     base_state["relations"].append(dns_transfer_relation)
     state = testing.State(**base_state)
     context = testing.Context(
@@ -68,3 +69,37 @@ def test_config_changed_with_primary(
     assert out.get_relation(dns_transfer_relation.id).local_app_data == {
         "addresses": f'["{PUBLIC_IPS}"]'
     }
+
+
+def test_config_changed_with_snap_error(
+    base_state: dict,
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    dns_transfer_relation,
+):
+    """
+    arrange: prepare dns-secondary charm and mock setup to raise an error.
+    act: run config_changed.
+    assert: error is raised and config/reload not called.
+    """
+    monkeypatch.setattr(constants, "DNS_CONFIG_DIR", str(tmp_path))
+    error_message = "Failed to setup service"
+    error = RuntimeError(error_message)
+    monkeypatch.setattr(bind.BindService, "setup", MagicMock(side_effect=error))
+    update_config_and_reload_mock = MagicMock()
+    monkeypatch.setattr(
+        bind.BindService, "update_config_and_reload", update_config_and_reload_mock
+    )
+
+    base_state["relations"].append(dns_transfer_relation)
+    state = testing.State(**base_state)
+    context = testing.Context(
+        charm_type=DnsSecondaryCharm,
+    )
+
+    with raises(UncaughtCharmError) as e:
+        _ = context.run(context.on.config_changed(), state)
+
+    assert isinstance(e.value.__cause__, RuntimeError)
+    assert error_message in str(e.value.__cause__)
+    update_config_and_reload_mock.assert_not_called()

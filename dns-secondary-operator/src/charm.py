@@ -39,8 +39,8 @@ class DnsSecondaryCharm(ops.CharmBase):
         self.framework.observe(self.on["dns-transfer"].relation_joined, self._reconcile)
         self.framework.observe(self.on["dns-transfer"].relation_changed, self._reconcile)
         self.framework.observe(self.topology.on.topology_changed, self._reconcile)
-        self.unit.open_port("tcp", 53)  # Bind DNS
-        self.unit.open_port("udp", 53)  # Bind DNS
+        self.unit.open_port("tcp", constants.DNS_BIND_PORT)  # Bind DNS
+        self.unit.open_port("udp", constants.DNS_BIND_PORT)  # Bind DNS
 
     def _reconcile(self, _: ops.EventBase) -> None:
         """Reconcile the charm."""

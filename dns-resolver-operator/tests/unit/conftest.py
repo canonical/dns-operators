@@ -5,7 +5,6 @@
 
 import logging
 import pathlib
-import typing
 from unittest.mock import patch
 
 import ops
@@ -61,14 +60,23 @@ def context_fixture(write_dir):
         )
 
 
+@pytest.fixture(name="peer_relation")
+def peer_relation_fixture():
+    """Peer relation fixture."""
+    yield ops.testing.PeerRelation(
+        endpoint="bind-peers",
+        peers_data={},
+    )
+
+
 @pytest.fixture(name="base_state")
-def base_state_fixture():
+def base_state_fixture(peer_relation):
     """Base state fixture.
 
     Args:
         peer_relation: peer relation fixture
     """
-    input_state: dict[str, typing.Any] = {
-        "relations": [],
+    input_state = {
+        "relations": [peer_relation],
     }
     yield input_state

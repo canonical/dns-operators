@@ -34,7 +34,7 @@ class DnsResolverCharm(ops.CharmBase):
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
         self.framework.observe(self.on.dns_authority_relation_joined, self._reconcile)
-        self.framework.observe(self.on.dns_authority_relation_changed, self.reconcile)
+        self.framework.observe(self.on.dns_authority_relation_changed, self._reconcile)
         self.unit.open_port("tcp", 53)  # Bind DNS
         self.unit.open_port("udp", 53)  # Bind DNS
 
@@ -56,7 +56,7 @@ class DnsResolverCharm(ops.CharmBase):
             return
         event.add_status(ops.ActiveStatus())
 
-    def _reconcile(self) -> None:
+    def _reconcile(self, _: ops.HookEvent) -> None:
         """Reconcile loop."""
         data = self.dns_authority.get_relation_data()
         if data is not None:

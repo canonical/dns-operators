@@ -46,7 +46,7 @@ class Topology(pydantic.BaseModel):
         standby_units_ip: IPs of the standby units
         current_unit_ip: IP of the current unit
         is_current_unit_active: Is the current unit active ?
-        public_ips: IPs as the primary DNS will see.
+        public_ips: IPs visible to the primary DNS. Defaults to unit IPs if not set.
     """
 
     units_ip: list[pydantic.IPvAnyAddress]
@@ -151,6 +151,8 @@ class TopologyObserver(ops.Object):
             for ip in str(self.charm.config["public-ips"]).split(",")
             if ip.strip() != ""
         ]
+        if not public_ips:
+            public_ips = units_ip
 
         logger.debug("active_unit_ip: %s", active_unit_ip)
         logger.debug("current_unit_ip: %s", current_unit_ip)

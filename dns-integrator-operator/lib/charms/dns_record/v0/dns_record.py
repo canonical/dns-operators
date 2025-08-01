@@ -34,7 +34,7 @@ import pydantic
 logger = logging.getLogger(__name__)
 
 DEFAULT_RELATION_NAME = "dns-record"
-DEFAULT_SECRET_LABEL = "dns-record"
+DEFAULT_SECRET_LABEL = "dns-record"  # nosec
 
 
 class DnsRecordError(Exception):
@@ -323,7 +323,8 @@ class DNSRecordBase(ops.Object):
                 rr = RecordRequest.model_validate(entry)
                 rr_entries.append(rr)
             except pydantic.ValidationError:
-                # If we could not create a record request, this is not an issue, let's just continue
+                # If we could not create a record request,
+                # this is not an issue, let's just continue
                 continue
 
         return rr_entries

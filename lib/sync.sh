@@ -20,3 +20,11 @@ do
   mkdir -p "$REPO_ROOT/$project/lib/charms"
   cp -fr "$LIB_DIR/charms/dns_record" "$REPO_ROOT/$project/lib/charms/"
 done
+
+for project in \
+  "bind-operator" \
+  "dns-resolver-operator"
+do
+  mkdir -p "$REPO_ROOT/$project/lib/charms"
+  cp -r "$LIB_DIR/charms/dns_authority" "$REPO_ROOT/$project/lib/charms/"
+done

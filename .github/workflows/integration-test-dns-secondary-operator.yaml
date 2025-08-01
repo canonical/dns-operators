@@ -1,0 +1,21 @@
+name: Dns-secondary-operator integration tests
+
+on:
+  pull_request:
+    paths:
+      - 'dns-secondary-operator/**'
+      - '.github/workflows/integration-test-dns-secondary-operator.yaml'
+  push:
+    branches:
+      - main
+
+jobs:
+  integration-tests:
+    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    secrets: inherit
+    with:
+      self-hosted-runner: false
+      self-hosted-runner-label: "edge"
+      juju-channel: 3.6/stable
+      provider: lxd
+      working-directory: ./dns-secondary-operator

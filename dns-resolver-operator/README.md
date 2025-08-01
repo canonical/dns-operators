@@ -1,12 +1,7 @@
-[![CharmHub Badge](https://charmhub.io/bind/badge.svg)](https://charmhub.io/bind)
-[![Publish to edge](https://github.com/canonical/dns-operators/actions/workflows/publish_charm.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/publish_charm.yaml)
-[![Promote charm](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml)
-[![Discourse Status](https://img.shields.io/discourse/status?server=https%3A%2F%2Fdiscourse.charmhub.io&style=flat&label=CharmHub%20Discourse)](https://discourse.charmhub.io)
-
-# Bind operator
+# DNS resolver operator
 
 A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
-deploying and managing a DNS server on bare metal.
+deploying and managing a DNS resolver server on bare metal.
 
 This charm simplifies configuration of a DNS server by providing a single point
 of configuration for all the requirers using the same DNS server. It can be
@@ -20,18 +15,18 @@ configuration simple and straightforward through Juju's clean interface.
 
 ## Get started
 
-The charm can be deployed to any machine model by pulling it from [Charmhub](https://charmhub.io/bind):
+The charm can be deployed to any machine model by pulling it from [Charmhub](https://charmhub.io/dbs-resolver):
 ```
-juju deploy bind --channel=latest/edge
+juju deploy dns-resolver --channel=latest/edge
 ```
 
-You can then integrate it with any charm supporting the requirer side of the `dns_record` interface, and the bind operator will
-start serving those DNS records.
+You can then integrate it with any charm supporting the provider side of the `dns_authority` interface, and the dns-resolver operator will
+start acting as a DNS resolver server for the authority one.
 
 ### Basic operations
 
-No actions are available as this charm is meant to be operated through its integrations.  
-The charm can integrate with any requirer charm implementing the [dns_record interface](https://canonical.github.io/charm-relation-interfaces/interfaces/dns_record/v0/).
+No actions are available as this charm is meant to be operated through its integrations.
+The charm can integrate with any provider charm implementing the dns_authority interface.
 
 ## Learn more
 * [Read more](https://charmhub.io/bind/docs)

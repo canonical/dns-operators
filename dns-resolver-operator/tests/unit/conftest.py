@@ -5,11 +5,11 @@
 
 import logging
 import pathlib
+import typing
 from unittest.mock import patch
 
 import ops
 import pytest
-import scenario
 
 from src.charm import DnsResolverCharm
 
@@ -61,23 +61,14 @@ def context_fixture(write_dir):
         )
 
 
-@pytest.fixture(name="peer_relation")
-def peer_relation_fixture():
-    """Peer relation fixture."""
-    yield scenario.PeerRelation(
-        endpoint="bind-peers",
-        peers_data={},
-    )
-
-
 @pytest.fixture(name="base_state")
-def base_state_fixture(peer_relation):
+def base_state_fixture():
     """Base state fixture.
 
     Args:
         peer_relation: peer relation fixture
     """
-    input_state = {
-        "relations": [peer_relation],
+    input_state: dict[str, typing.Any] = {
+        "relations": [],
     }
     yield input_state

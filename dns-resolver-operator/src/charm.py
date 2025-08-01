@@ -33,12 +33,8 @@ class DnsResolverCharm(ops.CharmBase):
         self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
-        self.framework.observe(
-            self.on.dns_authority_relation_joined, self._on_dns_authority_relation_joined
-        )
-        self.framework.observe(
-            self.on.dns_authority_relation_changed, self._on_dns_authority_relation_changed
-        )
+        self.framework.observe(self.on.dns_authority_relation_joined, self._reconcile)
+        self.framework.observe(self.on.dns_authority_relation_changed, self.reconcile)
         self.unit.open_port("tcp", 53)  # Bind DNS
         self.unit.open_port("udp", 53)  # Bind DNS
 
@@ -67,14 +63,6 @@ class DnsResolverCharm(ops.CharmBase):
             self.bind.update_config_and_reload(data.zones, [str(a) for a in data.addresses])
         else:
             self.bind.update_config_and_reload()
-
-    def _on_dns_authority_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
-        """Handle changed relation joined event."""
-        self._reconcile()
-
-    def _on_dns_authority_relation_changed(self, _: ops.RelationChangedEvent) -> None:
-        """Handle changed relation changed event."""
-        self._reconcile()
 
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install."""

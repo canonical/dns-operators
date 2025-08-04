@@ -80,10 +80,7 @@ class DnsSecondaryCharm(ops.CharmBase):
         Returns:
             true if dns_transfer is set.
         """
-        data = self.dns_transfer.get_remote_relation_data()
-        if data is None:
-            return False
-        return True
+        return self.dns_transfer.get_remote_relation_data() is not None
 
 
 if __name__ == "__main__":  # pragma: nocover

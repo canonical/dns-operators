@@ -331,7 +331,7 @@ class DNSTransferRequires(ops.Object):
         relation = self.model.get_relation(self.relation_name)
         if not relation:
             return None
-        return DNSTransferProviderData.from_relation_data(relation) if relation else None
+        return DNSTransferProviderData.from_relation_data(relation)
 
     def update_relation_data(
         self,

@@ -8,6 +8,8 @@ import ipaddress
 import ops
 import yaml
 from ops import testing
+from pydantic import ValidationError
+from pytest import raises
 
 from charms.dns_transfer.v0 import dns_transfer
 
@@ -141,6 +143,34 @@ def test_dns_transfer_provider_get_relation_data(dns_transfer_provider_relation)
         ) == dns_transfer.DNSTransferRequirerData(
             addresses=[ipaddress.IPv4Address("10.10.10.20")],
         )
+
+
+def test_dns_transfer_provider_get_relation_data_error():
+    """
+    arrange: given a provider charm.
+    act: add an empty relation data.
+    assert: get_remote_relation_data raises invalid error.
+    """
+    ctx = testing.Context(
+        DNSTransferProviderCharm,
+        meta=yaml.safe_load(PROVIDER_METADATA),
+    )
+    state = testing.State(
+        relations=[
+            testing.Relation(
+                endpoint="dns-transfer",
+                interface="dns-transfer",
+                remote_app_name="secondary",
+                remote_app_data={},
+            )
+        ]
+    )
+
+    with ctx(ctx.on.start(), state) as manager:
+        relation = manager.charm.model.relations["dns-transfer"][0]
+        with raises(ValidationError) as e:
+            manager.charm.dns_transfer.get_remote_relation_data(relation)
+        assert "\naddresses\n  Field required" in str(e.value)
 
 
 def test_dns_transfer_provider_update_relation_data(dns_transfer_provider_relation):

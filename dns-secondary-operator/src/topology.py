@@ -151,8 +151,6 @@ class TopologyObserver(ops.Object):
             for ip in str(self.charm.config["public-ips"]).split(",")
             if ip.strip() != ""
         ]
-        if not public_ips:
-            public_ips = units_ip
 
         logger.debug("active_unit_ip: %s", active_unit_ip)
         logger.debug("current_unit_ip: %s", current_unit_ip)

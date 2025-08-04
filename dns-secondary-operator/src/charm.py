@@ -57,6 +57,9 @@ class DnsSecondaryCharm(ops.CharmBase):
 
         if self.unit.is_leader():
             public_ips = self.topology.dump().public_ips
+            if not public_ips:
+                logger.debug("Public ips not set, using units ip")
+                public_ips = self.topology.dump().units_ip
             requirer_data = dns_transfer.DNSTransferRequirerData(addresses=public_ips)
             self.dns_transfer.update_relation_data(relation, requirer_data)
 

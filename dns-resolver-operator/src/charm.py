@@ -49,12 +49,17 @@ class DnsResolverCharm(ops.CharmBase):
             return
         relation_data = self.dns_authority.get_relation_data()
         if not relation_data:
-            event.add_status(ops.WaitingStatus("DNS authority relation is not ready"))
+            event.add_status(ops.ActiveStatus("DNS authority relation not ready"))
+            logger.warning("DNS authority relation could not be retrieved")
             return
         if not relation_data.addresses or not relation_data.zones:
-            event.add_status(ops.WaitingStatus("DNS authority relation is empty"))
+            event.add_status(ops.ActiveStatus("DNS authority relation not ready"))
+            logger.warning("DNS authority relation data has no zones or no addresses")
             return
-        event.add_status(ops.ActiveStatus())
+        data = self.dns_authority.get_relation_data()
+        event.add_status(
+            ops.ActiveStatus(f"{len(data.zones)} zones, {len(data.addresses)} authority addresses")
+        )
 
     def _reconcile(self, _: ops.HookEvent) -> None:
         """Reconcile loop."""

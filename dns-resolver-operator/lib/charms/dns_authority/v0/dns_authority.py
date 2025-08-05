@@ -145,8 +145,8 @@ class DNSAuthorityRelationData(pydantic.BaseModel):
         Returns: a DNSAuthorityRelationData instance with the relation data.
         """
         return cls(
-            zones=json.loads(relation_data.get("zones", "[]")),
-            addresses=json.loads(relation_data.get("addresses", "[]")),
+            zones=json.loads(relation_data["zones"]),
+            addresses=json.loads(relation_data["addresses"]),
         )
 
 

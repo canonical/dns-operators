@@ -47,7 +47,7 @@ def test_start_with_relation_without_data(context, base_state):
     base_state["relations"] = [dns_authority_relation]
     state = testing.State(**base_state)
     out = context.run(context.on.start(), state)
-    assert out.unit_status == ops.WaitingStatus("DNS authority relation is not ready")
+    assert out.unit_status == ops.ActiveStatus("DNS authority relation not ready")
 
 
 @pytest.mark.usefixtures("context")
@@ -65,7 +65,7 @@ def test_start_with_relation_with_empty_data(context, base_state):
     base_state["relations"] = [dns_authority_relation]
     state = testing.State(**base_state)
     out = context.run(context.on.start(), state)
-    assert out.unit_status == ops.WaitingStatus("DNS authority relation is empty")
+    assert out.unit_status == ops.ActiveStatus("DNS authority relation not ready")
 
 
 @pytest.mark.usefixtures("context")
@@ -78,7 +78,7 @@ def test_relaton_changed_with_relation_with_some_data(context, base_state, write
     assert: status is correct
     """
     zones = ["example.com"]
-    addresses = ["1.2.3.4"]
+    addresses = ["1.2.3.4", "1.2.3.4"]
     dns_authority_relation = scenario.Relation(
         endpoint="dns-authority",
         remote_app_data={
@@ -92,7 +92,7 @@ def test_relaton_changed_with_relation_with_some_data(context, base_state, write
         "dns_authority_relation_changed", relation=dns_authority_relation
     )
     out = context.run(dns_authority_relation_changed_event, state)
-    assert out.unit_status == ops.ActiveStatus()
+    assert out.unit_status == ops.ActiveStatus('1 zones, 1 authority addresses')
     conf_path = pathlib.Path(constants.DNS_CONFIG_DIR) / "named.conf.local"
     real_conf_path = pathlib.Path(write_dir / conf_path.relative_to(conf_path.anchor))
     assert real_conf_path.exists()
@@ -100,6 +100,6 @@ def test_relaton_changed_with_relation_with_some_data(context, base_state, write
     for zone in zones:
         assert (
             f'zone "{zone}" {{ '
-            f"type forward;forward only;forwarders {{ {";".join(addresses)}; }}; "
+            f"type forward;forward only;forwarders {{ {";".join(list(set(addresses)))}; }}; "
             f"}};" in content
         )

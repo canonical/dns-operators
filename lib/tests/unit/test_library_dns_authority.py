@@ -74,17 +74,28 @@ class TestDNSAuthorityRelationData:
                     ],
                 },
             ),
+            (
+                {
+                    "addresses": [],
+                    "zones": [],
+                },
+                {
+                    "addresses": [],
+                    "zones": [],
+                },
+            ),
         ],
         ids=[
             "Standard valid case with IPv4 and IPv6",
             "Uniqueness check for addresses and zones",
             "Valid zones including one with a trailing dot",
             "Valid zones using punycode",
+            "Empty list of addresses and zones",
         ],
     )
     def test_dns_authority_relation_data_success(self, input_data, expected_data):
         """Test successful creation of DNSAuthorityRelationData with valid inputs."""
-        instance = dns_authority.DNSAuthorityRelationData(**input_data)
+        instance = dns_authority.DNSAuthorityRelationData.model_validate(input_data)
 
         assert len(instance.addresses) == len(expected_data["addresses"])
         assert set(instance.addresses) == set(expected_data["addresses"])
@@ -126,7 +137,7 @@ class TestDNSAuthorityRelationData:
     def test_dns_authority_relation_data_failure(self, input_data):
         """Test that DNSAuthorityRelationData initialization fails with invalid data."""
         with pytest.raises(pydantic.ValidationError):
-            dns_authority.DNSAuthorityRelationData(**input_data)
+            dns_authority.DNSAuthorityRelationData.model_validate(input_data)
 
     def test_serialization_and_to_relation_data(self):
         """Test the custom field serializer and the to_relation_data method."""

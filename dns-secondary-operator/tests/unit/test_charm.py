@@ -12,7 +12,7 @@ from scenario.errors import UncaughtCharmError
 
 import bind
 import constants
-from charm import DnsSecondaryCharm
+from charm import STATUS_REQUIRED_INTEGRATION, DnsSecondaryCharm
 
 from .conftest import PRIMARY_ADDRESS, PRIMARY_ZONE, PUBLIC_IPS
 
@@ -30,9 +30,7 @@ def test_config_changed(base_state: dict):
 
     out = context.run(context.on.config_changed(), state)
 
-    assert out.unit_status == testing.BlockedStatus(
-        "Required integration with DNS primary not found"
-    )
+    assert out.unit_status == testing.BlockedStatus(STATUS_REQUIRED_INTEGRATION)
 
 
 # pylint: disable=too-many-positional-arguments
@@ -60,7 +58,7 @@ def test_config_changed_with_primary(
 
     out = context.run(context.on.config_changed(), state)
 
-    assert out.unit_status == testing.ActiveStatus()
+    assert out.unit_status == testing.ActiveStatus("1 zones, 1 primary addresses")
     conf_path = tmp_path / "named.conf.local"
     assert conf_path.exists()
     content = conf_path.read_text()
@@ -80,16 +78,14 @@ def test_config_changed_with_snap_error(
     """
     arrange: prepare dns-secondary charm and mock setup to raise an error.
     act: run config_changed.
-    assert: error is raised and config/reload not called.
+    assert: error is raised and start not called.
     """
     monkeypatch.setattr(constants, "DNS_CONFIG_DIR", str(tmp_path))
     error_message = "Failed to setup service"
     error = RuntimeError(error_message)
     monkeypatch.setattr(bind.BindService, "setup", MagicMock(side_effect=error))
-    update_config_and_reload_mock = MagicMock()
-    monkeypatch.setattr(
-        bind.BindService, "update_config_and_reload", update_config_and_reload_mock
-    )
+    start_mock = MagicMock()
+    monkeypatch.setattr(bind.BindService, "start", start_mock)
 
     base_state["relations"].append(dns_transfer_relation)
     state = testing.State(**base_state)
@@ -102,4 +98,4 @@ def test_config_changed_with_snap_error(
 
     assert isinstance(e.value.__cause__, RuntimeError)
     assert error_message in str(e.value.__cause__)
-    update_config_and_reload_mock.assert_not_called()
+    start_mock.assert_not_called()

@@ -43,60 +43,29 @@ class BindService:
         charmed_bind.stop()
 
     def setup(self) -> None:
-        """Prepare the machine."""
+        """Install or update snap if present and write the named.conf.options."""
         self._install_snap_package(
             snap_name=constants.DNS_SNAP_NAME,
             snap_channel=constants.SNAP_PACKAGES[constants.DNS_SNAP_NAME]["channel"],
         )
-        # We need to put the service zone in place so we call
-        # the following with an empty relation and topology.
-        self.update_config_and_reload()
-
-    def _write_file(self, path: pathlib.Path, content: str) -> None:
-        """Write a file to the filesystem.
-
-        This function exists to be easily mocked during unit tests.
-
-        Args:
-            path: path to the file
-            content: content of the file
-        """
+        path = pathlib.Path(constants.DNS_CONFIG_DIR) / "named.conf.options"
         pathlib.Path(path).write_text(
-            content,
+            self._generate_named_conf_options(),
             encoding="utf-8",
         )
 
-    def update_config_and_reload(
-        self, zones: list[str] | None = None, ips: list[str] | None = None
-    ) -> None:
-        """Update BIND's configuration and reload the service.
+    def write_config_local(self, zones: list[str], ips: list[str]) -> None:
+        """Write named.conf.local.
 
         Args:
-            zones (list[str] | None): Optional list of DNS zones.
-            ips (list[str] | None): Optional list of IP addresses.
+            zones (list[str]):  list of DNS zones.
+            ips (list[str]):  list of IP addresses.
         """
-        if zones is None:
-            zones = []
-        if ips is None:
-            ips = []
-
-        # Write the named.conf.local file
-        self._write_file(
-            pathlib.Path(constants.DNS_CONFIG_DIR) / "named.conf.local",
+        path = pathlib.Path(constants.DNS_CONFIG_DIR) / "named.conf.local"
+        pathlib.Path(path).write_text(
             self._generate_named_conf_local(zones, ips),
+            encoding="utf-8",
         )
-
-        # Write the named.conf.options file
-        self._write_file(
-            pathlib.Path(constants.DNS_CONFIG_DIR) / "named.conf.options",
-            self._generate_named_conf_options(),
-        )
-
-        # Reload charmed-bind config (only if already started).
-        # When stopped, we assume this was on purpose.
-        # We can be here following a regular reload-bind event
-        # and we don't want to interfere with another operation.
-        self.reload(force_start=False)
 
     def _install_snap_package(
         self, snap_name: str, snap_channel: str, refresh: bool = False

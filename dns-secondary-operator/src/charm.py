@@ -16,7 +16,7 @@ from bind import BindService
 
 logger = logging.getLogger(__name__)
 
-STATUS_REQUIRED_INTEGRATION = "Required integration with DNS primary not found"
+STATUS_REQUIRED_INTEGRATION = "Needs to be related with a primary charm"
 
 
 class DnsSecondaryCharm(ops.CharmBase):
@@ -53,7 +53,10 @@ class DnsSecondaryCharm(ops.CharmBase):
 
         relation = self.model.get_relation(self.dns_transfer.relation_name)
         data = self.dns_transfer.get_remote_relation_data()
-        self.bind.update_config_and_reload(data.zones, [str(a) for a in data.addresses])
+        if data and data.addresses and data.zones:
+            self.unit.status = ops.MaintenanceStatus("Updating named.conf.local")
+            self.bind.write_config_local(data.zones, [str(a) for a in data.addresses])
+            self.bind.reload(force_start=True)
 
         if self.unit.is_leader():
             public_ips = self.topology.dump().public_ips
@@ -71,7 +74,20 @@ class DnsSecondaryCharm(ops.CharmBase):
         """
         if not self._has_required_integration():
             event.add_status(ops.BlockedStatus(STATUS_REQUIRED_INTEGRATION))
-        event.add_status(ops.ActiveStatus(""))
+        relation_data = self.dns_transfer.get_remote_relation_data()
+        if not relation_data:
+            event.add_status(ops.ActiveStatus("DNS primary relation not ready"))
+            logger.warning("DNS primary relation could not be retrieved")
+            return
+        if not relation_data.addresses or not relation_data.zones:
+            event.add_status(ops.ActiveStatus("DNS primary relation not ready"))
+            logger.warning("DNS primary relation data has no zones or no addresses")
+            return
+        total_zones = len(relation_data.zones)
+        total_addresses = len(relation_data.addresses)
+        event.add_status(
+            ops.ActiveStatus(f"{total_zones} zones, {total_addresses} primary addresses")
+        )
 
     def _on_stop(self, _: ops.StopEvent) -> None:
         """Handle stop."""

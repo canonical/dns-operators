@@ -58,7 +58,14 @@ class DnsResolverCharm(ops.CharmBase):
             return
         data = self.dns_authority.get_relation_data()
         event.add_status(
-            ops.ActiveStatus(f"{len(data.zones)} zones, {len(data.addresses)} authority addresses")
+            ops.ActiveStatus(
+                (
+                    f"{len(data.zones)}"
+                    f" zone{'e' if len(data.zones) > 1 else ''},"
+                    f" {len(data.addresses)}"
+                    f" authority address{'es' if len(data.addresses) > 1 else ''}"
+                )
+            )
         )
 
     def _reconcile(self, _: ops.HookEvent) -> None:

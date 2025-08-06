@@ -92,7 +92,7 @@ def test_relaton_changed_with_relation_with_some_data(context, base_state, write
         "dns_authority_relation_changed", relation=dns_authority_relation
     )
     out = context.run(dns_authority_relation_changed_event, state)
-    assert out.unit_status == ops.ActiveStatus("1 zones, 1 authority addresses")
+    assert out.unit_status == ops.ActiveStatus("1 zone, 1 authority address")
     conf_path = pathlib.Path(constants.DNS_CONFIG_DIR) / "named.conf.local"
     real_conf_path = pathlib.Path(write_dir / conf_path.relative_to(conf_path.anchor))
     assert real_conf_path.exists()

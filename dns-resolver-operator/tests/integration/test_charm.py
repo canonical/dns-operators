@@ -6,8 +6,7 @@
 
 import logging
 
-import juju.application
-import ops
+import jubilant
 import pytest
 
 logger = logging.getLogger(__name__)
@@ -15,11 +14,14 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
-async def test_active(full_deployment: dict[str, juju.application.Application]):
+async def test_active(
+    juju: jubilant.Juju,
+    dns_resolver_name: str,
+    full_deployment,  # pylint: disable=unused-argument
+):
     """
     arrange: build and deploy the charm.
     act: nothing.
     assert: that the charm ends up in an active state.
     """
-    unit = full_deployment["dns-resolver"].units[0]
-    assert unit.workload_status == ops.model.ActiveStatus.name
+    assert juju.status().apps[dns_resolver_name].is_active

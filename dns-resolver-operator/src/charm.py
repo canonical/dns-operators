@@ -56,14 +56,13 @@ class DnsResolverCharm(ops.CharmBase):
             event.add_status(ops.ActiveStatus("DNS authority relation not ready"))
             logger.warning("DNS authority relation data has no zones or no addresses")
             return
-        data = self.dns_authority.get_relation_data()
         event.add_status(
             ops.ActiveStatus(
                 (
-                    f"{len(data.zones)}"
-                    f" zone{'e' if len(data.zones) > 1 else ''},"
-                    f" {len(data.addresses)}"
-                    f" authority address{'es' if len(data.addresses) > 1 else ''}"
+                    f"{len(relation_data.zones)}"
+                    f" zone{'e' if len(relation_data.zones) > 1 else ''},"
+                    f" {len(relation_data.addresses)}"
+                    f" authority address{'es' if len(relation_data.addresses) > 1 else ''}"
                 )
             )
         )

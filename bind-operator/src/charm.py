@@ -12,6 +12,7 @@ import typing
 
 import ops
 from charms.bind.v0 import dns_record
+from charms.dns_authority.v0 import dns_authority
 
 import constants
 import dns_data
@@ -34,42 +35,23 @@ class BindCharm(ops.CharmBase):
         super().__init__(*args)
         self.bind = BindService()
         self.dns_record = dns_record.DNSRecordProvides(self)
+        self.dns_authority = dns_authority.DNSAuthorityProvides(self)
         self.topology = topology.TopologyObserver(self, constants.PEER)
 
         self.on.define_event("reload_bind", events.ReloadBindEvent)
 
-        self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.config_changed, self._reconcile)
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
-        self.framework.observe(
-            self.on.dns_record_relation_changed, self._on_dns_record_relation_changed
-        )
-        self.framework.observe(self.topology.on.topology_changed, self._on_topology_changed)
+        self.framework.observe(self.on.dns_record_relation_changed, self._reconcile)
+        self.framework.observe(self.on.dns_authority_relation_joined, self._reconcile)
+        self.framework.observe(self.topology.on.topology_changed, self._reconcile)
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
-        self.framework.observe(self.on.reload_bind, self._on_reload_bind)
+        self.framework.observe(self.on.reload_bind, self._reconcile)
         self.unit.open_port("tcp", 53)  # Bind DNS
         self.unit.open_port("udp", 53)  # Bind DNS
-
-    def _on_topology_changed(self, _: topology.TopologyChangedEvent) -> None:
-        """Handle topology changed events."""
-        self._reconcile()
-
-    def _on_reload_bind(self, _: events.ReloadBindEvent) -> None:
-        """Handle periodic reload bind event.
-
-        Reloading is used to take new configuration into account.
-
-        """
-        self._reconcile()
-
-    def _on_dns_record_relation_changed(self, _: ops.RelationChangedEvent) -> None:
-        """Handle dns_record relation changed."""
-        # Checking if we are the leader is also done in reconcile
-        # but doing it here avoids some unnecessary computations of reconcile for this case
-        if self.unit.is_leader():
-            self._reconcile()
 
     def _on_collect_status(self, event: ops.CollectStatusEvent) -> None:
         """Handle collect status event.
@@ -90,9 +72,6 @@ class BindCharm(ops.CharmBase):
             event.add_status(ops.BlockedStatus("Non valid DNS requests"))
             return
         self.bind.collect_status(event, relation_data)
-
-    def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
-        """Handle changed configuration event."""
 
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install."""
@@ -186,7 +165,7 @@ class BindCharm(ops.CharmBase):
         )
         return relation_data
 
-    def _reconcile(self) -> None:  # noqa: C901
+    def _reconcile(self, _: ops.HookEvent) -> None:  # noqa: C901
         """Reconciles."""
         # Retrieve the current topology of units
         try:
@@ -221,10 +200,18 @@ class BindCharm(ops.CharmBase):
         if dns_data.has_changed(relation_data, t, last_valid_state):
             self.bind.update_zonefiles_and_reload(relation_data, t)
 
-        # Update dns_record relation's data if we are the leader
         if self.unit.is_leader():
+            # Update dns_record relation's data
             dns_record_provider_data = dns_data.create_dns_record_provider_data(relation_data)
             self.dns_record.update_remote_relation_data(dns_record_provider_data)
+
+            # Update dns_record authority's data
+            ips = t.standby_units_ip or t.units_ip
+            zones = dns_data.dns_record_relations_data_to_zones(relation_data)
+            data = dns_authority.DNSAuthorityRelationData(
+                addresses=ips, zones=[zone.domain for zone in zones]
+            )
+            self.dns_authority.update_relation_data(data)
 
 
 if __name__ == "__main__":  # pragma: nocover

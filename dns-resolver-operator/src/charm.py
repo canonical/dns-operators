@@ -71,10 +71,8 @@ class DnsResolverCharm(ops.CharmBase):
     def _reconcile(self, _: ops.HookEvent) -> None:
         """Reconcile loop."""
         data = self.dns_authority.get_relation_data()
-        if data is not None:
+        if data and data.addresses and data.zones:
             self.bind.update_config_and_reload(data.zones, [str(a) for a in data.addresses])
-        else:
-            self.bind.update_config_and_reload()
 
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install."""

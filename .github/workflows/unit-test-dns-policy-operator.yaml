@@ -5,6 +5,9 @@ on:
     paths:
       - 'dns-policy-operator/**'
       - '.github/workflows/unit-test-dns-policy-operator.yaml'
+  push:
+    branches:
+      - main
 
 jobs:
   unit-tests:
@@ -14,3 +17,4 @@ jobs:
       self-hosted-runner: false
       self-hosted-runner-label: "edge"
       working-directory: ./dns-policy-operator
+      vale-style-check: true

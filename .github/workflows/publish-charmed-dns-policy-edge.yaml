@@ -1,28 +1,35 @@
 name: Publish charmed-dns-policy to edge
 
 on:
-  push:
-    branches:
-      - main
-      - track/*
-    paths:
-      - 'charmed-dns-policy/**'
+  workflow_dispatch:
+    secrets:
+      SNAP_STORE_TOKEN:
+        required: true
 
 jobs:
-  publish-to-edge-charmed-dns-policy:
-    name: Build snap
-    uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v31.0.1
-    with:
-      path-to-snap-project-directory: ./charmed-dns-policy
-
+  publish:
     name: Release snap
-    needs:
-      - build
-    uses: canonical/data-platform-workflows/.github/workflows/release_snap.yaml@v31.0.1
-    with:
-      channel: latest/edge
-      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
-    secrets:
-      snap-store-token: ${{ secrets.SNAP_STORE_TOKEN }}
-    permissions:
-      contents: write  # Needed to create git tags
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up environment
+        run: |
+          sudo snap install lxd
+          sudo adduser "$USER" lxd
+          # `newgrp` does not work in GitHub Actions; use `sudo --user` instead
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd waitready
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd init --auto
+          # Workaround for Docker & LXD on same machine
+          sudo iptables -F FORWARD
+          sudo iptables -P FORWARD ACCEPT
+          sudo snap install snapcraft --classic
+      - run: snap list
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build and publish the snap
+        run: |
+          cd ./charmed-dns-policy
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- snapcraft --verbose
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- snapcraft upload --release="latest/edge" charmed-dns-policy_*.snap
+        env:
+          SNAPCRAFT_STORE_AUTH: candid
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_STORE_TOKEN }}

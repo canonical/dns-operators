@@ -67,20 +67,19 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 6
 
 PYDEPS = ["pydantic>=2"]
 
 # pylint: disable=wrong-import-position
 import json
 import logging
+import typing
 from enum import Enum
-from typing import Annotated, Dict, List, Optional, Tuple, cast
 from uuid import UUID
 
 import ops
-from pydantic import (BaseModel, Field, IPvAnyAddress, PlainValidator,
-                      ValidationError, ValidationInfo)
+import pydantic
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +169,7 @@ class RecordClass(str, Enum):
     IN = "IN"
 
 
-class DNSProviderData(BaseModel):
+class DNSProviderData(pydantic.BaseModel):
     """Represent the DNS provider data.
 
     Attributes:
@@ -181,19 +180,19 @@ class DNSProviderData(BaseModel):
 
     uuid: UUID
     status: Status
-    description: Optional[str] = None
+    description: str | None = None
 
 
-class DNSRecordProviderData(BaseModel):
+class DNSRecordProviderData(pydantic.BaseModel):
     """List of entries for the provider to manage.
 
     Attributes:
         dns_entries: list of entries to manage.
     """
 
-    dns_entries: List[DNSProviderData]
+    dns_entries: list[DNSProviderData]
 
-    def to_relation_data(self) -> Dict[str, str]:
+    def to_relation_data(self) -> dict[str, str]:
         """Convert an instance of DNSRecordProviderData to the relation representation.
 
         Returns:
@@ -220,7 +219,7 @@ class DNSRecordProviderData(BaseModel):
         """
         try:
             loaded_data = {}
-            app = cast(ops.Application, relation.app)
+            app = typing.cast(ops.Application, relation.app)
             relation_data = relation.data[app]
             for key, value in relation_data.items():
                 loaded_data[key] = json.loads(value)
@@ -229,7 +228,7 @@ class DNSRecordProviderData(BaseModel):
             raise ValueError from ex
 
 
-class RequirerEntry(BaseModel):
+class RequirerEntry(pydantic.BaseModel):
     """DNS requirer entries requested.
 
     Attributes:
@@ -238,19 +237,116 @@ class RequirerEntry(BaseModel):
         ttl: TTL.
         record_class: DNS record class.
         record_type: DNS record type.
-        record_data: the record value.
+        record_data: DNS record value (pydantic.IPvAnyAddress for A/AAAA, str otherwise).
         uuid: UUID for this entry.
     """
 
-    domain: str = Field(min_length=1)
-    host_label: str = Field(min_length=1)
-    ttl: Optional[int] = None
-    record_class: Optional[RecordClass] = None
-    record_type: Optional[RecordType] = None
-    record_data: IPvAnyAddress
+    domain: str = pydantic.Field(min_length=1)
+    host_label: str = pydantic.Field(min_length=1)
+    ttl: int
+    record_class: RecordClass = RecordClass.IN
+    record_type: RecordType
+    record_data: str | pydantic.IPvAnyAddress
     uuid: UUID
 
-    def validate_dns_entry(self, _: ValidationInfo) -> "RequirerEntry":
+    # Validator for record_data
+    @classmethod
+    @pydantic.field_validator("record_data")
+    def validate_record_data(
+        cls, value: str | pydantic.IPvAnyAddress, info: pydantic.ValidationInfo
+    ) -> str | pydantic.IPvAnyAddress:
+        """Validate record_data based on record_type.
+
+        Args:
+            value: input value
+            info: information about the current model
+
+        Raises:
+            ValueError: when the input value could not be validated
+
+        Returns:
+            The validated value
+        """
+        record_type = info.data.get("record_type")
+        if record_type in (RecordType.A, RecordType.AAAA):
+            if isinstance(value, pydantic.IPvAnyAddress):
+                return value
+            if isinstance(value, str):
+                try:
+                    # mypy is confused by the fact that pydantic interfaces
+                    # an external class
+                    return pydantic.IPv4Address(value)  # type: ignore
+                except ValueError:
+                    pass
+
+                try:
+                    # mypy is confused by the fact that pydantic interfaces
+                    # an external class
+                    return pydantic.IPv6Address(value)  # type: ignore
+                except ValueError as e:
+                    raise ValueError(
+                        "record_data must be a valid IP address for record_type A or AAAA"
+                    ) from e
+            else:
+                raise ValueError(
+                    "record_data must be a string"
+                    "or pydantic.IPvAnyAddress for record_type A or AAAA"
+                )
+        # For other record types, ensure it's a string
+        if not isinstance(value, str):
+            raise ValueError("record_data must be a string for non-A/AAAA record types")
+        return value
+
+    # Serializer for enums (use their value)
+    @pydantic.field_serializer("record_class", "record_type")
+    def serialize_enum(self, value: RecordClass | RecordType | None) -> str | None:
+        """Serialize enum.
+
+        Args:
+            value: input value
+
+        Returns:
+            serialized value
+        """
+        return value.value if value else None
+
+    @pydantic.field_serializer("ttl")
+    def serialize_ttl(self, ttl: int) -> str:
+        """Serialize record class.
+
+        Args:
+            ttl: input value
+
+        Returns:
+            serialized value
+        """
+        return str(ttl)
+
+    @pydantic.field_serializer("uuid")
+    def serialize_dt(self, uuid: UUID) -> str:
+        """Serialize uuid.
+
+        Args:
+            uuid: input value
+
+        Returns:
+            serialized value
+        """
+        return str(uuid)
+
+    @pydantic.field_serializer("record_data")
+    def serialize_record_data(self, record_data: str | pydantic.IPvAnyAddress) -> str:
+        """Serialize record data.
+
+        Args:
+            record_data: input value
+
+        Returns:
+            serialized value
+        """
+        return str(record_data)
+
+    def validate_dns_entry(self, _: pydantic.ValidationInfo) -> "RequirerEntry":
         """Validate DNS entries.
 
         Returns:
@@ -262,16 +358,18 @@ class RequirerEntry(BaseModel):
         return validated_entry
 
 
-class DNSRecordRequirerData(BaseModel):
+class DNSRecordRequirerData(pydantic.BaseModel):
     """List of domains for the provider to manage.
 
     Attributes:
         dns_entries: list of entries to manage.
     """
 
-    dns_entries: List[Annotated[RequirerEntry, PlainValidator(RequirerEntry.validate_dns_entry)]]
+    dns_entries: list[
+        typing.Annotated[RequirerEntry, pydantic.PlainValidator(RequirerEntry.validate_dns_entry)]
+    ]
 
-    def to_relation_data(self) -> Dict[str, str]:
+    def to_relation_data(self) -> dict[str, str]:
         """Convert an instance of DNSRecordRequirerData to the relation representation.
 
         Returns:
@@ -286,7 +384,7 @@ class DNSRecordRequirerData(BaseModel):
     @classmethod
     def from_relation(
         cls, relation: ops.Relation
-    ) -> Tuple["DNSRecordRequirerData", "DNSRecordProviderData"]:
+    ) -> tuple["DNSRecordRequirerData", "DNSRecordProviderData"]:
         """Get a Tuple of DNSRecordRequirerData and DNSRecordProviderData from the relation data.
 
         Args:
@@ -299,7 +397,7 @@ class DNSRecordRequirerData(BaseModel):
             ValueError: if the value is not parseable.
         """
         try:
-            app = cast(ops.Application, relation.app)
+            app = typing.cast(ops.Application, relation.app)
             relation_data = relation.data[app]
             dns_entries = (
                 json.loads(relation_data["dns_entries"]) if "dns_entries" in relation_data else []
@@ -313,7 +411,7 @@ class DNSRecordRequirerData(BaseModel):
                         continue
                     validated_entry = RequirerEntry.model_validate(dns_entry)
                     valid_entries.append(validated_entry)
-                except ValidationError as ex:
+                except pydantic.ValidationError as ex:
                     provider_data = DNSProviderData(
                         uuid=dns_entry["uuid"],
                         status=Status.INVALID_DATA,
@@ -348,7 +446,7 @@ class DNSRecordRequestProcessed(ops.RelationEvent):
         return DNSRecordProviderData.from_relation(self.relation)
 
     @property
-    def dns_entries(self) -> Optional[List[DNSProviderData]]:
+    def dns_entries(self) -> list[DNSProviderData] | None:
         """Fetch the DNS entries from the relation."""
         return self.get_dns_record_provider_relation_data().dns_entries
 
@@ -365,17 +463,17 @@ class DNSRecordRequestReceived(ops.RelationEvent):
     @property
     def dns_record_requirer_relation_data(
         self,
-    ) -> Tuple[DNSRecordRequirerData, DNSRecordProviderData]:
+    ) -> tuple[DNSRecordRequirerData, DNSRecordProviderData]:
         """Get the requirer data and corresponding provider data the relation data."""
         return DNSRecordRequirerData.from_relation(self.relation)
 
     @property
-    def dns_entries(self) -> List[RequirerEntry]:
+    def dns_entries(self) -> list[RequirerEntry]:
         """Fetch the DNS entries from the relation."""
         return self.dns_record_requirer_relation_data[0].dns_entries
 
     @property
-    def processed_entries(self) -> List[DNSProviderData]:
+    def processed_entries(self) -> list[DNSProviderData]:
         """Fetch the processed DNS entries."""
         return self.dns_record_requirer_relation_data[1].dns_entries
 
@@ -413,7 +511,7 @@ class DNSRecordRequires(ops.Object):
         self.relation_name = relation_name
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
 
-    def get_remote_relation_data(self) -> Optional[DNSRecordProviderData]:
+    def get_remote_relation_data(self) -> DNSRecordProviderData | None:
         """Retrieve the remote relation data.
 
         Returns:
@@ -455,12 +553,28 @@ class DNSRecordRequires(ops.Object):
         Args:
             event: event triggering this handler.
         """
-        assert event.relation.app
+        if event.relation.app is None:
+            logger.warning(
+                "RelationChangedEvent: event.relation.app is not defined. This should not happen"
+            )
         relation_data = event.relation.data[event.relation.app]
         if relation_data and self._is_remote_relation_data_valid(event.relation):
             self.on.dns_record_request_processed.emit(
                 event.relation, app=event.app, unit=event.unit
             )
+
+    def update_remote_relation_data(
+        self,
+        dns_record_requirer_data: DNSRecordRequirerData,
+    ) -> None:
+        """Update the relation data.
+
+        Args:
+            dns_record_requirer_data: DNSRecordRequirerData wrapping the data to be updated.
+        """
+        for relation in self.model.relations[self.relation_name]:
+            relation_data = dns_record_requirer_data.to_relation_data()
+            relation.data[self.charm.model.app].update(relation_data)
 
     def update_relation_data(
         self,
@@ -512,13 +626,13 @@ class DNSRecordProvides(ops.Object):
 
     def get_remote_relation_data(
         self,
-    ) -> List[Tuple[DNSRecordRequirerData, DNSRecordProviderData]]:
+    ) -> list[tuple[DNSRecordRequirerData, DNSRecordProviderData]]:
         """Retrieve all the remote relations data.
 
         Returns:
             the relation data and the processed entries for it.
         """
-        relations_data: List[Tuple[DNSRecordRequirerData, DNSRecordProviderData]] = []
+        relations_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]] = []
         for relation in self.model.relations[self.relation_name]:
             try:
                 data = self._get_remote_relation_data(relation)
@@ -535,7 +649,7 @@ class DNSRecordProvides(ops.Object):
 
     def _get_remote_relation_data(
         self, relation: ops.Relation
-    ) -> Tuple[DNSRecordRequirerData, DNSRecordProviderData]:
+    ) -> tuple[DNSRecordRequirerData, DNSRecordProviderData]:
         """Retrieve the remote relation data.
 
         Args:
@@ -568,12 +682,26 @@ class DNSRecordProvides(ops.Object):
         Args:
             event: event triggering this handler.
         """
-        assert event.relation.app
-        relation_data = event.relation.data[event.relation.app]
-        if relation_data and self._is_remote_relation_data_valid(event.relation):
-            self.on.dns_record_request_received.emit(
-                event.relation, app=event.app, unit=event.unit
-            )
+        if event.relation.app is not None:
+            relation_data = event.relation.data[event.relation.app]
+            if relation_data and self._is_remote_relation_data_valid(event.relation):
+                self.on.dns_record_request_received.emit(
+                    event.relation, app=event.app, unit=event.unit
+                )
+
+    def update_remote_relation_data(
+        self,
+        dns_record_provider_data: DNSRecordProviderData,
+    ) -> None:
+        """Update the relation data.
+
+        Args:
+            dns_record_provider_data: a DNSRecordProviderData instance wrapping the data to be
+                updated.
+        """
+        for relation in self.model.relations[self.relation_name]:
+            relation_data = dns_record_provider_data.to_relation_data()
+            relation.data[self.charm.model.app].update(relation_data)
 
     def update_relation_data(
         self, relation: ops.Relation, dns_record_provider_data: DNSRecordProviderData

@@ -1,14 +1,15 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""DNS record library unit tests"""
+"""DNS record library unit tests."""
 
 import json
 import uuid
 
 import ops
-from charms.bind.v0 import dns_record
 from ops.testing import Harness
+
+from charms.bind.v0 import dns_record
 
 REQUIRER_METADATA = """
 name: dns-record-consumer
@@ -42,7 +43,7 @@ def get_requirer_relation_data() -> dict[str, str]:
                 {
                     "domain": "cloud.canonical.com",
                     "host_label": "admin",
-                    "ttl": 600,
+                    "ttl": "600",
                     "record_class": "IN",
                     "record_type": "A",
                     "record_data": "91.189.91.48",
@@ -51,6 +52,8 @@ def get_requirer_relation_data() -> dict[str, str]:
                 {
                     "domain": "staging.ubuntu.com",
                     "host_label": "www",
+                    "ttl": "600",
+                    "record_type": "A",
                     "record_data": "91.189.91.47",
                     "uuid": str(UUID4),
                 },
@@ -78,7 +81,9 @@ def get_requirer_relation_data_partially_invalid() -> dict[str, str]:
                 },
                 {
                     "domain": "staging.ubuntu.com",
+                    "ttl": 600,
                     "host_label": "www",
+                    "record_type": "A",
                     "record_data": "91.189.91.47",
                     "uuid": str(UUID4),
                 },
@@ -106,7 +111,9 @@ def get_requirer_relation_data_without_uuid() -> dict[str, str]:
                 },
                 {
                     "domain": "staging.ubuntu.com",
+                    "ttl": 600,
                     "host_label": "www",
+                    "record_type": "A",
                     "record_data": "91.189.91.47",
                     "uuid": str(UUID4),
                 },
@@ -124,19 +131,21 @@ def get_dns_record_requirer_data() -> dns_record.DNSRecordRequirerData:
     return dns_record.DNSRecordRequirerData(
         dns_entries=[
             dns_record.RequirerEntry(
-                uuid=UUID3,
                 domain="cloud.canonical.com",
                 host_label="admin",
                 ttl=600,
                 record_class=dns_record.RecordClass.IN,
                 record_type=dns_record.RecordType.A,
                 record_data="91.189.91.48",
+                uuid=UUID3,
             ),
             dns_record.RequirerEntry(
-                uuid=UUID4,
                 domain="staging.ubuntu.com",
+                ttl=600,
                 host_label="www",
+                record_type=dns_record.RecordType.A,
                 record_data="91.189.91.47",
+                uuid=UUID4,
             ),
         ],
     )
@@ -192,7 +201,9 @@ class DNSRecordRequirerCharm(ops.CharmBase):
         Args:
             event: event.
         """
-        self.events.append(event)
+        # mypy warns us that we can import different types of events doing that.
+        # We know mypy, we know.
+        self.events.append(event)  # type: ignore
 
 
 class DNSRecordProviderCharm(ops.CharmBase):
@@ -215,7 +226,9 @@ class DNSRecordProviderCharm(ops.CharmBase):
         Args:
             event: event.
         """
-        self.events.append(event)
+        # mypy warns us that we can import different types of events doing that.
+        # We know mypy, we know.
+        self.events.append(event)  # type: ignore
 
 
 def test_dns_record_requirer_update_relation_data():
@@ -230,9 +243,9 @@ def test_dns_record_requirer_update_relation_data():
 
     harness.add_relation("dns-record", "dns-record")
     relation = harness.model.get_relation("dns-record")
+    assert relation
     harness.charm.dns_record.update_relation_data(relation, get_dns_record_requirer_data())
 
-    assert relation
     assert relation.data[harness.model.app] == get_requirer_relation_data()
 
 
@@ -295,9 +308,9 @@ def test_dns_record_provider_update_relation_data():
 
     harness.add_relation("dns-record", "dns-record")
     relation = harness.model.get_relation("dns-record")
+    assert relation
     harness.charm.dns_record.update_relation_data(relation, DNS_RECORD_PROVIDER_DATA)
 
-    assert relation
     assert relation.data[harness.model.app] == PROVIDER_RELATION_DATA
 
 
@@ -330,7 +343,9 @@ def test_dns_record_provider_emits_event_when_partially_valid():
     harness.set_leader(True)
 
     harness.add_relation(
-        "dns-record", "dns-record", app_data=get_requirer_relation_data_partially_invalid()
+        "dns-record",
+        "dns-record",
+        app_data=get_requirer_relation_data_partially_invalid(),
     )
 
     events = harness.charm.events

@@ -5,6 +5,9 @@ on:
     paths:
       - 'bind-operator/**'
       - '.github/workflows/unit-test-bind-operator.yaml'
+  push:
+    branches:
+      - main
 
 jobs:
   unit-tests:
@@ -14,3 +17,4 @@ jobs:
       self-hosted-runner: false
       self-hosted-runner-label: "edge"
       working-directory: ./bind-operator
+      vale-style-check: true

@@ -1,0 +1,20 @@
+name: Lib tests
+
+on:
+  pull_request:
+    paths:
+      - 'lib/**'
+      - '.github/workflows/unit-test-lib.yaml'
+  push:
+    branches:
+      - main
+
+jobs:
+  unit-tests:
+    uses: canonical/operator-workflows/.github/workflows/test.yaml@main
+    secrets: inherit
+    with:
+      self-hosted-runner: false
+      self-hosted-runner-label: "edge"
+      working-directory: ./lib
+      vale-style-check: true

@@ -5,6 +5,9 @@ on:
     paths:
       - 'charmed-bind/**'
       - '.github/workflows/test-charmed-bind.yaml'
+  push:
+    branches:
+      - main
 
 jobs:
   shellcheck:
@@ -19,7 +22,7 @@ jobs:
 
   build-snap:
     name: Build snap
-    uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v31
+    uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v32
     with:
       path-to-snap-project-directory: ./charmed-bind
 
@@ -30,7 +33,7 @@ jobs:
       - build-snap
     steps:
       - name: Download snap package(s)
-        uses: actions/download-artifact@v4.2.1
+        uses: actions/download-artifact@v5.0.0
         with:
           pattern: ${{ needs.build-snap.outputs.artifact-prefix }}-*
           merge-multiple: true

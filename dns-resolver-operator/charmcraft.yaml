@@ -1,0 +1,30 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: dns-resolver
+summary: DNS resolver charm
+description: |
+  A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+  deploying and managing a DNS resolver charm on bare metal.
+assumes:
+  - juju >= 3.6
+peers:
+  dns-resolver-peers:
+    interface: dns-resolver-instance
+requires:
+  dns-authority:
+    interface: dns_authority
+type: charm
+bases:
+  - build-on:
+    - name: ubuntu
+      channel: "22.04"
+    run-on:
+    - name: ubuntu
+      channel: "22.04"
+parts:
+  charm:
+    build-snaps:
+      - rustup
+    override-build: |
+      rustup default stable
+      craftctl default

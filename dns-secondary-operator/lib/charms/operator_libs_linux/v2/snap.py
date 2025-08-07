@@ -54,10 +54,6 @@ try:
 except snap.SnapError as e:
     logger.error("An exception occurred when installing snaps. Reason: %s" % e.message)
 ```
-
-Dependencies:
-Note that this module requires `opentelemetry-api`, which is already included into
-your charm's virtual environment via `ops >= 2.21`.
 """
 
 from __future__ import annotations
@@ -89,17 +85,14 @@ from typing import (
     TypeVar,
 )
 
-import opentelemetry.trace
-
 if typing.TYPE_CHECKING:
     # avoid typing_extensions import at runtime
-    from typing_extensions import NotRequired, ParamSpec, Required, Self, TypeAlias, Unpack
+    from typing_extensions import NotRequired, ParamSpec, Required, TypeAlias, Unpack
 
     _P = ParamSpec("_P")
     _T = TypeVar("_T")
 
 logger = logging.getLogger(__name__)
-tracer = opentelemetry.trace.get_tracer(__name__)
 
 # The unique Charmhub library identifier, never change it
 LIBID = "05394e5893f94f2d90feb7cbe6b633cd"
@@ -109,9 +102,7 @@ LIBAPI = 2
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 13
-
-PYDEPS = ["opentelemetry-api"]
+LIBPATCH = 10
 
 
 # Regex to locate 7-bit C1 ANSI sequences
@@ -277,24 +268,6 @@ class SnapState(Enum):
 class SnapError(Error):
     """Raised when there's an error running snap control commands."""
 
-    @classmethod
-    def _from_called_process_error(cls, msg: str, error: CalledProcessError) -> Self:
-        lines = [msg]
-        if error.stdout:
-            lines.extend(['Stdout:', error.stdout])
-        if error.stderr:
-            lines.extend(['Stderr:', error.stderr])
-        try:
-            cmd = ['journalctl', '--unit', 'snapd', '--lines', '20']
-            with tracer.start_as_current_span(cmd[0]) as span:
-                span.set_attribute("argv", cmd)
-                logs = subprocess.check_output(cmd, text=True)
-        except Exception as e:
-            lines.extend(['Error fetching logs:', str(e)])
-        else:
-            lines.extend(['Latest logs:', logs])
-        return cls('\n'.join(lines))
-
 
 class SnapNotFoundError(Error):
     """Raised when a requested snap is not known to the system."""
@@ -367,12 +340,11 @@ class Snap:
         optargs = optargs or []
         args = ["snap", command, self._name, *optargs]
         try:
-            with tracer.start_as_current_span(args[0]) as span:
-                span.set_attribute("argv", args)
-                return subprocess.check_output(args, text=True, stderr=subprocess.PIPE)
+            return subprocess.check_output(args, text=True)
         except CalledProcessError as e:
-            msg = f'Snap: {self._name!r} -- command {args!r} failed!'
-            raise SnapError._from_called_process_error(msg=msg, error=e) from e
+            raise SnapError(
+                f"Snap: {self._name!r}; command {args!r} failed with output = {e.output!r}"
+            ) from e
 
     def _snap_daemons(
         self,
@@ -397,12 +369,9 @@ class Snap:
         args = ["snap", *command, *services]
 
         try:
-            with tracer.start_as_current_span(args[0]) as span:
-                span.set_attribute("argv", args)
-                return subprocess.run(args, text=True, check=True, capture_output=True)
+            return subprocess.run(args, text=True, check=True, capture_output=True)
         except CalledProcessError as e:
-            msg = f'Snap: {self._name!r} -- command {args!r} failed!'
-            raise SnapError._from_called_process_error(msg=msg, error=e) from e
+            raise SnapError(f"Could not {args} for snap [{self._name}]: {e.stderr}") from e
 
     @typing.overload
     def get(self, key: None | Literal[""], *, typed: Literal[False] = False) -> NoReturn: ...
@@ -506,12 +475,9 @@ class Snap:
 
         args = ["snap", *command]
         try:
-            with tracer.start_as_current_span(args[0]) as span:
-                span.set_attribute("argv", args)
-                subprocess.run(args, text=True, check=True, capture_output=True)
+            subprocess.run(args, text=True, check=True, capture_output=True)
         except CalledProcessError as e:
-            msg = f'Snap: {self._name!r} -- command {args!r} failed!'
-            raise SnapError._from_called_process_error(msg=msg, error=e) from e
+            raise SnapError(f"Could not {args} for snap [{self._name}]: {e.stderr}") from e
 
     def hold(self, duration: timedelta | None = None) -> None:
         """Add a refresh hold to a snap.
@@ -540,12 +506,11 @@ class Snap:
             alias = application
         args = ["snap", "alias", f"{self.name}.{application}", alias]
         try:
-            with tracer.start_as_current_span(args[0]) as span:
-                span.set_attribute("argv", args)
-                subprocess.run(args, text=True, check=True, capture_output=True)
+            subprocess.check_output(args, text=True)
         except CalledProcessError as e:
-            msg = f'Snap: {self._name!r} -- command {args!r} failed!'
-            raise SnapError._from_called_process_error(msg=msg, error=e) from e
+            raise SnapError(
+                f"Snap: {self._name!r}; command {args!r} failed with output = {e.output!r}"
+            ) from e
 
     def restart(self, services: list[str] | None = None, reload: bool = False) -> None:
         """Restarts a snap's services.
@@ -611,9 +576,6 @@ class Snap:
 
         if revision:
             args.append(f'--revision="{revision}"')
-
-        if self.confinement == 'classic':
-            args.append('--classic')
 
         if devmode:
             args.append("--devmode")
@@ -951,20 +913,15 @@ class SnapClient:
 
     def get_installed_snaps(self) -> list[dict[str, JSONType]]:
         """Get information about currently installed snaps."""
-        with tracer.start_as_current_span("get_installed_snaps"):
-            return self._request("GET", "snaps")  # type: ignore
+        return self._request("GET", "snaps")  # type: ignore
 
     def get_snap_information(self, name: str) -> dict[str, JSONType]:
         """Query the snap server for information about single snap."""
-        with tracer.start_as_current_span("get_snap_information") as span:
-            span.set_attribute("name", name)
-            return self._request("GET", "find", {"name": name})[0]  # type: ignore
+        return self._request("GET", "find", {"name": name})[0]  # type: ignore
 
     def get_installed_snap_apps(self, name: str) -> list[dict[str, JSONType]]:
         """Query the snap server for apps belonging to a named, currently installed snap."""
-        with tracer.start_as_current_span("get_installed_snap_apps") as span:
-            span.set_attribute("name", name)
-            return self._request("GET", "apps", {"names": name, "select": "service"})  # type: ignore
+        return self._request("GET", "apps", {"names": name, "select": "service"})  # type: ignore
 
     def _put_snap_conf(self, name: str, conf: dict[str, JSONAble]) -> None:
         """Set the configuration details for an installed snap."""
@@ -1304,13 +1261,7 @@ def install_local(
     if dangerous:
         args.append("--dangerous")
     try:
-        with tracer.start_as_current_span(args[0]) as span:
-            span.set_attribute("argv", args)
-            result = subprocess.check_output(
-                args,
-                text=True,
-                stderr=subprocess.PIPE,
-            ).splitlines()[-1]
+        result = subprocess.check_output(args, text=True).splitlines()[-1]
         snap_name, _ = result.split(" ", 1)
         snap_name = ansi_filter.sub("", snap_name)
 
@@ -1326,8 +1277,7 @@ def install_local(
             )
             raise SnapError(f"Failed to find snap {snap_name} in Snap cache") from e
     except CalledProcessError as e:
-        msg = f'Cound not install snap {filename}!'
-        raise SnapError._from_called_process_error(msg=msg, error=e) from e
+        raise SnapError(f"Could not install snap {filename}: {e.output}") from e
 
 
 def _system_set(config_item: str, value: str) -> None:
@@ -1339,12 +1289,9 @@ def _system_set(config_item: str, value: str) -> None:
     """
     args = ["snap", "set", "system", f"{config_item}={value}"]
     try:
-        with tracer.start_as_current_span(args[0]) as span:
-            span.set_attribute("argv", args)
-            subprocess.run(args, text=True, check=True, capture_output=True)
+        subprocess.check_call(args, text=True)
     except CalledProcessError as e:
-        msg = f"Failed setting system config '{config_item}' to '{value}'"
-        raise SnapError._from_called_process_error(msg=msg, error=e) from e
+        raise SnapError(f"Failed setting system config '{config_item}' to '{value}'") from e
 
 
 def hold_refresh(days: int = 90, forever: bool = False) -> None:

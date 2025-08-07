@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     name: Build snap
-    uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v32.2.0
+    uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v32.2.1
     with:
       path-to-snap-project-directory: ./charmed-bind
 
@@ -17,7 +17,7 @@ jobs:
     name: Release snap
     needs:
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/release_snap.yaml@v32.2.0
+    uses: canonical/data-platform-workflows/.github/workflows/release_snap.yaml@v32.2.1
     with:
       path-to-snap-project-directory: ./charmed-bind
       channel: latest/edge

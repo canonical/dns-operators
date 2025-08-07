@@ -76,7 +76,7 @@ class BindCharm(ops.CharmBase):
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install."""
         self.unit.status = ops.MaintenanceStatus("Preparing bind")
-        self.bind.setup(self.unit.name)
+        self.bind.setup(self.unit.name, self.config)
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start."""
@@ -89,7 +89,7 @@ class BindCharm(ops.CharmBase):
     def _on_upgrade_charm(self, _: ops.UpgradeCharmEvent) -> None:
         """Handle upgrade-charm."""
         self.unit.status = ops.MaintenanceStatus("Upgrading dependencies")
-        self.bind.setup(self.unit.name)
+        self.bind.setup(self.unit.name, self.config)
 
     def _check_and_may_become_active(self, t: topology.Topology) -> bool:
         """Check the active unit status and may become active if need be.
@@ -198,7 +198,7 @@ class BindCharm(ops.CharmBase):
             # we assume that we need to regenerate the configuration
             last_valid_state = {}
         if dns_data.has_changed(relation_data, t, last_valid_state):
-            self.bind.update_zonefiles_and_reload(relation_data, t)
+            self.bind.update_zonefiles_and_reload(relation_data, t, self.config)
 
         if self.unit.is_leader():
             # Update dns_record relation's data

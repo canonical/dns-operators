@@ -107,11 +107,12 @@ class BindService:
             logger.error(error_msg)
             raise StopError(error_msg) from e
 
-    def setup(self, unit_name: str) -> None:
+    def setup(self, unit_name: str, config: dict[str, str]) -> None:
         """Prepare the machine.
 
         Args:
             unit_name: The name of the current unit
+            config: the charm config
         """
         self._install_snap_package(
             snap_name=constants.DNS_SNAP_NAME,
@@ -120,7 +121,7 @@ class BindService:
         self._install_bind_reload_service(unit_name)
         # We need to put the service zone in place so we call
         # the following with an empty relation and topology.
-        self.update_zonefiles_and_reload([], None)
+        self.update_zonefiles_and_reload([], None, config)
 
     def _install_bind_reload_service(self, unit_name: str) -> None:
         """Install the bind reload service.
@@ -182,12 +183,14 @@ class BindService:
         self,
         relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
         topology: topology_module.Topology | None,
+        config: dict[str, str],
     ) -> None:
         """Update the zonefiles from bind's config and reload bind.
 
         Args:
             relation_data: input relation data
             topology: Topology of the current deployment
+            config: Relevant charm's config
         """
         start_time = time.time_ns()
         logger.debug("Starting update of zonefiles")
@@ -214,12 +217,13 @@ class BindService:
                 pathlib.Path(constants.DNS_CONFIG_DIR) / f"db.{constants.ZONE_SERVICE_NAME}",
                 templates.ZONE_SERVICE.format(
                     serial=int(time.time() / 60),
+                    mailbox=config["mailbox"],
                 ),
             )
 
             if topology is not None and topology.is_current_unit_active:
                 # Write zone files
-                zone_files: dict[str, str] = self._zones_to_files_content(zones, topology)
+                zone_files: dict[str, str] = self._zones_to_files_content(zones, topology, config)
                 for domain, content in zone_files.items():
                     self._write_file(pathlib.Path(tempdir) / f"db.{domain}", content)
 
@@ -268,13 +272,17 @@ class BindService:
             raise InstallError(error_msg) from e
 
     def _zones_to_files_content(
-        self, zones: list[models.Zone], topology: topology_module.Topology
+        self,
+        zones: list[models.Zone],
+        topology: topology_module.Topology,
+        config: dict[str, str],
     ) -> dict[str, str]:
         """Return zone files and their content.
 
         Args:
             zones: list of the zones to transform to text
             topology: Topology of the current deployment
+            config: Relevant charm config
 
         Returns:
             A dict whose keys are the domain of each zone
@@ -287,6 +295,7 @@ class BindService:
                 # The serial is the timestamp divided by 60.
                 # We only need precision to the minute and want to avoid overflows
                 serial=int(time.time() / 60),
+                mailbox=config["mailbox"],
             )
 
             # By default, we hide the active unit.

@@ -5,11 +5,18 @@
 """Charm for dns-secondary."""
 
 import logging
+import socket
 import typing
 
 import ops
 from charms.dns_transfer.v0 import dns_transfer
+from charms.tls_certificates_interface.v4.tls_certificates import (
+    CertificateRequestAttributes,
+    Mode,
+    TLSCertificatesRequiresV4,
+)
 
+import certificate_storage
 import constants
 import topology
 from bind import BindService
@@ -17,10 +24,15 @@ from bind import BindService
 logger = logging.getLogger(__name__)
 
 STATUS_REQUIRED_INTEGRATION = "Needs to be related with a primary charm"
+CERTIFICATES_RELATION_NAME = "bind-certificates"
 
 
 class DnsSecondaryCharm(ops.CharmBase):
-    """Charm the service."""
+    """Charm the service.
+
+    Attrs:
+        remote_hostname: remote-hostname config.
+    """
 
     def __init__(self, *args: typing.Any):
         """Construct.
@@ -32,6 +44,12 @@ class DnsSecondaryCharm(ops.CharmBase):
         self.bind = BindService()
         self.topology = topology.TopologyObserver(self, constants.PEER)
         self.dns_transfer = dns_transfer.DNSTransferRequires(self)
+        self.certificates = TLSCertificatesRequiresV4(
+            charm=self,
+            relationship_name=CERTIFICATES_RELATION_NAME,
+            certificate_requests=[self._get_certificate_request_attributes()],
+            mode=Mode.UNIT,
+        )
 
         self.framework.observe(self.on.config_changed, self._reconcile)
         self.framework.observe(self.on.stop, self._on_stop)
@@ -39,8 +57,14 @@ class DnsSecondaryCharm(ops.CharmBase):
         self.framework.observe(self.on["dns-transfer"].relation_joined, self._reconcile)
         self.framework.observe(self.on["dns-transfer"].relation_changed, self._reconcile)
         self.framework.observe(self.topology.on.topology_changed, self._reconcile)
+        self.framework.observe(self.certificates.on.certificate_available, self._reconcile)
         self.unit.open_port("tcp", constants.DNS_BIND_PORT)  # Bind DNS
         self.unit.open_port("udp", constants.DNS_BIND_PORT)  # Bind DNS
+
+    @property
+    def remote_hostname(self) -> str | None:
+        """Remote hostname."""
+        return typing.cast(str | None, self.config.get("server-name"))
 
     def _reconcile(self, _: ops.EventBase) -> None:
         """Reconcile the charm."""
@@ -48,6 +72,12 @@ class DnsSecondaryCharm(ops.CharmBase):
             return
 
         self.unit.status = ops.MaintenanceStatus("Preparing bind")
+        if self._relation_created(CERTIFICATES_RELATION_NAME):
+            self._check_and_update_certificate()
+            if self._certificate_is_available():
+                logger.info("add tls config")
+            else:
+                logger.warning("Certificate is not ready, Bind will start without TLS")
         self.bind.setup()
         self.bind.start()
 
@@ -83,6 +113,11 @@ class DnsSecondaryCharm(ops.CharmBase):
             event.add_status(ops.ActiveStatus("DNS primary relation not ready"))
             logger.warning("DNS primary relation data has no zones or no addresses")
             return
+        if self._relation_created(CERTIFICATES_RELATION_NAME):
+            if not self.remote_hostname:
+                event.add_status(ops.BlockedStatus("Remote hostname is required"))
+            elif not self._certificate_is_available():
+                event.add_status(ops.ActiveStatus("Certificate not ready, started without TLS"))
         total_zones = len(relation_data.zones)
         total_addresses = len(relation_data.addresses)
         event.add_status(
@@ -100,6 +135,66 @@ class DnsSecondaryCharm(ops.CharmBase):
             true if dns_transfer is set.
         """
         return self.dns_transfer.get_remote_relation_data() is not None
+
+    def _relation_created(self, relation_name: str) -> bool:
+        """Check if relation is created.
+
+        Args:
+            relation_name (str): relation name.
+
+        Returns:
+            if relation is created.
+        """
+        return bool(self.model.relations.get(relation_name))
+
+    # TLS helpers
+    def _certificate_is_available(self) -> bool:
+        """Check certificate.
+
+        Returns:
+            if certificate is available.
+        """
+        cert, key = self.certificates.get_assigned_certificate(
+            certificate_request=self._get_certificate_request_attributes()
+        )
+        return bool(cert and key)
+
+    def _get_certificate_request_attributes(self) -> CertificateRequestAttributes:
+        """Get CSR attributes.
+
+        Returns:
+            CertificateRequestAttributes: attributes as expected by tls library.
+        """
+        unit_hostname = socket.gethostname()
+        common_name = self.remote_hostname or unit_hostname
+        return CertificateRequestAttributes(common_name=common_name)
+
+    def _check_and_update_certificate(self) -> bool:
+        """Check if the certificate or private key needs an update and perform the update.
+
+        This method retrieves the currently assigned certificate and private key associated with
+        the charm's TLS relation. It checks whether the certificate or private key has changed
+        or needs to be updated. If an update is necessary, the new certificate or private key is
+        stored.
+
+        Returns:
+            bool: True if either the certificate or the private key was updated, False otherwise.
+        """
+        provider_certificate, private_key = self.certificates.get_assigned_certificate(
+            certificate_request=self._get_certificate_request_attributes()
+        )
+        if not provider_certificate or not private_key:
+            logger.debug("Certificate or private key is not available")
+            return False
+        if certificate_update_required := certificate_storage.is_certificate_update_required(
+            provider_certificate.certificate
+        ):
+            certificate_storage.store_certificate(certificate=provider_certificate.certificate)
+        if private_key_update_required := certificate_storage.is_private_key_update_required(
+            private_key
+        ):
+            certificate_storage.store_private_key(private_key=private_key)
+        return certificate_update_required or private_key_update_required
 
 
 if __name__ == "__main__":  # pragma: nocover

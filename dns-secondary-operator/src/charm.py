@@ -85,7 +85,6 @@ class DnsSecondaryCharm(ops.CharmBase):
             self._check_and_update_certificate()
             if self._certificate_is_available():
                 enable_tls = True
-                self.unit.open_port("tcp", 443)
 
         self.bind.write_config_options(enable_tls=enable_tls)
         self.bind.start()
@@ -151,7 +150,6 @@ class DnsSecondaryCharm(ops.CharmBase):
         """
         self._reconcile(event)
         certificate_storage.delete_files()
-        self.unit.close_port("tcp", 443)
 
     def _has_required_integration(self) -> bool:
         """Check if dns_transfer required integration is set.

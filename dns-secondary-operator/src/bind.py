@@ -55,9 +55,10 @@ class BindService:
         Args:
             enable_tls: enable TLS configuration. Defaults to False.
         """
+        allow_query = "0.0.0.0/0"
         content: str = ""
         options = templates.NAMED_CONF_OPTIONS_TEMPLATE.format(
-            allow_query="0.0.0.0/0", listen_tls=""
+            allow_query=allow_query, listen_tls=""
         )
         if enable_tls:
             content += templates.NAMED_CONF_TLS_TEMPATE.format(
@@ -65,7 +66,7 @@ class BindService:
                 cert_file=constants.STORED_CERTIFICATE_PATH,
             )
             options = templates.NAMED_CONF_OPTIONS_TEMPLATE.format(
-                allow_query="0.0.0.0/0", listen_tls=templates.NAMED_CONF_LISTEN_TLS
+                allow_query=allow_query, listen_tls=templates.NAMED_CONF_LISTEN_TLS
             )
         content += options
         path = pathlib.Path(constants.DNS_CONFIG_DIR) / "named.conf.options"

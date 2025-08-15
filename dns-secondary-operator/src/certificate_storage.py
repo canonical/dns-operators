@@ -17,12 +17,6 @@ import constants
 
 logger = logging.getLogger(__name__)
 
-STATUS_REQUIRED_INTEGRATION = "Needs to be related with a primary charm"
-PRIVATE_KEY_NAME = "dns-secondary.key"
-CERTIFICATE_NAME = "dns-secondary.pem"
-STORED_CERTIFICATE_PATH = pathlib.Path(f"{constants.DNS_CONFIG_DIR}/{CERTIFICATE_NAME}")
-STORED_PRIVATE_KEY_PATH = pathlib.Path(f"{constants.DNS_CONFIG_DIR}/{PRIVATE_KEY_NAME}")
-
 
 def _get_stored_certificate() -> typing.Optional[Certificate]:
     """Get stored certificate.
@@ -30,9 +24,10 @@ def _get_stored_certificate() -> typing.Optional[Certificate]:
     Returns:
         Certificate stored in machine or None.
     """
-    if not STORED_CERTIFICATE_PATH.exists():
+    certificate_path = pathlib.Path(constants.STORED_CERTIFICATE_PATH)
+    if not certificate_path.exists():
         return None
-    cert_string = str(STORED_CERTIFICATE_PATH.read_text("utf-8"))
+    cert_string = str(certificate_path.read_text("utf-8"))
     return Certificate.from_string(cert_string)
 
 
@@ -42,10 +37,11 @@ def _get_stored_private_key() -> typing.Optional[PrivateKey]:
     Returns:
         Private key stored in machine or None.
     """
-    if not STORED_PRIVATE_KEY_PATH.exists():
+    key_path = pathlib.Path(constants.STORED_PRIVATE_KEY_PATH)
+    if not key_path.exists():
         return None
     key_string = str(
-        STORED_PRIVATE_KEY_PATH.read_text(
+        key_path.read_text(
             "utf-8",
         )
     )
@@ -82,7 +78,7 @@ def store_certificate(certificate: Certificate) -> None:
     Args:
         certificate: certificate.
     """
-    pathlib.Path(STORED_CERTIFICATE_PATH).write_text(
+    pathlib.Path(constants.STORED_CERTIFICATE_PATH).write_text(
         str(certificate),
         encoding="utf-8",
     )
@@ -95,7 +91,7 @@ def store_private_key(private_key: PrivateKey) -> None:
     Args:
         private_key: private key.
     """
-    pathlib.Path(STORED_PRIVATE_KEY_PATH).write_text(
+    pathlib.Path(constants.STORED_PRIVATE_KEY_PATH).write_text(
         str(private_key),
         encoding="utf-8",
     )
@@ -104,6 +100,6 @@ def store_private_key(private_key: PrivateKey) -> None:
 
 def delete_files() -> None:
     """Delete certificate and private key from workload container."""
-    STORED_CERTIFICATE_PATH.unlink(missing_ok=True)
-    STORED_PRIVATE_KEY_PATH.unlink(missing_ok=True)
+    pathlib.Path(constants.STORED_CERTIFICATE_PATH).unlink(missing_ok=True)
+    pathlib.Path(constants.STORED_PRIVATE_KEY_PATH).unlink(missing_ok=True)
     logger.info("Removed certificate and private key from workload")

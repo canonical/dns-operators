@@ -48,9 +48,29 @@ class BindService:
             snap_name=constants.DNS_SNAP_NAME,
             snap_channel=constants.SNAP_PACKAGES[constants.DNS_SNAP_NAME]["channel"],
         )
+
+    def write_config_options(self, enable_tls: bool = False) -> None:
+        """Write named.conf.options.
+
+        Args:
+            enable_tls: enable TLS configuration. Defaults to False.
+        """
+        content: str = ""
+        options = templates.NAMED_CONF_OPTIONS_TEMPLATE.format(
+            allow_query="0.0.0.0/0",
+        )
+        if enable_tls:
+            content += templates.NAMED_CONF_TLS_TEMPATE.format(
+                key_file=constants.STORED_PRIVATE_KEY_PATH,
+                cert_file=constants.STORED_CERTIFICATE_PATH,
+            )
+            options = templates.NAMED_CONF_OPTIONS_TEMPLATE.format(
+                allow_query="0.0.0.0/0", listen_tls=templates.NAMED_CONF_LISTEN_TLS
+            )
+        content += options
         path = pathlib.Path(constants.DNS_CONFIG_DIR) / "named.conf.options"
         pathlib.Path(path).write_text(
-            self._generate_named_conf_options(),
+            content,
             encoding="utf-8",
         )
 
@@ -82,18 +102,6 @@ class BindService:
 
         if not snap_package.present or refresh:
             snap_package.ensure(snap.SnapState.Latest, channel=snap_channel)
-
-    def _generate_named_conf_options(self) -> str:
-        """Generate the content of `named.conf.options`.
-
-        Returns:
-            The content of `named.conf.options`
-        """
-        content: str = ""
-        content += templates.NAMED_CONF_OPTIONS_TEMPLATE.format(
-            allow_query="0.0.0.0/0",
-        )
-        return content
 
     def _generate_named_conf_local(self, zones: list[str], ips: list[str]) -> str:
         """Generate the content of `named.conf.local`.

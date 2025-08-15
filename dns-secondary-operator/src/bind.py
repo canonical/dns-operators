@@ -75,16 +75,19 @@ class BindService:
             encoding="utf-8",
         )
 
-    def write_config_local(self, zones: list[str], ips: list[str]) -> None:
+    def write_config_local(
+        self, zones: list[str], ips: list[str], enable_tls: bool = False
+    ) -> None:
         """Write named.conf.local.
 
         Args:
             zones (list[str]):  list of DNS zones.
             ips (list[str]):  list of IP addresses.
+            enable_tls: enable tls (xot).
         """
         path = pathlib.Path(constants.DNS_CONFIG_DIR) / "named.conf.local"
         pathlib.Path(path).write_text(
-            self._generate_named_conf_local(zones, ips),
+            self._generate_named_conf_local(zones, ips, enable_tls),
             encoding="utf-8",
         )
 
@@ -104,7 +107,9 @@ class BindService:
         if not snap_package.present or refresh:
             snap_package.ensure(snap.SnapState.Latest, channel=snap_channel)
 
-    def _generate_named_conf_local(self, zones: list[str], ips: list[str]) -> str:
+    def _generate_named_conf_local(
+        self, zones: list[str], ips: list[str], enable_tls: bool = False
+    ) -> str:
         """Generate the content of `named.conf.local`.
 
         Returns:
@@ -112,8 +117,15 @@ class BindService:
         """
         # It's good practice to include rfc1918
         content: str = f'include "{constants.DNS_CONFIG_DIR}/zones.rfc1918";\n'
+
         # Include a zone specifically used for some services tests
-        primary_ips = "; ".join(ips) + ";"
+        default_separator = ";"
+        if enable_tls:
+            default_separator = " tls xot;"
+        if len(ips) == 1:
+            primary_ips = f"{ips[0]}{default_separator}"
+        else:
+            primary_ips = default_separator.join(ips) + default_separator
         content += templates.NAMED_CONF_SECONDARY_ZONE_DEF_TEMPLATE.format(
             name=f"{constants.ZONE_SERVICE_NAME}",
             absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{constants.ZONE_SERVICE_NAME}",

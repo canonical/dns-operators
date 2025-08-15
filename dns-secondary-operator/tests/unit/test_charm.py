@@ -141,6 +141,10 @@ def test_config_changed_with_tls(
         assert "cert-file" in content
         assert "listen-on port 443 tls xot" in content
         assert "listen-on-v6 port 443 tls xot" in content
+        conf_local_path = tmp_path / "named.conf.local"
+        assert conf_local_path.exists()
+        content = conf_local_path.read_text()
+        assert f"primaries {{ {PRIMARY_ADDRESS} tls xot; }}" in content
         assert (
             certificate
             == certificate_storage._get_stored_certificate()  # pylint: disable=protected-access

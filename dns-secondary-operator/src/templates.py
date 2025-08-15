@@ -66,35 +66,3 @@ NAMED_CONF_LISTEN_TLS = """
     listen-on port 443 tls xot http local-http-server {any;};
     listen-on-v6 port 443 tls xot http local-http-server {any;};
 """
-
-NAMED_CONF_FORWARDER_TEMPLATE = (
-    'zone "{zone}" {{ '
-    "type forward;"
-    "forward only;"
-    "forwarders {{ {forwarders_ips} }}; "
-    "}};\n"
-)
-
-DISPATCH_EVENT_SERVICE = """[Unit]
-Description=Dispatch the {event} event on {unit}
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/timeout {timeout} /usr/bin/bash -c '/usr/bin/juju-exec "{unit}" "JUJU_DISPATCH_PATH={event} ./dispatch"'
-
-[Install]
-WantedBy=multi-user.target
-"""
-
-SYSTEMD_SERVICE_TIMER = """[Unit]
-Description=Run {service} weekly
-Requires={service}.service
-
-[Timer]
-Unit={service}.service
-OnCalendar=*-*-* *:0/{interval}
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-"""

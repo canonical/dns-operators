@@ -80,23 +80,23 @@ class DnsSecondaryCharm(ops.CharmBase):
 
         self.bind.setup()
 
-        default_config_only = True
+        enable_tls = False
         if self._relation_created(CERTIFICATES_RELATION_NAME):
             self._check_and_update_certificate()
             if self._certificate_is_available():
-                default_config_only = False
-                self.bind.write_config_options(enable_tls=True)
+                enable_tls = True
+                self.unit.open_port("tcp", 443)
 
-        if default_config_only:
-            self.bind.write_config_options()
-
+        self.bind.write_config_options(enable_tls=enable_tls)
         self.bind.start()
 
         relation = self.model.get_relation(self.dns_transfer.relation_name)
         data = self.dns_transfer.get_remote_relation_data()
         if data and data.addresses and data.zones:
             self.unit.status = ops.MaintenanceStatus("Updating named.conf.local")
-            self.bind.write_config_local(data.zones, [str(a) for a in data.addresses])
+            self.bind.write_config_local(
+                data.zones, [str(a) for a in data.addresses], enable_tls=enable_tls
+            )
             self.bind.reload(force_start=True)
 
         if self.unit.is_leader():
@@ -151,6 +151,7 @@ class DnsSecondaryCharm(ops.CharmBase):
         """
         self._reconcile(event)
         certificate_storage.delete_files()
+        self.unit.close_port("tcp", 443)
 
     def _has_required_integration(self) -> bool:
         """Check if dns_transfer required integration is set.

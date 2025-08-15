@@ -57,16 +57,11 @@ class BindService:
         """
         allow_query = "0.0.0.0/0"
         content: str = ""
-        options = templates.NAMED_CONF_OPTIONS_TEMPLATE.format(
-            allow_query=allow_query, listen_tls=""
-        )
+        options = templates.NAMED_CONF_OPTIONS_TEMPLATE.format(allow_query=allow_query)
         if enable_tls:
             content += templates.NAMED_CONF_TLS_TEMPATE.format(
                 key_file=constants.STORED_PRIVATE_KEY_PATH,
                 cert_file=constants.STORED_CERTIFICATE_PATH,
-            )
-            options = templates.NAMED_CONF_OPTIONS_TEMPLATE.format(
-                allow_query=allow_query, listen_tls=templates.NAMED_CONF_LISTEN_TLS
             )
         content += options
         path = pathlib.Path(constants.DNS_CONFIG_DIR) / "named.conf.options"

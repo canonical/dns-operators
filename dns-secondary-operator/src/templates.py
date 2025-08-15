@@ -49,7 +49,6 @@ options {{
     allow-transfer {{ none; }};
     notify no;
     forwarders {{}};
-    {{ {listen_tls} }}
 }};
 """
 
@@ -60,9 +59,4 @@ tls xot {{
     protocols {{ TLSv1.3; }};
     session-tickets no;
 }};
-"""
-
-NAMED_CONF_LISTEN_TLS = """
-    listen-on port 443 tls xot http local-http-server {any;};
-    listen-on-v6 port 443 tls xot http local-http-server {any;};
 """

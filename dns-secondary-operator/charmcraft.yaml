@@ -42,4 +42,5 @@ config:
       description: |
         Specifies the expected hostname in the TLS certificate of the remote server.
         This is required if the charm is integrated via certificates interface.
+        Default: machine hostname.
       type: string

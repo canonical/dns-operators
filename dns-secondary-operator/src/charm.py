@@ -58,13 +58,18 @@ class DnsSecondaryCharm(ops.CharmBase):
         self.framework.observe(self.on["dns-transfer"].relation_changed, self._reconcile)
         self.framework.observe(self.topology.on.topology_changed, self._reconcile)
         self.framework.observe(self.certificates.on.certificate_available, self._reconcile)
+        self.framework.observe(
+            self.on[CERTIFICATES_RELATION_NAME].relation_departed,
+            self._on_certificates_relation_departed,
+        )
         self.unit.open_port("tcp", constants.DNS_BIND_PORT)  # Bind DNS
         self.unit.open_port("udp", constants.DNS_BIND_PORT)  # Bind DNS
 
     @property
-    def remote_hostname(self) -> str | None:
-        """Remote hostname."""
-        return typing.cast(str | None, self.config.get("server-name"))
+    def remote_hostname(self) -> str:
+        """Remote hostname or unit hostname if not set."""
+        unit_hostname = socket.gethostname()
+        return str(self.config.get("remote-hostname", unit_hostname))
 
     def _reconcile(self, _: ops.EventBase) -> None:
         """Reconcile the charm."""
@@ -72,12 +77,14 @@ class DnsSecondaryCharm(ops.CharmBase):
             return
 
         self.unit.status = ops.MaintenanceStatus("Preparing bind")
+
         if self._relation_created(CERTIFICATES_RELATION_NAME):
             self._check_and_update_certificate()
             if self._certificate_is_available():
                 logger.info("add tls config")
             else:
                 logger.warning("Certificate is not ready, Bind will start without TLS")
+
         self.bind.setup()
         self.bind.start()
 
@@ -104,20 +111,24 @@ class DnsSecondaryCharm(ops.CharmBase):
         """
         if not self._has_required_integration():
             event.add_status(ops.BlockedStatus(STATUS_REQUIRED_INTEGRATION))
+
         relation_data = self.dns_transfer.get_remote_relation_data()
         if not relation_data:
             event.add_status(ops.ActiveStatus("DNS primary relation not ready"))
             logger.warning("DNS primary relation could not be retrieved")
             return
+
         if not relation_data.addresses or not relation_data.zones:
             event.add_status(ops.ActiveStatus("DNS primary relation not ready"))
             logger.warning("DNS primary relation data has no zones or no addresses")
             return
+
         if self._relation_created(CERTIFICATES_RELATION_NAME):
             if not self.remote_hostname:
                 event.add_status(ops.BlockedStatus("Remote hostname is required"))
             elif not self._certificate_is_available():
                 event.add_status(ops.ActiveStatus("Certificate not ready, started without TLS"))
+
         total_zones = len(relation_data.zones)
         total_addresses = len(relation_data.addresses)
         event.add_status(
@@ -127,6 +138,15 @@ class DnsSecondaryCharm(ops.CharmBase):
     def _on_stop(self, _: ops.StopEvent) -> None:
         """Handle stop."""
         self.bind.stop()
+
+    def _on_certificates_relation_departed(self, event: ops.EventBase) -> None:
+        """Handle certificates relation departed.
+
+        Args:
+            event: relation departed event.
+        """
+        self._reconcile(event)
+        certificate_storage.delete_files()
 
     def _has_required_integration(self) -> bool:
         """Check if dns_transfer required integration is set.
@@ -165,9 +185,7 @@ class DnsSecondaryCharm(ops.CharmBase):
         Returns:
             CertificateRequestAttributes: attributes as expected by tls library.
         """
-        unit_hostname = socket.gethostname()
-        common_name = self.remote_hostname or unit_hostname
-        return CertificateRequestAttributes(common_name=common_name)
+        return CertificateRequestAttributes(common_name=self.remote_hostname)
 
     def _check_and_update_certificate(self) -> bool:
         """Check if the certificate or private key needs an update and perform the update.

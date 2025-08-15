@@ -137,7 +137,8 @@ def test_config_changed_with_tls(
         conf_path = tmp_path / "named.conf.options"
         assert conf_path.exists()
         content = conf_path.read_text()
-        assert "tls xot" in content
+        assert "key-file" in content
+        assert "cert-file" in content
         assert "listen-on port 443 tls xot" in content
         assert "listen-on-v6 port 443 tls xot" in content
         assert (

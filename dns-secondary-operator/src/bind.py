@@ -57,7 +57,7 @@ class BindService:
         """
         content: str = ""
         options = templates.NAMED_CONF_OPTIONS_TEMPLATE.format(
-            allow_query="0.0.0.0/0",
+            allow_query="0.0.0.0/0", listen_tls=""
         )
         if enable_tls:
             content += templates.NAMED_CONF_TLS_TEMPATE.format(

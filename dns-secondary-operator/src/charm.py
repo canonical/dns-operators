@@ -78,14 +78,18 @@ class DnsSecondaryCharm(ops.CharmBase):
 
         self.unit.status = ops.MaintenanceStatus("Preparing bind")
 
+        self.bind.setup()
+
+        default_config_only = True
         if self._relation_created(CERTIFICATES_RELATION_NAME):
             self._check_and_update_certificate()
             if self._certificate_is_available():
-                logger.info("add tls config")
-            else:
-                logger.warning("Certificate is not ready, Bind will start without TLS")
+                default_config_only = False
+                self.bind.write_config_options(enable_tls=True)
 
-        self.bind.setup()
+        if default_config_only:
+            self.bind.write_config_options()
+
         self.bind.start()
 
         relation = self.model.get_relation(self.dns_transfer.relation_name)

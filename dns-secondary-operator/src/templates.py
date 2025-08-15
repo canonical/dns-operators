@@ -57,7 +57,7 @@ NAMED_CONF_TLS_TEMPATE = """
 tls xot {{
     key-file "{{ {key_file} }}";
     cert-file "{{ {cert_file} }}";
-    protocols { TLSv1.3; };
+    protocols {{ TLSv1.3; }};
     session-tickets no;
 }};
 """

@@ -209,9 +209,9 @@ class DnsSecondaryCharm(ops.CharmBase):
             logger.debug("Certificate or private key is not available")
             return False
         if certificate_update_required := certificate_storage.is_certificate_update_required(
-            provider_certificate.certificate
+            provider_certificate
         ):
-            certificate_storage.store_certificate(certificate=provider_certificate.certificate)
+            certificate_storage.store_certificate(certificate=provider_certificate)
         if private_key_update_required := certificate_storage.is_private_key_update_required(
             private_key
         ):

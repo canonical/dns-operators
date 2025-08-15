@@ -11,6 +11,7 @@ from pytest import MonkeyPatch, raises
 from scenario.errors import UncaughtCharmError
 
 import bind
+import certificate_storage
 import constants
 from charm import STATUS_REQUIRED_INTEGRATION, DnsSecondaryCharm
 
@@ -99,3 +100,51 @@ def test_config_changed_with_snap_error(
     assert isinstance(e.value.__cause__, RuntimeError)
     assert error_message in str(e.value.__cause__)
     start_mock.assert_not_called()
+
+
+def test_config_changed_with_tls(
+    base_state: dict,
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    dns_transfer_relation,
+    bind_certificates_relation,
+    certificate,
+    private_key,
+):
+    """
+    arrange: prepare dns-secondary charm.
+    act: run config_changed.
+    assert: tls configuration is set and files have the same content as the relation.
+    """
+    monkeypatch.setattr(constants, "DNS_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setattr(constants, "STORED_CERTIFICATE_PATH", f"{str(tmp_path)}/certificate")
+    monkeypatch.setattr(constants, "STORED_PRIVATE_KEY_PATH", f"{str(tmp_path)}/key")
+    monkeypatch.setattr(bind.BindService, "reload", MagicMock())
+    monkeypatch.setattr(bind.BindService, "start", MagicMock())
+    monkeypatch.setattr(bind.BindService, "setup", MagicMock())
+    base_state["relations"].append(dns_transfer_relation)
+    base_state["relations"].append(bind_certificates_relation)
+    state = testing.State(**base_state)
+    context = testing.Context(
+        charm_type=DnsSecondaryCharm,
+    )
+    with context(context.on.config_changed(), state=state) as manager:
+        manager.charm.certificates.get_assigned_certificate = MagicMock(
+            return_value=(certificate, private_key)
+        )
+        manager.run()
+
+        conf_path = tmp_path / "named.conf.options"
+        assert conf_path.exists()
+        content = conf_path.read_text()
+        assert "tls xot" in content
+        assert "listen-on port 443 tls xot" in content
+        assert "listen-on-v6 port 443 tls xot" in content
+        assert (
+            certificate
+            == certificate_storage._get_stored_certificate()  # pylint: disable=protected-access
+        )
+        assert (
+            private_key
+            == certificate_storage._get_stored_private_key()  # pylint: disable=protected-access
+        )

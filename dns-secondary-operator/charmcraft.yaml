@@ -26,6 +26,10 @@ bases:
       channel: "22.04"
 parts:
   charm:
+    build-packages:
+      - libssl-dev  # for cryptography
+      - rust-all  # for cryptography
+      - pkg-config # for cryptography
     build-snaps:
       - rustup
     override-build: |

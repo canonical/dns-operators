@@ -106,13 +106,14 @@ def test_config_changed_with_tls(
     base_state: dict,
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
-    dns_transfer_relation,
+    dns_transfer_tls_relation,
     bind_certificates_relation,
     certificate,
     private_key,
 ):
     """
-    arrange: prepare dns-secondary charm.
+    arrange: prepare dns-secondary charm, primary has transport as tls and
+        certificate is available.
     act: run config_changed.
     assert: tls configuration is set and files have the same content as the relation.
     """
@@ -122,7 +123,7 @@ def test_config_changed_with_tls(
     monkeypatch.setattr(bind.BindService, "reload", MagicMock())
     monkeypatch.setattr(bind.BindService, "start", MagicMock())
     monkeypatch.setattr(bind.BindService, "setup", MagicMock())
-    base_state["relations"].append(dns_transfer_relation)
+    base_state["relations"].append(dns_transfer_tls_relation)
     base_state["relations"].append(bind_certificates_relation)
     state = testing.State(**base_state)
     context = testing.Context(

@@ -41,6 +41,23 @@ def dns_transfer_relation_fixture():
     """Matrix auth relation fixture."""
     data = {
         "addresses": [PRIMARY_ADDRESS],
+        "transport": "tcp",
+        "zones": [PRIMARY_ZONE],
+    }
+    provider_data = DNSTransferProviderData.model_validate(data)
+    yield testing.Relation(
+        endpoint="dns-transfer",
+        interface="dns_transfer",
+        remote_app_name="primary",
+        remote_app_data=provider_data.to_relation_data(),
+    )
+
+
+@pytest.fixture(name="dns_transfer_tls_relation")
+def dns_transfer_tls_relation_fixture():
+    """Matrix auth relation fixture."""
+    data = {
+        "addresses": [PRIMARY_ADDRESS],
         "transport": "tls",
         "zones": [PRIMARY_ZONE],
     }

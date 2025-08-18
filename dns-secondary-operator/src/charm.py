@@ -93,6 +93,14 @@ class DnsSecondaryCharm(ops.CharmBase):
         data = self.dns_transfer.get_remote_relation_data()
         if data and data.addresses and data.zones:
             self.unit.status = ops.MaintenanceStatus("Updating named.conf.local")
+            if not enable_tls and data.transport == dns_transfer.TransportSecurity.TLS:
+                logger.error(
+                    "Certificate not ready, transport: TLS, named.conf.local will not be updated"
+                )
+                return
+            if enable_tls and data.transport == dns_transfer.TransportSecurity.TCP:
+                logger.info("TLS available but provider transport is tcp")
+                enable_tls = False
             self.bind.write_config_local(
                 data.zones, [str(a) for a in data.addresses], enable_tls=enable_tls
             )
@@ -130,7 +138,18 @@ class DnsSecondaryCharm(ops.CharmBase):
             if not self.remote_hostname:
                 event.add_status(ops.BlockedStatus("Remote hostname is required"))
             elif not self._certificate_is_available():
-                event.add_status(ops.ActiveStatus("Certificate not ready, started without TLS"))
+                if relation_data.transport == dns_transfer.TransportSecurity.TLS:
+                    event.add_status(
+                        ops.BlockedStatus(
+                            "Certificate not ready, transport: TLS. Check the certificate"
+                        )
+                    )
+                else:
+                    event.add_status(
+                        ops.ActiveStatus(
+                            "Certificate not ready, transport: TCP. No action required"
+                        )
+                    )
 
         total_zones = len(relation_data.zones)
         total_addresses = len(relation_data.addresses)

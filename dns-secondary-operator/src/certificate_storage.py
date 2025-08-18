@@ -6,7 +6,6 @@
 
 import logging
 import pathlib
-import typing
 
 from charms.tls_certificates_interface.v4.tls_certificates import (
     Certificate,
@@ -18,7 +17,7 @@ import constants
 logger = logging.getLogger(__name__)
 
 
-def _get_stored_certificate() -> typing.Optional[Certificate]:
+def _get_stored_certificate() -> Certificate | None:
     """Get stored certificate.
 
     Returns:
@@ -31,7 +30,7 @@ def _get_stored_certificate() -> typing.Optional[Certificate]:
     return Certificate.from_string(cert_string)
 
 
-def _get_stored_private_key() -> typing.Optional[PrivateKey]:
+def _get_stored_private_key() -> PrivateKey | None:
     """Get stored key or None.
 
     Returns:

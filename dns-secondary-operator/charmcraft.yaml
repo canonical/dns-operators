@@ -13,6 +13,9 @@ peers:
 requires:
   dns-transfer:
     interface: dns_transfer
+  bind-certificates:
+    interface: tls-certificates
+    limit: 1
 type: charm
 bases:
   - build-on:
@@ -23,6 +26,10 @@ bases:
       channel: "22.04"
 parts:
   charm:
+    build-packages:
+      - libssl-dev  # for cryptography
+      - rust-all  # for cryptography
+      - pkg-config # for cryptography
     build-snaps:
       - rustup
     override-build: |
@@ -34,4 +41,10 @@ config:
       description: |
         List of ips that the primary DNS will allow transfer.
       default: ""
+      type: string
+    remote-hostname:
+      description: |
+        Specifies the expected hostname in the TLS certificate of the remote server.
+        This is required if the charm is integrated via certificates interface.
+        Default: machine hostname.
       type: string

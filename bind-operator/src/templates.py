@@ -10,14 +10,14 @@ import constants
 
 ZONE_SERVICE = f"""$ORIGIN {constants.ZONE_SERVICE_NAME}.
 $TTL 600
-@ IN SOA {constants.ZONE_SERVICE_NAME}. mail.{constants.ZONE_SERVICE_NAME}. ( {{serial}} 1d 1h 1h 10m )
+@ IN SOA {constants.ZONE_SERVICE_NAME}. {{mailbox}}.{constants.ZONE_SERVICE_NAME}. ( {{serial}} 1d 1h 1h 10m )
 @ IN NS localhost.
 status IN TXT "ok"
 """
 
 ZONE_APEX_TEMPLATE = """$ORIGIN {zone}.
 $TTL 600
-@ IN SOA {zone}. mail.{zone}. ( {serial} 1d 1h 1h 10m )
+@ IN SOA {zone}. {mailbox}.{zone}. ( {serial} 1d 1h 1h 10m )
 """
 
 ZONE_APEX_NS_TEMPLATE = "@ IN NS ns{number}.\nns{number} IN A {ip}\n"

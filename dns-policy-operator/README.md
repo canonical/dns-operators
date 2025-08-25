@@ -1,11 +1,11 @@
 [![CharmHub Badge](https://charmhub.io/bind/badge.svg)](https://charmhub.io/dns-policy)
-[![Publish to edge](https://github.com/canonical/dns-operators/actions/workflows/publish_charm.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/publish_charm.yaml)
-[![Promote charm](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml)
+[![Publish to edge](https://github.com/canonical/dns-operators/actions/workflows/publish-charmed-dns-policy-edge.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/publish-charmed-dns-policy-edge.yaml)
+[![Promote charm](https://github.com/canonical/dns-operators/actions/workflows/promote-bind-operator.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/promote-bind-operator.yaml)
 [![Discourse Status](https://img.shields.io/discourse/status?server=https%3A%2F%2Fdiscourse.charmhub.io&style=flat&label=CharmHub%20Discourse)](https://discourse.charmhub.io)
 
 # DNS policy operator
 
-A [subordinate](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/charm/index.html#subordinate) [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+A [subordinate](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/charm/index.html#subordinate) [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/tutorial/)
 enabling a policy layer on top of a DNS charm like [Bind](https://github.com/canonical/dns-operators/tree/main/bind-operator).
 
 After deploying the Bind operator, you may want to restrict the possibility of any charm integrating with it and freely modifying the DNS records it serves. You may want to add formal human approval for each incoming DNS resource record request. That's when you want to use the DNS Policy charm.
@@ -77,4 +77,4 @@ See more information about debug mode in the [Django documentation](https://docs
 ## Project and community
 * [Issues](https://github.com/canonical/dns-operators/issues)
 * [Contribute](https://github.com/canonical/dns-operators/blob/main/CONTRIBUTING.md)
-* [Matrix](https://chat.charmhub.io/charmhub/channels/charm-dev)
+* [Matrix](https://matrix.to/#/#charmhub:ubuntu.com)

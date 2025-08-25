@@ -1,11 +1,11 @@
 [![CharmHub Badge](https://charmhub.io/bind/badge.svg)](https://charmhub.io/dns-integrator)
-[![Publish to edge](https://github.com/canonical/dns-operators/actions/workflows/publish_charm.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/publish_charm.yaml)
-[![Promote charm](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml)
+[![Publish to edge](https://github.com/canonical/dns-operators/actions/workflows/publish-dns-integrator-operator-edge.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/publish-dns-integrator-operator-edge.yaml)
+[![Promote charm](https://github.com/canonical/dns-operators/actions/workflows/promote-bind-operator.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/promote-bind-operator.yaml)
 [![Discourse Status](https://img.shields.io/discourse/status?server=https%3A%2F%2Fdiscourse.charmhub.io&style=flat&label=CharmHub%20Discourse)](https://discourse.charmhub.io)
 
 # DNS integrator operator
 
-A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/tutorial/)
 deploying and managing a DNS record requests integrator on bare metal.
 
 This charm simplifies the resource record requests creation towards an already deployed DNS charm
@@ -32,4 +32,4 @@ The charm can integrate with any requirer charm implementing the [`dns_record` i
 ## Project and community
 * [Issues](https://github.com/canonical/dns-operators/issues)
 * [Contribute](https://github.com/canonical/dns-operators/blob/main/CONTRIBUTING.md)
-* [Matrix](https://chat.charmhub.io/charmhub/channels/charm-dev)
+* [Matrix](https://matrix.to/#/#charmhub:ubuntu.com)

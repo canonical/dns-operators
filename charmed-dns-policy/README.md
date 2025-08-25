@@ -1,6 +1,6 @@
 # DNS-policy snap
 
-This snap is meant to be the workload of the [dns-policy-operator](https://github.com/canonical/dns-operators/dns-policy-operator) charm.  
+This snap is meant to be the workload of the [dns-policy-operator](https://github.com/canonical/dns-operators/tree/main/dns-policy-operator) charm.  
 
 ## Get started
 

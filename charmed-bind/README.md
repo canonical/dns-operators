@@ -1,6 +1,6 @@
 # Bind snap
 
-This snap is meant to be the workload of the [bind-operator](https://github.com/canonical/dns-operators/bind-operator) charm.  
+This snap is meant to be the workload of the [bind-operator](https://github.com/canonical/dns-operators/tree/main/bind-operator) charm.  
 
 ## Get started
 

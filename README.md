@@ -25,6 +25,6 @@ suggestions, fixes and constructive feedback.
 
 * [Code of conduct](https://ubuntu.com/community/code-of-conduct)
 * [Get support](https://discourse.charmhub.io/)
-* [Issues](https://github.com/canonical/dns-charms/issues)
+* [Issues](https://github.com/canonical/dns-operators/issues)
 * [Matrix](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)
 * [Contribute](https://github.com/canonical/dns-operators/blob/main/CONTRIBUTING.md)

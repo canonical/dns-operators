@@ -17,5 +17,4 @@ jobs:
       self-hosted-runner: false
       self-hosted-runner-label: "edge"
       working-directory: ./dns-integrator-operator
-      vale-style-check: true
       require-check-lib: false

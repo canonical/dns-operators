@@ -3,7 +3,7 @@
 name: dns-resolver
 summary: DNS resolver charm
 description: |
-  A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/tutorial/)
+  A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/)
   deploying and managing a DNS resolver charm on bare metal.
 assumes:
   - juju >= 3.6

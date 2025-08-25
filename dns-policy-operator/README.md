@@ -77,4 +77,4 @@ See more information about debug mode in the [Django documentation](https://docs
 ## Project and community
 * [Issues](https://github.com/canonical/dns-operators/issues)
 * [Contribute](https://github.com/canonical/dns-operators/blob/main/CONTRIBUTING.md)
-* [Matrix](https://https://matrix.to/#/#charmhub-charmdev:ubuntu.com)
+* [Matrix](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)

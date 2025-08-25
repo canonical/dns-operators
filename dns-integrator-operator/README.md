@@ -32,4 +32,4 @@ The charm can integrate with any requirer charm implementing the [`dns_record` i
 ## Project and community
 * [Issues](https://github.com/canonical/dns-operators/issues)
 * [Contribute](https://github.com/canonical/dns-operators/blob/main/CONTRIBUTING.md)
-* [Matrix](https://https://matrix.to/#/#charmhub-charmdev:ubuntu.com)
+* [Matrix](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)

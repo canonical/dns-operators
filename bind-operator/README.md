@@ -5,7 +5,7 @@
 
 # Bind operator
 
-A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/)
+A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/)
 deploying and managing a DNS server on bare metal.
 
 This charm simplifies configuration of a DNS server by providing a single point

@@ -5,7 +5,7 @@
 
 # DNS integrator operator
 
-A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/tutorial/)
+A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/)
 deploying and managing a DNS record requests integrator on bare metal.
 
 This charm simplifies the resource record requests creation towards an already deployed DNS charm

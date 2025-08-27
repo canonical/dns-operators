@@ -1,11 +1,11 @@
 [![CharmHub Badge](https://charmhub.io/bind/badge.svg)](https://charmhub.io/bind)
-[![Publish to edge](https://github.com/canonical/dns-operators/actions/workflows/publish_charm.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/publish_charm.yaml)
-[![Promote charm](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/promote_charm.yaml)
+[![Publish to edge](https://github.com/canonical/dns-operators/actions/workflows/publish-charmed-bind-edge.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/publish-charmed-bind-edge.yaml)
+[![Promote charm](https://github.com/canonical/dns-operators/actions/workflows/promote-bind-operator.yaml/badge.svg)](https://github.com/canonical/dns-operators/actions/workflows/promote-bind-operator.yaml)
 [![Discourse Status](https://img.shields.io/discourse/status?server=https%3A%2F%2Fdiscourse.charmhub.io&style=flat&label=CharmHub%20Discourse)](https://discourse.charmhub.io)
 
 # Bind operator
 
-A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/)
 deploying and managing a DNS server on bare metal.
 
 This charm simplifies configuration of a DNS server by providing a single point

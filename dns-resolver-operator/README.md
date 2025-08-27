@@ -1,6 +1,6 @@
 # DNS resolver operator
 
-A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/tutorial/)
 deploying and managing a DNS resolver server on bare metal.
 
 This charm simplifies configuration of a DNS server by providing a single point
@@ -15,7 +15,7 @@ configuration simple and straightforward through Juju's clean interface.
 
 ## Get started
 
-The charm can be deployed to any machine model by pulling it from [Charmhub](https://charmhub.io/dbs-resolver):
+The charm can be deployed to any machine model by pulling it from [Charmhub](https://charmhub.io/dns-resolver):
 ```
 juju deploy dns-resolver --channel=latest/edge
 ```

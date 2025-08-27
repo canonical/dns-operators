@@ -1,6 +1,6 @@
-# DNS Secondary operator
+# DNS secondary operator
 
-A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/)
 deploying and managing a DNS secondary server on bare metal.
 
 This charm simplifies configuration of a DNS server by providing a single point
@@ -15,7 +15,7 @@ configuration simple and straightforward through Juju's clean interface.
 
 ## Get started
 
-The charm can be deployed to any machine model by pulling it from [Charmhub](https://charmhub.io/dbs-secondary):
+The charm can be deployed to any machine model by pulling it from [Charmhub](https://charmhub.io/dns-secondary):
 ```
 juju deploy dns-secondary --channel=latest/edge
 ```

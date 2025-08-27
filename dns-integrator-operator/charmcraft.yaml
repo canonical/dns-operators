@@ -6,7 +6,7 @@ name: dns-integrator
 title: DNS Integrator
 summary: DNS integrator to create DNS records
 description: |
-  A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators)
+  A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/tutorial/)
   deploying and managing a DNS Integrator on Kubernetes and bare metal.
   The Domain Name System (DNS) is a hierarchical and distributed name service
   that provides a naming system for computers, services, and other resources on

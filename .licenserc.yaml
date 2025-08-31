@@ -29,6 +29,7 @@ header:
     - '.jujuignore'
     - 'LICENSE'
     - '.licenserc.yaml'
+    - '.lycheeignore'
     - '.trivyignore'
     - '.wokeignore'
     - '.woke.yaml'

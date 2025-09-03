@@ -153,7 +153,7 @@ ZONES = {
         ],
     },
     "empty": {
-        "domain": "empty.com",
+        "domain": "empty.test",
         "entries": [],
     },
     "ipv6_mixed": {

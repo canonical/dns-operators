@@ -136,10 +136,10 @@ logger = logging.getLogger(__name__)
             tests.unit.helpers.TOPOLOGIES["single_unit"],
             "mail",
             {
-                "empty.com": (
-                    "$ORIGIN empty.com.\n"
+                "empty.test": (
+                    "$ORIGIN empty.test.\n"
                     "$TTL 600\n"
-                    "@ IN SOA empty.com. mail.empty.com. ( 20576131 1d 1h 1h 10m )\n"
+                    "@ IN SOA empty.test. mail.empty.test. ( 20576131 1d 1h 1h 10m )\n"
                     "@ IN NS ns\n"
                     "ns IN A 1.1.1.1\n"
                 ),

@@ -17,18 +17,19 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.parametrize(
-    "zones_data, topology_data, expected",
+    "zones_data, topology_data, mailbox, expected",
     (
         (
             [
                 tests.unit.helpers.ZONES["simple"],
             ],
             tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
+            "testmail",
             {
                 "example.com": (
                     "$ORIGIN example.com.\n"
                     "$TTL 600\n"
-                    "@ IN SOA example.com. mail.example.com. ( 20576131 1d 1h 1h 10m )\n"
+                    "@ IN SOA example.com. testmail.example.com. ( 20576131 1d 1h 1h 10m )\n"
                     "@ IN NS ns\n"
                     "ns IN A 2.2.2.2\n"
                     "@ IN NS ns\n"
@@ -43,6 +44,7 @@ logger = logging.getLogger(__name__)
                 tests.unit.helpers.ZONES["multiple_records"],
             ],
             tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
+            "mail",
             {
                 "example.com": (
                     "$ORIGIN example.com.\n"
@@ -73,6 +75,7 @@ logger = logging.getLogger(__name__)
                 tests.unit.helpers.ZONES["simple"],
             ],
             tests.unit.helpers.TOPOLOGIES["single_unit"],
+            "mail",
             {
                 "example.com": (
                     "$ORIGIN example.com.\n"
@@ -89,6 +92,7 @@ logger = logging.getLogger(__name__)
                 tests.unit.helpers.ZONES["simple"],
             ],
             tests.unit.helpers.TOPOLOGIES["with_public_ips"],
+            "mail",
             {
                 "example.com": (
                     "$ORIGIN example.com.\n"
@@ -107,6 +111,7 @@ logger = logging.getLogger(__name__)
                 tests.unit.helpers.ZONES["simple"],
             ],
             tests.unit.helpers.TOPOLOGIES["with_custom_names"],
+            "mail",
             {
                 "example.com": (
                     "$ORIGIN example.com.\n"
@@ -129,6 +134,7 @@ logger = logging.getLogger(__name__)
                 tests.unit.helpers.ZONES["empty"],
             ],
             tests.unit.helpers.TOPOLOGIES["single_unit"],
+            "mail",
             {
                 "empty.com": (
                     "$ORIGIN empty.com.\n"
@@ -144,6 +150,7 @@ logger = logging.getLogger(__name__)
                 tests.unit.helpers.ZONES["ipv6_mixed"],
             ],
             tests.unit.helpers.TOPOLOGIES["single_unit"],
+            "mail",
             {
                 "ipv6.example": (
                     "$ORIGIN ipv6.example.\n"
@@ -169,7 +176,7 @@ logger = logging.getLogger(__name__)
     ),
 )
 @mock.patch("time.time", mock.MagicMock(return_value=1234567890))
-def test_zone_file_content(zones_data, topology_data, expected):
+def test_zone_file_content(zones_data, topology_data, mailbox, expected):
     """
     arrange: prepare some zones and network topology
     act: create zone file content
@@ -185,5 +192,5 @@ def test_zone_file_content(zones_data, topology_data, expected):
     topology = topology_module.Topology(**topology_data) if topology_data is not None else None
 
     # pylint: disable=protected-access
-    file_content = bind.BindService._zones_to_files_content(zones, topology)
+    file_content = bind.BindService._zones_to_files_content(zones, topology, {"mailbox": mailbox})
     assert file_content == expected

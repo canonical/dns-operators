@@ -223,7 +223,9 @@ class BindService:
 
             if topology is not None and topology.is_current_unit_active:
                 # Write zone files
-                zone_files: dict[str, str] = BindService._zones_to_files_content(zones, topology, config)
+                zone_files: dict[str, str] = BindService._zones_to_files_content(
+                    zones, topology, config
+                )
                 for domain, content in zone_files.items():
                     self._write_file(pathlib.Path(tempdir) / f"db.{domain}", content)
 

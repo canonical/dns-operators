@@ -6,6 +6,7 @@
 
 import logging
 import pathlib
+import string
 import subprocess  # nosec
 import time
 import typing
@@ -67,6 +68,10 @@ class BindCharm(ops.CharmBase):
                 event.add_status(ops.ActiveStatus())
         except topology.TopologyUnavailableError:
             event.add_status(ops.WaitingStatus("Topology is not available"))
+        config_validation = self._validate_config()
+        if not config_validation[0]:
+            event.add_status(ops.BlockedStatus(config_validation[1]))
+            return
         relation_data = self._get_remote_relation_data()
         if relation_data is None:
             event.add_status(ops.BlockedStatus("Non valid DNS requests"))
@@ -76,7 +81,7 @@ class BindCharm(ops.CharmBase):
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install."""
         self.unit.status = ops.MaintenanceStatus("Preparing bind")
-        self.bind.setup(self.unit.name)
+        self.bind.setup(self.unit.name, self.config)
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start."""
@@ -89,7 +94,7 @@ class BindCharm(ops.CharmBase):
     def _on_upgrade_charm(self, _: ops.UpgradeCharmEvent) -> None:
         """Handle upgrade-charm."""
         self.unit.status = ops.MaintenanceStatus("Upgrading dependencies")
-        self.bind.setup(self.unit.name)
+        self.bind.setup(self.unit.name, self.config)
 
     def _check_and_may_become_active(self, t: topology.Topology) -> bool:
         """Check the active unit status and may become active if need be.
@@ -165,6 +170,26 @@ class BindCharm(ops.CharmBase):
         )
         return relation_data
 
+    def _validate_config(self) -> tuple[bool, str]:
+        """Check config.
+
+        Returns:
+            A tuple expressing if the config is valid and an error message if not.
+        """
+        mailbox_config = str(self.config.get("mailbox", "")).strip()
+        if mailbox_config == "":
+            return (False, "Mailbox should not be empty")
+
+        # The list of metacharacters considered here is stronger than the RFC
+        # We have chosen that list to simplify the logic for now.
+        # https://www.ietf.org/rfc/rfc2142.txt
+        metacharacters: str = string.punctuation + string.whitespace
+        for char in metacharacters:
+            if char in mailbox_config:
+                return (False, f"Mailbox should not contain '{char}'")
+
+        return (True, "")
+
     def _reconcile(self, _: ops.HookEvent) -> None:  # noqa: C901
         """Reconciles."""
         # Retrieve the current topology of units
@@ -177,6 +202,10 @@ class BindCharm(ops.CharmBase):
         # If we're the leader and not active, check that the active unit is doing well
         if self.unit.is_leader() and not t.is_current_unit_active:
             self._check_and_may_become_active(t)
+
+        # verify config before continuing
+        if not self._validate_config()[0]:
+            return
 
         try:
             relation_data = self.dns_record.get_remote_relation_data()
@@ -198,7 +227,7 @@ class BindCharm(ops.CharmBase):
             # we assume that we need to regenerate the configuration
             last_valid_state = {}
         if dns_data.has_changed(relation_data, t, last_valid_state):
-            self.bind.update_zonefiles_and_reload(relation_data, t)
+            self.bind.update_zonefiles_and_reload(relation_data, t, self.config)
 
         if self.unit.is_leader():
             # Update dns_record relation's data

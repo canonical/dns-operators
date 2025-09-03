@@ -24,7 +24,7 @@ jobs:
           sudo snap install snapcraft --classic
       - run: snap list
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Build and publish the snap
         run: |
           cd ./charmed-dns-policy

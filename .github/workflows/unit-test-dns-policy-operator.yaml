@@ -17,4 +17,3 @@ jobs:
       self-hosted-runner: false
       self-hosted-runner-label: "edge"
       working-directory: ./dns-policy-operator
-      vale-style-check: true

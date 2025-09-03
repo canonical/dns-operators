@@ -1,0 +1,11 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+options:
+  public-ips:
+    description: A comma separated list of public IPs at which bind units are reachable.
+    type: string
+    default: ""
+  names:
+    description: A comma separated list of names for this server.
+    type: string
+    default: ""

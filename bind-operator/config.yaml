@@ -2,11 +2,15 @@
 # See LICENSE file for licensing details.
 options:
   public-ips:
-    description: A comma separated list of public IPs at which bind units are reachable.
+    description: |
+      A comma separated list of public IPs at which bind units are reachable.
+      Defaults to the standby units when empty.
     type: string
     default: ""
   names:
-    description: A comma separated list of names for this server.
+    description: |
+      A comma separated list of names for this server.
+      Defaults to "ns" when empty.
     type: string
     default: ""
   mailbox:

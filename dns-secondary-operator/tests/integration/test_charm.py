@@ -9,22 +9,15 @@ import jubilant
 import pytest
 
 
-@pytest.fixture(scope="module", name="juju")
-def juju_fixture():
-    """Juju fixture"""
-    with jubilant.temp_model() as juju:
-        yield juju
-
-
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_deploy(juju: jubilant.Juju, charm_file, app_name, resources):
+async def test_integration_primary(juju: jubilant.Juju, app, primary):
     """
-    arrange: build and deploy the charm.
-    act: nothing.
-    assert: charm is in blocked status.
+    arrange: build and deploy the charm. Also, deploy a primary charm.
+    act: relate both.
+    assert: charm is in active status.
     """
-    juju.deploy(charm=charm_file, app=app_name, resources=resources)
-    juju.wait(jubilant.all_agents_idle, timeout=600)
-    juju.wait(jubilant.all_blocked)
+    juju.integrate(app, primary)
+
+    juju.wait(jubilant.all_active, timeout=300)

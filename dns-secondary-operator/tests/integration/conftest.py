@@ -7,10 +7,18 @@ import pathlib
 import subprocess  # nosec B404
 import typing
 
+import jubilant
 import pytest
 import pytest_asyncio
 import yaml
 from pytest_operator.plugin import Model, OpsTest
+
+
+@pytest.fixture(scope="module", name="juju")
+def juju_fixture():
+    """Juju fixture"""
+    with jubilant.temp_model() as juju:
+        yield juju
 
 
 @pytest.fixture(scope="module", name="metadata")
@@ -72,3 +80,26 @@ async def resources_fixture(
         resources.update({"charmed-bind-snap": pytestconfig.getoption("--charmed-bind-snap-file")})
 
     yield resources
+
+
+@pytest.fixture(scope="module", name="app")
+def app_fixture(juju: jubilant.Juju, charm_file, app_name, resources):
+    """Deploy secondary charm."""
+    juju.deploy(charm=charm_file, app=app_name, resources=resources)
+    juju.wait(jubilant.all_agents_idle, timeout=600)
+    juju.wait(jubilant.all_blocked)
+    yield app_name  # run the test
+
+
+@pytest.fixture(scope="module", name="primary")
+def primary_fixture(juju: jubilant.Juju):
+    """Deploy primary(bind) charm."""
+    bind_charm_name = "bind"
+    juju.deploy(
+        bind_charm_name,
+        channel="latest/edge",
+        base="ubuntu@22.04",
+        revision=78,
+    )
+    juju.wait(lambda status: jubilant.all_active(status, bind_charm_name))
+    yield bind_charm_name  # run the test

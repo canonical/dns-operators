@@ -184,6 +184,7 @@ class BindService:
         relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
         topology: topology_module.Topology | None,
         config: dict[str, str],
+        secondary_transfer_ips: list[pydantic.IPvAnyAddress] | None = None,
     ) -> None:
         """Update the zonefiles from bind's config and reload bind.
 
@@ -191,6 +192,7 @@ class BindService:
             relation_data: input relation data
             topology: Topology of the current deployment
             config: Relevant charm's config
+            secondary_transfer_ips: ips from secondary dns that should be allowed to transfer.
         """
         start_time = time.time_ns()
         logger.debug("Starting update of zonefiles")
@@ -230,7 +232,9 @@ class BindService:
             # Write the named.conf file
             self._write_file(
                 pathlib.Path(tempdir) / "named.conf.local",
-                self._generate_named_conf_local([z.domain for z in zones], topology),
+                self._generate_named_conf_local(
+                    [z.domain for z in zones], topology, secondary_transfer_ips
+                ),
             )
 
             # Move the staging area files to the config dir
@@ -326,13 +330,17 @@ class BindService:
         return zone_files
 
     def _generate_named_conf_local(
-        self, zones: list[str], topology: topology_module.Topology | None
+        self,
+        zones: list[str],
+        topology: topology_module.Topology | None,
+        secondary_transfer_ips: list[pydantic.IPvAnyAddress] | None,
     ) -> str:
         """Generate the content of `named.conf.local`.
 
         Args:
             zones: A list of all the zones names
             topology: Topology of the current deployment
+            secondary_transfer_ips: ips from secondary dns that should be allowed to transfer.
 
         Returns:
             The content of `named.conf.local`
@@ -346,12 +354,13 @@ class BindService:
             zone_transfer_ips="",
         )
         if topology is not None:
+            transfer_list = topology.standby_units_ip.extend(secondary_transfer_ips or [])
             for name in zones:
                 if topology.is_current_unit_active:
                     content += templates.NAMED_CONF_PRIMARY_ZONE_DEF_TEMPLATE.format(
                         name=name,
                         absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{name}",
-                        zone_transfer_ips=self._bind_config_ip_list(topology.standby_units_ip),
+                        zone_transfer_ips=self._bind_config_ip_list(transfer_list),
                     )
                 else:
                     content += templates.NAMED_CONF_SECONDARY_ZONE_DEF_TEMPLATE.format(

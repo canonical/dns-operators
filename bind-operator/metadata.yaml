@@ -30,6 +30,8 @@ provides:
     interface: dns_record
   dns-authority:
     interface: dns_authority
+  dns-transfer:
+    interface: dns_transfer
 peers:
   bind-peers:
     interface: bind-instance

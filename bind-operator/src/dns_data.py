@@ -7,7 +7,9 @@ import collections
 import json
 import logging
 import typing
+from ipaddress import IPv4Address, IPv6Address
 
+import pydantic
 from charms.bind.v0.dns_record import (
     DNSProviderData,
     DNSRecordProviderData,
@@ -55,6 +57,7 @@ def create_dns_record_provider_data(
 def has_changed(
     relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
     topology: topology_module.Topology | None,
+    secondary_transfer_ips: list[pydantic.IPvAnyAddress] | None,
     last_valid_state: dict[str, typing.Any],
 ) -> bool:
     """Check if the dns data has changed.
@@ -67,6 +70,7 @@ def has_changed(
     Args:
         relation_data: input relation data
         topology: Topology of the current deployment
+        secondary_transfer_ips: list of dns secondary ips
         last_valid_state: The last valid state, deserialized from a state.json file
 
     Returns:
@@ -78,6 +82,13 @@ def has_changed(
         return True
 
     if "topology" not in last_valid_state or topology != last_valid_state["topology"]:
+        return True
+
+    # secondary transfer ips is not mandatory so we only check if is not None
+    if secondary_transfer_ips and (
+        "secondary_transfer_ips" not in last_valid_state
+        or secondary_transfer_ips != last_valid_state["secondary_transfer_ips"]
+    ):
         return True
 
     return False
@@ -158,7 +169,11 @@ def dns_record_relations_data_to_zones(
     return list(zones.values())
 
 
-def dump_state(zones: list[models.Zone], topology: topology_module.Topology) -> str:
+def dump_state(
+    zones: list[models.Zone],
+    topology: topology_module.Topology,
+    secondary_transfer_ips: list[pydantic.IPvAnyAddress],
+) -> str:
     """Dump the current state.
 
     We need this cumbersome way of serializing the state because
@@ -169,6 +184,7 @@ def dump_state(zones: list[models.Zone], topology: topology_module.Topology) -> 
     Args:
         zones: list of the zones
         topology: Topology of the current deployment
+        secondary_transfer_ips: list of dns secondary ips
 
     Returns:
         The dumped state as a string
@@ -176,6 +192,7 @@ def dump_state(zones: list[models.Zone], topology: topology_module.Topology) -> 
     to_dump = {
         "topology": topology.model_dump(mode="json") if topology is not None else None,
         "zones": [zone.model_dump(mode="json") for zone in zones if zone is not None],
+        "secondary_transfer_ips": sorted([str(ip) for ip in secondary_transfer_ips]),
     }
     return json.dumps(to_dump)
 
@@ -195,4 +212,20 @@ def load_state(serialized_state: str) -> dict[str, typing.Any]:
     if state["topology"] is not None:
         state["topology"] = topology_module.Topology(**state["topology"])
     state["zones"] = [models.Zone(**zone) for zone in state["zones"]]
+    state["secondary_transfer_ips"] = [parse_ip(ip) for ip in state["secondary_transfer_ips"]]
     return state
+
+
+def parse_ip(ip_str: str) -> IPv4Address | IPv6Address:
+    """Parse string ip to pydantic.
+
+    Args:
+        ip_str (str): ip as string.
+
+    Returns:
+        Pydantic IP address.
+    """
+    try:
+        return IPv4Address(ip_str)
+    except ValueError:
+        return IPv6Address(ip_str)

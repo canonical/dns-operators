@@ -354,7 +354,7 @@ class BindService:
             zone_transfer_ips="",
         )
         if topology is not None:
-            transfer_list = topology.standby_units_ip.extend(secondary_transfer_ips or [])
+            transfer_list = topology.standby_units_ip + (secondary_transfer_ips or [])
             for name in zones:
                 if topology.is_current_unit_active:
                     content += templates.NAMED_CONF_PRIMARY_ZONE_DEF_TEMPLATE.format(

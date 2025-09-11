@@ -210,10 +210,11 @@ class BindCharm(ops.CharmBase):
         if self.unit.is_leader() and not t.is_current_unit_active:
             self._check_and_may_become_active(t)
 
-        # verify config before continuing
+        # Verify config before continuing
         if not self._validate_config()[0]:
             return
 
+        # Get DNS record data
         try:
             relation_data = self.dns_record.get_remote_relation_data()
         except KeyError as err:
@@ -222,6 +223,12 @@ class BindCharm(ops.CharmBase):
             # better is to continue with the current state rather than crashing later.
             logger.info("Relation error: %s", err)
             return
+
+        # Get DNS transfer data
+        secondary_transfer_ips = []
+        for relation in self.model.relations[self.dns_transfer.relation_name]:
+            dns_secondary_data = self.dns_transfer.get_remote_relation_data(relation)
+            secondary_transfer_ips.extend(dns_secondary_data.addresses)
 
         # Update our workload configuration based on relation data and topology
         try:
@@ -234,12 +241,7 @@ class BindCharm(ops.CharmBase):
             # we assume that we need to regenerate the configuration
             last_valid_state = {}
 
-        secondary_transfer_ips = []
-        for relation in self.model.relations[self.dns_transfer.relation_name]:
-            dns_secondary_data = self.dns_transfer.get_remote_relation_data(relation)
-            secondary_transfer_ips.extend(dns_secondary_data.addresses)
-
-        if dns_data.has_changed(relation_data, t, last_valid_state):
+        if dns_data.has_changed(relation_data, t, secondary_transfer_ips, last_valid_state):
             self.bind.update_zonefiles_and_reload(
                 relation_data, t, self.config, secondary_transfer_ips
             )

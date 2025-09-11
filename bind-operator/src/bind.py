@@ -211,7 +211,7 @@ class BindService:
             # Write the serialized state to a json file for future comparison
             self._write_file(
                 pathlib.Path(constants.DNS_CONFIG_DIR) / "state.json",
-                dns_data.dump_state(zones, topology),
+                dns_data.dump_state(zones, topology, secondary_transfer_ips),
             )
 
             # Write the service.test file

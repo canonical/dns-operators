@@ -198,6 +198,8 @@ class BindService:
         logger.debug("Starting update of zonefiles")
         zones = dns_data.dns_record_relations_data_to_zones(relation_data)
         logger.debug("Zones: %s", [z.domain for z in zones])
+        if not secondary_transfer_ips:
+            secondary_transfer_ips = []
 
         # Check for conflicts
         _, conflicting = dns_data.get_conflicts(zones)

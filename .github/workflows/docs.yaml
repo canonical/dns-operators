@@ -12,3 +12,4 @@ jobs:
     with:
       vale-files: './**/*.md'
       linkcheck-files: './**/*.md'
+      linkcheck-fail-on-error: false

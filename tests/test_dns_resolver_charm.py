@@ -25,6 +25,7 @@ async def full_deployment_fixture(
     dns_resolver,  # pylint: disable=unused-argument
 ):
     """Add necessary integration for the deployed charms."""
+    juju.wait(lambda status: jubilant.all_agents_idle(status, dns_resolver_name))
     juju.integrate(dns_resolver_name, bind_name)
     juju.wait(lambda status: jubilant.all_active(status, dns_resolver_name))
 

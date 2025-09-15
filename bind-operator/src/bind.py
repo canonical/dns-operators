@@ -223,7 +223,9 @@ class BindService:
 
             if topology is not None and topology.is_current_unit_active:
                 # Write zone files
-                zone_files: dict[str, str] = self._zones_to_files_content(zones, topology, config)
+                zone_files: dict[str, str] = BindService._zones_to_files_content(
+                    zones, topology, config
+                )
                 for domain, content in zone_files.items():
                     self._write_file(pathlib.Path(tempdir) / f"db.{domain}", content)
 
@@ -271,8 +273,8 @@ class BindService:
             logger.exception(error_msg)
             raise InstallError(error_msg) from e
 
+    @staticmethod
     def _zones_to_files_content(
-        self,
         zones: list[models.Zone],
         topology: topology_module.Topology,
         config: dict[str, str],
@@ -298,27 +300,37 @@ class BindService:
                 mailbox=config["mailbox"],
             )
 
-            # By default, we hide the active unit.
-            # So only the standbies are used to respond to queries and receive NOTIFY events
-            # If we have no standby unit (a single unit deployment)
-            # then use current unit IP instead
-            ip_list: list[pydantic.IPvAnyAddress] = topology.standby_units_ip or [
-                topology.current_unit_ip
-            ]
+            # If an public ip is configured, we use it for our NS records
+            if topology.public_ips:
+                ns_ip_list: list[pydantic.IPvAnyAddress] = topology.public_ips
+            else:
+                # By default, we hide the active unit.
+                # So only the standbies are used to respond to queries and receive NOTIFY events
+                # If we have no standby unit (a single unit deployment)
+                # then use current unit IP instead
+                ns_ip_list = topology.standby_units_ip or [topology.current_unit_ip]
+
+            # If an name list is configured, we use it for our NS records
+            if topology.names:
+                ns_name_list: list[str] = topology.names
+            else:
+                # By default we just use "ns" as host_label
+                # from the served domain for the nameserver
+                ns_name_list = ["ns"]
+
             # We sort the list to hopefully present the NS in a stable order in the file
-            for ip in sorted(ip_list):
-                content += templates.ZONE_APEX_NS_TEMPLATE.format(
-                    # We convert the IP to an int and use that as the NS record number
-                    # This way, we generate a somewhat stable list of NS records
-                    number=int(ip),
-                    ip=ip,
-                )
+            for name in sorted(ns_name_list):
+                for ip in sorted(ns_ip_list):
+                    content += templates.ZONE_APEX_NS_TEMPLATE.format(
+                        name=name,
+                        ip=ip,
+                    )
 
             for entry in zone.entries:
                 content += templates.ZONE_RECORD_TEMPLATE.format(
                     host_label=entry.host_label,
-                    record_class=entry.record_class,
-                    record_type=entry.record_type,
+                    record_class=entry.record_class.value,
+                    record_type=entry.record_type.value,
                     record_data=entry.record_data,
                 )
             zone_files[zone.domain] = content

@@ -14,6 +14,11 @@ import typing
 import ops
 from charms.bind.v0 import dns_record
 from charms.dns_authority.v0 import dns_authority
+from charms.dns_transfer.v0.dns_transfer import (
+    DNSTransferProviderData,
+    DNSTransferProvides,
+    TransportSecurity,
+)
 
 import constants
 import dns_data
@@ -37,6 +42,7 @@ class BindCharm(ops.CharmBase):
         self.bind = BindService()
         self.dns_record = dns_record.DNSRecordProvides(self)
         self.dns_authority = dns_authority.DNSAuthorityProvides(self)
+        self.dns_transfer = DNSTransferProvides(self)
         self.topology = topology.TopologyObserver(self, constants.PEER)
 
         self.on.define_event("reload_bind", events.ReloadBindEvent)
@@ -48,6 +54,7 @@ class BindCharm(ops.CharmBase):
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(self.on.dns_record_relation_changed, self._reconcile)
         self.framework.observe(self.on.dns_authority_relation_joined, self._reconcile)
+        self.framework.observe(self.on.dns_transfer_relation_changed, self._reconcile)
         self.framework.observe(self.topology.on.topology_changed, self._reconcile)
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
         self.framework.observe(self.on.reload_bind, self._reconcile)
@@ -203,10 +210,11 @@ class BindCharm(ops.CharmBase):
         if self.unit.is_leader() and not t.is_current_unit_active:
             self._check_and_may_become_active(t)
 
-        # verify config before continuing
+        # Verify config before continuing
         if not self._validate_config()[0]:
             return
 
+        # Get DNS record data
         try:
             relation_data = self.dns_record.get_remote_relation_data()
         except KeyError as err:
@@ -215,6 +223,12 @@ class BindCharm(ops.CharmBase):
             # better is to continue with the current state rather than crashing later.
             logger.info("Relation error: %s", err)
             return
+
+        # Get DNS transfer data
+        secondary_transfer_ips = []
+        for relation in self.model.relations[self.dns_transfer.relation_name]:
+            dns_secondary_data = self.dns_transfer.get_remote_relation_data(relation)
+            secondary_transfer_ips.extend(dns_secondary_data.addresses)
 
         # Update our workload configuration based on relation data and topology
         try:
@@ -226,8 +240,11 @@ class BindCharm(ops.CharmBase):
             # If we can't load the previous state,
             # we assume that we need to regenerate the configuration
             last_valid_state = {}
-        if dns_data.has_changed(relation_data, t, last_valid_state):
-            self.bind.update_zonefiles_and_reload(relation_data, t, self.config)
+
+        if dns_data.has_changed(relation_data, t, secondary_transfer_ips, last_valid_state):
+            self.bind.update_zonefiles_and_reload(
+                relation_data, t, self.config, secondary_transfer_ips
+            )
 
         if self.unit.is_leader():
             # Update dns_record relation's data
@@ -241,6 +258,16 @@ class BindCharm(ops.CharmBase):
                 addresses=ips, zones=[zone.domain for zone in zones]
             )
             self.dns_authority.update_relation_data(data)
+
+            # Update dns_transfer relation's data
+            data = {
+                "addresses": t.standby_units_ip or t.units_ip,
+                "transport": TransportSecurity.TCP,
+                "zones": [zone.domain for zone in zones],
+            }
+            provider_data = DNSTransferProviderData.model_validate(data)
+            for relation in self.model.relations[self.dns_transfer.relation_name]:
+                self.dns_transfer.update_relation_data(relation, provider_data)
 
 
 if __name__ == "__main__":  # pragma: nocover

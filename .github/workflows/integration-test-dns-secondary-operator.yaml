@@ -19,3 +19,5 @@ jobs:
       juju-channel: 3.6/stable
       provider: lxd
       working-directory: ./dns-secondary-operator
+      tmate-debug: true
+      tmate-timeout: 120

@@ -1,0 +1,28 @@
+name: Bind/Dns-resolver integration tests
+
+on:
+  pull_request:
+    paths:
+      - 'bind-operator/src/**'
+      - 'bind-operator/tests/**'
+      - 'bind-operator/requirements.txt'
+      - 'bind-operator/charmcraft.yaml'
+      - 'dns-resolver-operator/src/**'
+      - 'dns-resolver-operator/tests/**'
+      - 'dns-resolver-operator/requirements.txt'
+      - 'dns-resolver-operator/charmcraft.yaml'
+      - '.github/workflows/integration-test-bind-dns-resolver.yaml'
+  push:
+    branches:
+      - main
+
+jobs:
+  integration-tests:
+    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    secrets: inherit
+    with:
+      self-hosted-runner: false
+      self-hosted-runner-label: "edge"
+      juju-channel: 3.6/stable
+      provider: lxd
+      modules: '["test_dns_resolver_charm"]'

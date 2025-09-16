@@ -5,7 +5,6 @@
 
 import pathlib
 import subprocess  # nosec B404
-import typing
 
 import pytest
 import pytest_asyncio
@@ -13,16 +12,16 @@ import yaml
 from pytest_operator.plugin import Model, OpsTest
 
 
-@pytest.fixture(scope="module", name="metadata")
-def fixture_metadata():
-    """Provide charm metadata."""
-    yield yaml.safe_load(pathlib.Path("./metadata.yaml").read_text(encoding="UTF-8"))
+@pytest.fixture(scope="module", name="charmcraft")
+def fixture_charmcraft():
+    """Provide charmcraft."""
+    yield yaml.safe_load(pathlib.Path("./charmcraft.yaml").read_text(encoding="UTF-8"))
 
 
 @pytest.fixture(scope="module", name="app_name")
-def fixture_app_name(metadata):
-    """Provide app name from the metadata."""
-    yield metadata["name"]
+def fixture_app_name(charmcraft):
+    """Provide app name from the charmcraft."""
+    yield charmcraft["name"]
 
 
 @pytest.fixture(scope="module", name="model")
@@ -33,7 +32,7 @@ def model_fixture(ops_test: OpsTest) -> Model:
 
 
 @pytest.fixture(scope="module", name="charm_file")
-def charm_file_fixture(metadata: dict[str, typing.Any], pytestconfig: pytest.Config):
+def charm_file_fixture(app_name, pytestconfig: pytest.Config):
     """Pytest fixture that packs the charm and returns the filename, or --charm-file if set."""
     charm_file = pytestconfig.getoption("--charm-file")
     if charm_file:
@@ -46,7 +45,6 @@ def charm_file_fixture(metadata: dict[str, typing.Any], pytestconfig: pytest.Con
     except subprocess.CalledProcessError as exc:
         raise OSError(f"Error packing charm: {exc}; Stderr:\n{exc.stderr}") from None
 
-    app_name = metadata["name"]
     charm_path = pathlib.Path(__file__).parent.parent.parent
     charms = [p.absolute() for p in charm_path.glob(f"{app_name}_*.charm")]
     assert charms, f"{app_name}.charm file not found"

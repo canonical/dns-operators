@@ -5,7 +5,8 @@
 
 import json
 import logging
-from unittest.mock import patch
+from ipaddress import IPv4Address
+from unittest.mock import ANY, patch
 
 import ops
 import pytest
@@ -350,3 +351,35 @@ def test_dns_record_relation_changed_with_conflict(context, base_state):
             for request in requests_data:
                 assert request["status"] == "conflict"
     assert out.unit_status == testing.BlockedStatus("Conflicting requests")
+
+
+@pytest.mark.usefixtures("context")
+@pytest.mark.usefixtures("base_state")
+def test_dns_transfer_relation_changed(context, base_state):
+    """
+    arrange: base state with dns_transfer relation
+    act: run dns transfer relation changed
+    assert: unit is active and reload is called with secondary ip
+    """
+    secondary_ip = "10.10.10.1"
+    dumped_data = {
+        "addresses": json.dumps([secondary_ip], default=str),
+    }
+    dns_transfer_relation = scenario.Relation(
+        endpoint="dns-transfer",
+        remote_app_data=dumped_data,
+    )
+    base_state["relations"].append(dns_transfer_relation)
+    base_state["leader"] = True
+    state = testing.State(**base_state)
+    dns_transfer_relation_changed_event = _Event(
+        "dns_transfer_relation_changed", relation=dns_transfer_relation
+    )
+
+    with patch("bind.BindService.update_zonefiles_and_reload") as update_zonefiles_and_reload:
+        out = context.run(dns_transfer_relation_changed_event, state)
+
+        assert isinstance(out.unit_status, ops.ActiveStatus)
+        update_zonefiles_and_reload.assert_called_once_with(
+            ANY, ANY, ANY, [IPv4Address(secondary_ip)]
+        )

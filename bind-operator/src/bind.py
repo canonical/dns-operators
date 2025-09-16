@@ -184,6 +184,7 @@ class BindService:
         relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
         topology: topology_module.Topology | None,
         config: dict[str, str],
+        secondary_transfer_ips: list[pydantic.IPvAnyAddress] | None = None,
     ) -> None:
         """Update the zonefiles from bind's config and reload bind.
 
@@ -191,11 +192,14 @@ class BindService:
             relation_data: input relation data
             topology: Topology of the current deployment
             config: Relevant charm's config
+            secondary_transfer_ips: ips from secondary dns that should be allowed to transfer.
         """
         start_time = time.time_ns()
         logger.debug("Starting update of zonefiles")
         zones = dns_data.dns_record_relations_data_to_zones(relation_data)
         logger.debug("Zones: %s", [z.domain for z in zones])
+        if not secondary_transfer_ips:
+            secondary_transfer_ips = []
 
         # Check for conflicts
         _, conflicting = dns_data.get_conflicts(zones)
@@ -209,7 +213,7 @@ class BindService:
             # Write the serialized state to a json file for future comparison
             self._write_file(
                 pathlib.Path(constants.DNS_CONFIG_DIR) / "state.json",
-                dns_data.dump_state(zones, topology),
+                dns_data.dump_state(zones, topology, secondary_transfer_ips),
             )
 
             # Write the service.test file
@@ -223,14 +227,18 @@ class BindService:
 
             if topology is not None and topology.is_current_unit_active:
                 # Write zone files
-                zone_files: dict[str, str] = self._zones_to_files_content(zones, topology, config)
+                zone_files: dict[str, str] = BindService._zones_to_files_content(
+                    zones, topology, config
+                )
                 for domain, content in zone_files.items():
                     self._write_file(pathlib.Path(tempdir) / f"db.{domain}", content)
 
             # Write the named.conf file
             self._write_file(
                 pathlib.Path(tempdir) / "named.conf.local",
-                self._generate_named_conf_local([z.domain for z in zones], topology),
+                self._generate_named_conf_local(
+                    [z.domain for z in zones], topology, secondary_transfer_ips
+                ),
             )
 
             # Move the staging area files to the config dir
@@ -271,8 +279,8 @@ class BindService:
             logger.exception(error_msg)
             raise InstallError(error_msg) from e
 
+    @staticmethod
     def _zones_to_files_content(
-        self,
         zones: list[models.Zone],
         topology: topology_module.Topology,
         config: dict[str, str],
@@ -298,27 +306,37 @@ class BindService:
                 mailbox=config["mailbox"],
             )
 
-            # By default, we hide the active unit.
-            # So only the standbies are used to respond to queries and receive NOTIFY events
-            # If we have no standby unit (a single unit deployment)
-            # then use current unit IP instead
-            ip_list: list[pydantic.IPvAnyAddress] = topology.standby_units_ip or [
-                topology.current_unit_ip
-            ]
+            # If an public ip is configured, we use it for our NS records
+            if topology.public_ips:
+                ns_ip_list: list[pydantic.IPvAnyAddress] = topology.public_ips
+            else:
+                # By default, we hide the active unit.
+                # So only the standbies are used to respond to queries and receive NOTIFY events
+                # If we have no standby unit (a single unit deployment)
+                # then use current unit IP instead
+                ns_ip_list = topology.standby_units_ip or [topology.current_unit_ip]
+
+            # If an name list is configured, we use it for our NS records
+            if topology.names:
+                ns_name_list: list[str] = topology.names
+            else:
+                # By default we just use "ns" as host_label
+                # from the served domain for the nameserver
+                ns_name_list = ["ns"]
+
             # We sort the list to hopefully present the NS in a stable order in the file
-            for ip in sorted(ip_list):
-                content += templates.ZONE_APEX_NS_TEMPLATE.format(
-                    # We convert the IP to an int and use that as the NS record number
-                    # This way, we generate a somewhat stable list of NS records
-                    number=int(ip),
-                    ip=ip,
-                )
+            for name in sorted(ns_name_list):
+                for ip in sorted(ns_ip_list):
+                    content += templates.ZONE_APEX_NS_TEMPLATE.format(
+                        name=name,
+                        ip=ip,
+                    )
 
             for entry in zone.entries:
                 content += templates.ZONE_RECORD_TEMPLATE.format(
                     host_label=entry.host_label,
-                    record_class=entry.record_class,
-                    record_type=entry.record_type,
+                    record_class=entry.record_class.value,
+                    record_type=entry.record_type.value,
                     record_data=entry.record_data,
                 )
             zone_files[zone.domain] = content
@@ -326,13 +344,17 @@ class BindService:
         return zone_files
 
     def _generate_named_conf_local(
-        self, zones: list[str], topology: topology_module.Topology | None
+        self,
+        zones: list[str],
+        topology: topology_module.Topology | None,
+        secondary_transfer_ips: list[pydantic.IPvAnyAddress] | None,
     ) -> str:
         """Generate the content of `named.conf.local`.
 
         Args:
             zones: A list of all the zones names
             topology: Topology of the current deployment
+            secondary_transfer_ips: ips from secondary dns that should be allowed to transfer.
 
         Returns:
             The content of `named.conf.local`
@@ -346,12 +368,13 @@ class BindService:
             zone_transfer_ips="",
         )
         if topology is not None:
+            transfer_list = topology.standby_units_ip + (secondary_transfer_ips or [])
             for name in zones:
                 if topology.is_current_unit_active:
                     content += templates.NAMED_CONF_PRIMARY_ZONE_DEF_TEMPLATE.format(
                         name=name,
                         absolute_path=f"{constants.DNS_CONFIG_DIR}/db.{name}",
-                        zone_transfer_ips=self._bind_config_ip_list(topology.standby_units_ip),
+                        zone_transfer_ips=self._bind_config_ip_list(transfer_list),
                     )
                 else:
                     content += templates.NAMED_CONF_SECONDARY_ZONE_DEF_TEMPLATE.format(

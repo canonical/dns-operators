@@ -99,7 +99,7 @@ def primary_fixture(juju: jubilant.Juju):
         bind_charm_name,
         channel="latest/edge",
         base="ubuntu@22.04",
-        revision=78,
+        revision=79,
     )
     juju.wait(lambda status: jubilant.all_active(status, bind_charm_name))
     yield bind_charm_name  # run the test

@@ -58,7 +58,7 @@ def juju_fixture(
 
 def create_charm_file(
     metadata: dict[str, typing.Any],
-    target_directory: str,
+    target_directory: pathlib.Path,
 ) -> str:
     """Pack the charm and returns the filename.
 

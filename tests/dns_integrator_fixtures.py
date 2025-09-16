@@ -51,7 +51,7 @@ def dns_integrator_charm_file_fixture(
     """
     charm_file = pytestconfig.getoption("--dns-integrator-charm-file")
     if charm_file:
-        yield Path(charm_file)
+        yield f"./{charm_file}"
         return
     yield core_fixtures.create_charm_file(
         dns_integrator_metadata, dns_integrator_directory

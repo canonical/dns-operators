@@ -51,7 +51,7 @@ def dns_resolver_charm_file_fixture(
     """
     charm_file = pytestconfig.getoption("--dns-resolver-charm-file")
     if charm_file:
-        yield Path(charm_file)
+        yield f"./{charm_file}"
         return
     yield core_fixtures.create_charm_file(dns_resolver_metadata, dns_resolver_directory)
 

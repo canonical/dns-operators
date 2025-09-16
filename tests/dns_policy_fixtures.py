@@ -51,7 +51,7 @@ def dns_policy_charm_file_fixture(
     """
     charm_file = pytestconfig.getoption("--dns-policy-charm-file")
     if charm_file:
-        yield Path(charm_file)
+        yield f"./{charm_file}"
         return
     yield core_fixtures.create_charm_file(dns_policy_metadata, dns_policy_directory)
 

@@ -71,4 +71,4 @@ async def dns_integrator_fixture(
         return
 
     juju.deploy(dns_integrator_charm_file, dns_integrator_name, resources={})
-    juju.wait(lambda status: jubilant.all_active(status, dns_integrator_name))
+    juju.wait(lambda status: jubilant.all_blocked(status, dns_integrator_name))

@@ -71,4 +71,4 @@ async def dns_secondary_fixture(
         return
 
     juju.deploy(dns_secondary_charm_file, dns_secondary_name, resources={})
-    juju.wait(lambda status: jubilant.all_active(status, dns_secondary_name))
+    juju.wait(lambda status: jubilant.all_blocked(status, dns_secondary_name))

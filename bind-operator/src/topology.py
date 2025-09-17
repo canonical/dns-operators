@@ -46,6 +46,8 @@ class Topology(pydantic.BaseModel):
         active_unit_ip: IP of the active unit
         standby_units_ip: IPs of the standby units
         current_unit_ip: IP of the current unit
+        public_ips: public IPs of the application
+        names: public names of the DNS server
         is_current_unit_active: Is the current unit active ?
     """
 
@@ -53,6 +55,8 @@ class Topology(pydantic.BaseModel):
     active_unit_ip: pydantic.IPvAnyAddress | None
     standby_units_ip: list[pydantic.IPvAnyAddress]
     current_unit_ip: pydantic.IPvAnyAddress
+    public_ips: list[pydantic.IPvAnyAddress]
+    names: list[str]
 
     @property
     def is_current_unit_active(self) -> bool:
@@ -136,10 +140,22 @@ class TopologyObserver(ops.Object):
 
         current_unit_ip = str(binding.network.bind_address)
         active_unit_ip = relation.data[self.charm.app].get("active-unit")
+        public_ips = [
+            ip.strip()
+            for ip in str(self.charm.config["public-ips"]).split(",")
+            if ip.strip() != ""
+        ]
+        names = [
+            name.strip()
+            for name in str(self.charm.config["names"]).split(",")
+            if name.strip() != ""
+        ]
 
         logger.debug("active_unit_ip: %s", active_unit_ip)
         logger.debug("current_unit_ip: %s", current_unit_ip)
         logger.debug("units_ip: %s", units_ip)
+        logger.debug("public_ips: %s", public_ips)
+        logger.debug("names: %s", names)
         logger.debug("topology retrieval duration (ms): %s", (time.time_ns() - start_time) / 1e6)
 
         try:
@@ -149,6 +165,8 @@ class TopologyObserver(ops.Object):
                 units_ip=units_ip,  # type: ignore
                 standby_units_ip=[ip for ip in units_ip if ip != active_unit_ip],  # type: ignore
                 current_unit_ip=current_unit_ip,  # type: ignore
+                public_ips=public_ips,  # type: ignore
+                names=names,  # type: ignore
             )
         except pydantic.ValidationError as e:
             raise TopologyUnavailableError("Error while instantiating model") from e

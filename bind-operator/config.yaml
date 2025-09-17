@@ -1,8 +1,0 @@
-# Copyright 2025 Canonical Ltd.
-# See LICENSE file for licensing details.
-options:
-  mailbox:
-    description: |
-      Mailbox to use to contact the zone administrator as per RFC2142
-    default: "hostmaster"
-    type: string

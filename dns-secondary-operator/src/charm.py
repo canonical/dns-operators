@@ -9,6 +9,7 @@ import socket
 import typing
 
 import ops
+import pydantic
 from charms.dns_transfer.v0 import dns_transfer
 from charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateRequestAttributes,
@@ -54,7 +55,6 @@ class DnsSecondaryCharm(ops.CharmBase):
         self.framework.observe(self.on.config_changed, self._reconcile)
         self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
-        self.framework.observe(self.on["dns-transfer"].relation_joined, self._reconcile)
         self.framework.observe(self.on["dns-transfer"].relation_changed, self._reconcile)
         self.framework.observe(self.topology.on.topology_changed, self._reconcile)
         self.framework.observe(self.certificates.on.certificate_available, self._reconcile)
@@ -71,7 +71,7 @@ class DnsSecondaryCharm(ops.CharmBase):
         unit_hostname = socket.gethostname()
         return str(self.config.get("remote-hostname", unit_hostname))
 
-    def _reconcile(self, _: ops.EventBase) -> None:
+    def _reconcile(self, _: ops.EventBase) -> None:  # noqa: C901
         """Reconcile the charm."""
         if not self._has_required_integration():
             return
@@ -90,7 +90,11 @@ class DnsSecondaryCharm(ops.CharmBase):
         self.bind.start()
 
         relation = self.model.get_relation(self.dns_transfer.relation_name)
-        data = self.dns_transfer.get_remote_relation_data()
+        data = None
+        try:
+            data = self.dns_transfer.get_remote_relation_data()
+        except pydantic.ValidationError as e:
+            logger.exception("failed to get dns_transfer data: %s", str(e))
         if data and data.addresses and data.zones:
             self.unit.status = ops.MaintenanceStatus("Updating named.conf.local")
             if not enable_tls and data.transport == dns_transfer.TransportSecurity.TLS:
@@ -123,7 +127,13 @@ class DnsSecondaryCharm(ops.CharmBase):
         if not self._has_required_integration():
             event.add_status(ops.BlockedStatus(STATUS_REQUIRED_INTEGRATION))
 
-        relation_data = self.dns_transfer.get_remote_relation_data()
+        relation_data = None
+        try:
+            relation_data = self.dns_transfer.get_remote_relation_data()
+        except pydantic.ValidationError:
+            event.add_status(ops.ActiveStatus("DNS primary relation not ready"))
+            logger.warning("DNS primary relation data has no valid data")
+            return
         if not relation_data:
             event.add_status(ops.ActiveStatus("DNS primary relation not ready"))
             logger.warning("DNS primary relation could not be retrieved")
@@ -176,7 +186,12 @@ class DnsSecondaryCharm(ops.CharmBase):
         Returns:
             true if dns_transfer is set.
         """
-        return self.dns_transfer.get_remote_relation_data() is not None
+        data = None
+        try:
+            data = self.dns_transfer.get_remote_relation_data()
+        except pydantic.ValidationError:
+            return False
+        return data is not None
 
     def _relation_created(self, relation_name: str) -> bool:
         """Check if relation is created.

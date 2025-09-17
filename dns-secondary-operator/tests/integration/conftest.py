@@ -92,14 +92,6 @@ def app_fixture(juju: jubilant.Juju, charm_file, app_name, resources):
 
 
 @pytest.fixture(scope="module", name="primary")
-def primary_fixture(juju: jubilant.Juju):
+def primary_fixture(bind, bind_name: str):  # pylint: disable=unused-argument
     """Deploy primary(bind) charm."""
-    bind_charm_name = "bind"
-    juju.deploy(
-        bind_charm_name,
-        channel="latest/edge",
-        base="ubuntu@22.04",
-        revision=79,
-    )
-    juju.wait(lambda status: jubilant.all_active(status, bind_charm_name))
-    yield bind_charm_name  # run the test
+    yield bind_name  # run the test

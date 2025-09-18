@@ -25,4 +25,3 @@ jobs:
       self-hosted-runner-label: "edge"
       juju-channel: 3.6/stable
       provider: lxd
-      modules: '["test_dns_resolver_charm"]'

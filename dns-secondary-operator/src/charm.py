@@ -139,11 +139,6 @@ class DnsSecondaryCharm(ops.CharmBase):
             logger.warning("DNS primary relation could not be retrieved")
             return
 
-        if not relation_data.addresses or not relation_data.zones:
-            event.add_status(ops.ActiveStatus("DNS primary relation not ready"))
-            logger.warning("DNS primary relation data has no zones or no addresses")
-            return
-
         if self._relation_created(CERTIFICATES_RELATION_NAME):
             if not self.remote_hostname:
                 event.add_status(ops.BlockedStatus("Remote hostname is required"))

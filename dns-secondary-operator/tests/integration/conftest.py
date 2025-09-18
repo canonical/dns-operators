@@ -13,6 +13,12 @@ import pytest_asyncio
 import yaml
 from pytest_operator.plugin import Model, OpsTest
 
+# Wildcard imports are used to make all the fixtures
+# available in test files
+# pylint: disable=wildcard-import
+# pylint: disable=unused-wildcard-import
+from .bind_fixtures import *  # noqa: F401, F403
+
 
 @pytest.fixture(scope="module", name="juju")
 def juju_fixture():

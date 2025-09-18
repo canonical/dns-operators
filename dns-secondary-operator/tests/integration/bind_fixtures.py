@@ -23,7 +23,7 @@ def bind_directory_fixture():
 @pytest.fixture(scope="module", name="bind_metadata")
 def bind_metadata_fixture(bind_directory):
     """Provide charm metadata."""
-    yield yaml.safe_load(Path(bind_directory / "metadata.yaml").read_text(encoding="UTF-8"))
+    yield yaml.safe_load(Path(bind_directory / "charmcraft.yaml").read_text(encoding="UTF-8"))
 
 
 @pytest.fixture(scope="module", name="bind_name")

@@ -46,10 +46,6 @@ def bind_charm_file_fixture(
     Returns:
         charm file's path
     """
-    charm_file = pytestconfig.getoption("--bind-charm-file")
-    if charm_file:
-        yield f"./{charm_file}"
-        return
     yield create_charm_file(bind_metadata, bind_directory)
 
 
@@ -61,9 +57,5 @@ async def bind_fixture(
     pytestconfig: pytest.Config,
 ):
     """Deploy the charm."""
-    use_existing = pytestconfig.getoption("--use-existing", default=False)
-    if use_existing:
-        return
-
     juju.deploy(bind_charm_file, bind_name, resources={})
     juju.wait(lambda status: jubilant.all_active(status, bind_name))

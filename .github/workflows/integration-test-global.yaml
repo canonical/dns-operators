@@ -56,17 +56,15 @@ jobs:
       - name: Pack charm
         run: |
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./bind-operator
-          ls -l ./bind-operator
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./dns-integrator-operator
-          ls -l ./dns-integrator-operator
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./dns-resolver-operator
-          ls -l ./dns-resolver-operator
+          ls -l
       - name: Run lxd integration tests
         run: |
           tox -e integration -- --keep-models \
-            --bind-charm-file=./bind-operator/bind_ubuntu-22.04-amd64.charm \
-            --dns-integrator-charm-file=./dns-integrator-operator/dns-integrator_ubuntu-22.04-amd64.charm \
-            --dns-resolver-charm-file=./dns-resolver-operator/dns-resolver_ubuntu-22.04-amd64.charm
+            --bind-charm-file=./bind_ubuntu-22.04-amd64.charm \
+            --dns-integrator-charm-file=./dns-integrator_ubuntu-22.04-amd64.charm \
+            --dns-resolver-charm-file=./dns-resolver_ubuntu-22.04-amd64.charm
       - name: Juju debug-log
         if: failure()
         run: |

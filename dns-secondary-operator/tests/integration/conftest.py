@@ -7,10 +7,24 @@ import pathlib
 import subprocess  # nosec B404
 import typing
 
+import jubilant
 import pytest
 import pytest_asyncio
 import yaml
 from pytest_operator.plugin import Model, OpsTest
+
+# Wildcard imports are used to make all the fixtures
+# available in test files
+# pylint: disable=wildcard-import
+# pylint: disable=unused-wildcard-import
+from .bind_fixtures import *  # noqa: F401, F403
+
+
+@pytest.fixture(scope="module", name="juju")
+def juju_fixture():
+    """Juju fixture"""
+    with jubilant.temp_model() as juju:
+        yield juju
 
 
 @pytest.fixture(scope="module", name="metadata")
@@ -72,3 +86,18 @@ async def resources_fixture(
         resources.update({"charmed-bind-snap": pytestconfig.getoption("--charmed-bind-snap-file")})
 
     yield resources
+
+
+@pytest.fixture(scope="module", name="app")
+def app_fixture(juju: jubilant.Juju, charm_file, app_name, resources):
+    """Deploy secondary charm."""
+    juju.deploy(charm=charm_file, app=app_name, resources=resources)
+    juju.wait(jubilant.all_agents_idle, timeout=600)
+    juju.wait(jubilant.all_blocked)
+    yield app_name  # run the test
+
+
+@pytest.fixture(scope="module", name="primary")
+def primary_fixture(bind, bind_name: str):  # pylint: disable=unused-argument
+    """Deploy primary(bind) charm."""
+    yield bind_name  # run the test

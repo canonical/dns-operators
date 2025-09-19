@@ -1,0 +1,75 @@
+name: Global integration tests
+
+on:
+  pull_request:
+    paths:
+      - 'bind-operator/src/**'
+      - 'bind-operator/tests/**'
+      - 'bind-operator/requirements.txt'
+      - 'bind-operator/charmcraft.yaml'
+      - 'dns-resolver-operator/src/**'
+      - 'dns-resolver-operator/tests/**'
+      - 'dns-resolver-operator/requirements.txt'
+      - 'dns-resolver-operator/charmcraft.yaml'
+      - 'dns-integrator-operator/src/**'
+      - 'dns-integrator-operator/tests/**'
+      - 'dns-integrator-operator/requirements.txt'
+      - 'dns-integrator-operator/charmcraft.yaml'
+      - '.github/workflows/integration-test-global.yaml'
+  push:
+    branches:
+      - main
+
+jobs:
+  integration-test:
+    name: Integration tests
+    timeout-minutes: 60
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Disable snap autorefresh
+        run: sudo snap refresh --hold=2h
+      - name: Wait for last autorefresh
+        run: sudo snap watch --last=auto-refresh?
+        timeout-minutes: 10
+      - uses: actions/checkout@v5.0.0
+      - name: Install tox
+        run: |
+          sudo apt-get update -yqq
+          sudo apt-get install -yqq tox
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          juju-channel: 3.6/stable
+      - uses: actions/checkout@v5.0.0
+      - run: sudo apt install skopeo -y
+      - name: Set up charmcraft
+        run: |
+          sudo snap install lxd
+          sudo adduser "$USER" lxd
+          # `newgrp` does not work in GitHub Actions; use `sudo --user` instead
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd waitready
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd init --auto
+          # Workaround for Docker & LXD on same machine
+          sudo iptables -F FORWARD
+          sudo iptables -P FORWARD ACCEPT
+          sudo snap install charmcraft --classic
+      - name: Pack charm
+        run: |
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./bind-operator
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./dns-integrator-operator
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./dns-resolver-operator
+      - name: Run lxd integration tests
+        run: |
+          tox -e integration -- --keep-models \
+            --bind-charm-file=./bind-operator/bind_ubuntu-22.04-amd64.charm \
+            --dns-integrator-charm-file=./dns-integrator-operator/dns-integrator_ubuntu-22.04-amd64.charm \
+            --dns-resolver-charm-file=./dns-resolver-operator/dns-resolver_ubuntu-22.04-amd64.charm
+      - name: Juju debug-log
+        if: failure()
+        run: |
+          juju models
+          for model in $(juju models --format json | jq -r '.models[].name')
+          do
+            echo ==== debug-log in model: $model
+            juju debug-log --replay --no-tail -m $model
+          done

@@ -157,11 +157,16 @@ async def test_active(
 
     integrator_config = ""
     for integration_data in integration_datasets:
-        for entry in integration_data:
-            integrator_config += (
-                f"{entry.host_label} {entry.domain} {entry.ttl}"
-                f" {entry.record_class} {entry.record_type} {entry.record_data}\n"
-            )
+        for entries in integration_data:
+            if not isinstance(entries, list):
+                entries_list = [entries]
+            else:
+                entries_list = entries
+            for entry in entries_list:
+                integrator_config += (
+                    f"{entry.host_label} {entry.domain} {entry.ttl}"
+                    f" {entry.record_class} {entry.record_type} {entry.record_data}\n"
+                )
 
     juju.config(
         dns_integrator_name,
@@ -174,17 +179,22 @@ async def test_active(
     # Check that bind and dns-resolver respond correctly
     for ip in [bind_ip, dns_resolver_ip]:
         for integration_data in integration_datasets:
-            for entry in integration_data:
-                # Create a DNS resolver
-                resolver = dns.resolver.Resolver()
-                resolver.nameservers = [ip]
+            for entries in integration_data:
+                if not isinstance(entries, list):
+                    entries_list = [entries]
+                else:
+                    entries_list = entries
+                for entry in entries_list:
+                    # Create a DNS resolver
+                    resolver = dns.resolver.Resolver()
+                    resolver.nameservers = [ip]
 
-                # Perform the DNS query
-                logger.info("%s", f"{entry.host_label}.{entry.domain}")
-                answers = resolver.resolve(
-                    f"{entry.host_label}.{entry.domain}", entry.record_type
-                )
-                logger.info("%s", [answer.to_text() for answer in answers])
-                assert str(entry.record_data) in [
-                    answer.to_text() for answer in answers
-                ]
+                    # Perform the DNS query
+                    logger.info("%s", f"{entry.host_label}.{entry.domain}")
+                    answers = resolver.resolve(
+                        f"{entry.host_label}.{entry.domain}", entry.record_type
+                    )
+                    logger.info("%s", [answer.to_text() for answer in answers])
+                    assert str(entry.record_data) in [
+                        answer.to_text() for answer in answers
+                    ]

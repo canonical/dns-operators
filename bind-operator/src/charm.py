@@ -271,8 +271,6 @@ class BindCharm(ops.CharmBase):
                 "zones": [zone.domain for zone in zones],
             }
             provider_data = DNSTransferProviderData.model_validate(data)
-            logger.info("AMANDA UPDATE")
-            logger.info(provider_data)
             for relation in self.model.relations[self.dns_transfer.relation_name]:
                 self.dns_transfer.update_relation_data(relation, provider_data)
 

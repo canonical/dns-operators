@@ -56,8 +56,11 @@ jobs:
       - name: Pack charm
         run: |
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./bind-operator
+          ls -l ./bind-operator
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./dns-integrator-operator
+          ls -l ./dns-integrator-operator
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./dns-resolver-operator
+          ls -l ./dns-resolver-operator
       - name: Run lxd integration tests
         run: |
           tox -e integration -- --keep-models \

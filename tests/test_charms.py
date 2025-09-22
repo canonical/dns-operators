@@ -33,7 +33,7 @@ async def full_deployment_fixture(
     bind,  # pylint: disable=unused-argument
     dns_integrator,  # pylint: disable=unused-argument
     dns_resolver,  # pylint: disable=unused-argument
-    # dns_secondary,  # pylint: disable=unused-argument
+    dns_secondary,  # pylint: disable=unused-argument
 ):
     """Add necessary integration and configuration for the deployed charms."""
     apps = juju.status().apps
@@ -41,14 +41,14 @@ async def full_deployment_fixture(
         juju.integrate(dns_integrator_name, bind_name)
     if "dns-authority" not in apps[dns_resolver_name].relations:
         juju.integrate(dns_resolver_name, bind_name)
-    # juju.integrate(dns_secondary_name, bind_name)
+    if "dns-transfer" not in apps[dns_secondary_name].relations:
+        juju.integrate(dns_secondary_name, bind_name)
     juju.wait(
         lambda status: jubilant.all_active(
             status,
             bind_name,
-            # dns_integrator_name,
             dns_resolver_name,
-            # dns_secondary_name,
+            dns_secondary_name,
         )
     )
 

@@ -13,6 +13,7 @@ peers:
 requires:
   dns-transfer:
     interface: dns_transfer
+    limit: 1
   bind-certificates:
     interface: tls-certificates
     limit: 1

@@ -12,6 +12,7 @@ import time
 import typing
 
 import ops
+import pydantic
 from charms.bind.v0 import dns_record
 from charms.dns_authority.v0 import dns_authority
 from charms.dns_transfer.v0.dns_transfer import (
@@ -227,8 +228,12 @@ class BindCharm(ops.CharmBase):
         # Get DNS transfer data
         secondary_transfer_ips = []
         for relation in self.model.relations[self.dns_transfer.relation_name]:
-            dns_secondary_data = self.dns_transfer.get_remote_relation_data(relation)
-            secondary_transfer_ips.extend(dns_secondary_data.addresses)
+            try:
+                dns_secondary_data = self.dns_transfer.get_remote_relation_data(relation)
+                secondary_transfer_ips.extend(dns_secondary_data.addresses)
+            except pydantic.ValidationError:
+                logger.warning("validation for dns secondary data failed, skipping")
+                continue
 
         # Update our workload configuration based on relation data and topology
         try:

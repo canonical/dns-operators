@@ -13,10 +13,10 @@ import time
 
 import ops
 import pydantic
-from charms.topology.v0 import topology as topology_module
 from charms.bind.v0.dns_record import DNSRecordProviderData, DNSRecordRequirerData
 from charms.operator_libs_linux.v1 import systemd
 from charms.operator_libs_linux.v2 import snap
+from charms.topology.v0 import topology as topology_module
 
 import constants
 import dns_data

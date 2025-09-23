@@ -6,7 +6,7 @@
 import logging
 
 import pytest
-import topology as topology_module
+from charms.topology.v0 import topology as topology_module
 
 import dns_data
 import tests.unit.helpers

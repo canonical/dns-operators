@@ -10,7 +10,9 @@ import typing
 
 import ops
 import pydantic
+from charms.dns_authority.v0 import dns_authority
 from charms.dns_transfer.v0 import dns_transfer
+from charms.topology.v0 import topology
 from charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateRequestAttributes,
     Mode,
@@ -19,7 +21,6 @@ from charms.tls_certificates_interface.v4.tls_certificates import (
 
 import certificate_storage
 import constants
-import topology
 from bind import BindService
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,7 @@ class DnsSecondaryCharm(ops.CharmBase):
         self.bind = BindService()
         self.topology = topology.TopologyObserver(self, constants.PEER)
         self.dns_transfer = dns_transfer.DNSTransferRequires(self)
+        self.dns_authority = dns_authority.DNSAuthorityProvides(self)
         self.certificates = TLSCertificatesRequiresV4(
             charm=self,
             relationship_name=CERTIFICATES_RELATION_NAME,
@@ -57,6 +59,7 @@ class DnsSecondaryCharm(ops.CharmBase):
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
         self.framework.observe(self.on["dns-transfer"].relation_changed, self._reconcile)
         self.framework.observe(self.topology.on.topology_changed, self._reconcile)
+        self.framework.observe(self.on.dns_authority_relation_joined, self._reconcile)
         self.framework.observe(self.certificates.on.certificate_available, self._reconcile)
         self.framework.observe(
             self.on[CERTIFICATES_RELATION_NAME].relation_departed,
@@ -111,12 +114,27 @@ class DnsSecondaryCharm(ops.CharmBase):
             self.bind.reload(force_start=True)
 
         if self.unit.is_leader():
-            public_ips = self.topology.dump().public_ips
+            # Retrieve the current topology of units
+            try:
+                t = self.topology.current()
+            except topology.TopologyUnavailableError as err:
+                logger.info("Could not retrieve network topology: %s", err)
+                return
+
+            public_ips = self.t.public_ips
             if not public_ips:
                 logger.debug("Public ips not set, using units ip")
-                public_ips = self.topology.dump().units_ip
+                public_ips = self.t.units_ip
             requirer_data = dns_transfer.DNSTransferRequirerData(addresses=public_ips)
             self.dns_transfer.update_relation_data(relation, requirer_data)
+
+            # Update dns_record authority's data
+            if data is not None and data.zones:
+                ips = t.standby_units_ip or t.units_ip
+                data = dns_authority.DNSAuthorityRelationData(
+                    addresses=ips, zones=[zone.domain for zone in data.zones]
+                )
+                self.dns_authority.update_relation_data(data)
 
     def _on_collect_status(self, event: ops.CollectStatusEvent) -> None:
         """Handle collect status event.

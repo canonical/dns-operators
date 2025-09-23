@@ -7,7 +7,7 @@ import logging
 from unittest import mock
 
 import pytest
-from charms.topology.v0 import topology
+from charms.topology.v0 import topology as topology_module
 
 import bind
 import models

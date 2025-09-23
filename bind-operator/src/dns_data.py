@@ -17,7 +17,7 @@ from charms.bind.v0.dns_record import (
     RequirerEntry,
     Status,
 )
-from charms.topology.v0 import topology
+from charms.topology.v0 import topology as topology_module
 
 import models
 

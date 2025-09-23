@@ -13,6 +13,7 @@ import time
 
 import ops
 import pydantic
+import topology as topology_module
 from charms.bind.v0.dns_record import DNSRecordProviderData, DNSRecordRequirerData
 from charms.operator_libs_linux.v1 import systemd
 from charms.operator_libs_linux.v2 import snap
@@ -22,7 +23,6 @@ import dns_data
 import exceptions
 import models
 import templates
-import topology as topology_module
 
 logger = logging.getLogger(__name__)
 

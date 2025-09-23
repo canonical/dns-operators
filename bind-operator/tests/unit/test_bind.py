@@ -7,11 +7,11 @@ import logging
 from unittest import mock
 
 import pytest
+from charms.topology.v0 import topology
 
 import bind
 import models
 import tests.unit.helpers
-import topology as topology_module
 
 logger = logging.getLogger(__name__)
 

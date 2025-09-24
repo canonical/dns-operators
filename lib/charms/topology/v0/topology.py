@@ -15,6 +15,7 @@ LIBPATCH = 1
 
 PYDEPS = ["pydantic>=2"]
 
+# pylint: disable=wrong-import-position
 import logging
 import time
 

@@ -303,12 +303,12 @@ class BindService:
                 # The serial is the timestamp divided by 60.
                 # We only need precision to the minute and want to avoid overflows
                 serial=int(time.time() / 60),
-                mailbox=config["mailbox"],
+                mailbox=config.get("mailbox"),
             )
 
             # If an public ip is configured, we use it for our NS records
-            if config.get("public_ips"):
-                ns_ip_list: list[pydantic.IPvAnyAddress] = [
+            if config.get("public-ips"):
+                ns_ip_list: list[str] = [
                     ip.strip()
                     for ip in config.get("public-ips", "").split(",")
                     if ip.strip() != ""

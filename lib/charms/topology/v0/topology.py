@@ -59,8 +59,6 @@ class Topology(pydantic.BaseModel):
         active_unit_ip: IP of the active unit
         standby_units_ip: IPs of the standby units
         current_unit_ip: IP of the current unit
-        public_ips: public IPs of the application
-        names: public names of the DNS server
         is_current_unit_active: Is the current unit active ?
     """
 

@@ -13,6 +13,7 @@ def pytest_addoption(parser: Parser):
         parser: Pytest parser.
     """
     parser.addoption("--charm-file", action="store")
+    parser.addoption("--bind-charm-file", action="store")
     parser.addoption(
         "--use-existing",
         action="store_true",

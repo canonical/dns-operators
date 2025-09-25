@@ -16,14 +16,17 @@ def juju_fixture(
     request: pytest.FixtureRequest,
 ) -> typing.Generator[jubilant.Juju, None, None]:
     """Pytest fixture that wraps jubilant.juju.
+
     Args:
         request: fixture request
+
     Returns:
         juju
     """
 
     def show_debug_log(juju: jubilant.Juju):
         """Show debug log.
+
         Args:
             juju: Jubilant.juju
         """

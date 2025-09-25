@@ -36,13 +36,11 @@ def fixture_bind_name(bind_metadata):
 def bind_charm_file_fixture(
     bind_metadata: dict[str, typing.Any],
     bind_directory: Path,
-    pytestconfig: pytest.Config,
 ):
     """Create bind charm file.
     Args:
         bind_metadata: bind metadata
         bind_directory: path to bind's directory
-        pytestconfig: pytest config options
     Returns:
         charm file's path
     """
@@ -54,7 +52,6 @@ async def bind_fixture(
     juju: jubilant.Juju,
     bind_charm_file: str,
     bind_name: str,
-    pytestconfig: pytest.Config,
 ):
     """Deploy the charm."""
     juju.deploy(bind_charm_file, bind_name, resources={})

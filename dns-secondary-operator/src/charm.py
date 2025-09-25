@@ -12,12 +12,12 @@ import ops
 import pydantic
 from charms.dns_authority.v0 import dns_authority
 from charms.dns_transfer.v0 import dns_transfer
-from charms.topology.v0 import topology
 from charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateRequestAttributes,
     Mode,
     TLSCertificatesRequiresV4,
 )
+from charms.topology.v0 import topology
 
 import certificate_storage
 import constants
@@ -121,19 +121,22 @@ class DnsSecondaryCharm(ops.CharmBase):
                 logger.info("Could not retrieve network topology: %s", err)
                 return
 
-            public_ips = self.t.public_ips
+            if self.config.get("public-ips"):
+                public_ips: list[str] = [
+                    ip.strip()
+                    for ip in self.config.get("public-ips", "").split(",")
+                    if ip.strip() != ""
+                ]
             if not public_ips:
                 logger.debug("Public ips not set, using units ip")
-                public_ips = self.t.units_ip
+                public_ips = t.units_ip
             requirer_data = dns_transfer.DNSTransferRequirerData(addresses=public_ips)
             self.dns_transfer.update_relation_data(relation, requirer_data)
 
             # Update dns_record authority's data
             if data is not None and data.zones:
                 ips = t.standby_units_ip or t.units_ip
-                data = dns_authority.DNSAuthorityRelationData(
-                    addresses=ips, zones=[zone.domain for zone in data.zones]
-                )
+                data = dns_authority.DNSAuthorityRelationData(addresses=ips, zones=data.zones)
                 self.dns_authority.update_relation_data(data)
 
     def _on_collect_status(self, event: ops.CollectStatusEvent) -> None:

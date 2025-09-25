@@ -124,7 +124,7 @@ class DnsSecondaryCharm(ops.CharmBase):
             if self.config.get("public-ips"):
                 public_ips: list[str] = [
                     ip.strip()
-                    for ip in self.config.get("public-ips", "").split(",")
+                    for ip in str(self.config.get("public-ips", "")).split(",")
                     if ip.strip() != ""
                 ]
             if not public_ips:

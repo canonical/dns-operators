@@ -21,9 +21,6 @@ logger = logging.getLogger(__name__)
 
 
 @pytest_asyncio.fixture(scope="module", name="full_deployment")
-@pytest.mark.usefixtures(
-    "juju", "bind_name", "dns_resolver_name", "bind", "dns_resolver"
-)
 async def full_deployment_fixture(
     juju: jubilant.Juju,
     bind_name: str,
@@ -38,11 +35,11 @@ async def full_deployment_fixture(
     """Add necessary integration and configuration for the deployed charms."""
     apps = juju.status().apps
     if "dns-record" not in apps[dns_integrator_name].relations:
-        juju.integrate(dns_integrator_name, bind_name)
-    if "dns-authority" not in apps[dns_resolver_name].relations:
-        juju.integrate(dns_resolver_name, bind_name)
+        juju.integrate(f"{dns_integrator_name}:dns-record", bind_name)
     if "dns-transfer" not in apps[dns_secondary_name].relations:
-        juju.integrate(dns_secondary_name, bind_name)
+        juju.integrate(f"{dns_secondary_name}:dns-transfer", bind_name)
+    if "dns-authority" not in apps[dns_resolver_name].relations:
+        juju.integrate(f"{dns_resolver_name}:dns-authority", dns_secondary_name)
     juju.wait(
         lambda status: jubilant.all_active(
             status,
@@ -138,8 +135,10 @@ class DnsEntry:
 @pytest.mark.abort_on_fail
 async def test_active(
     juju: jubilant.Juju,
-    dns_resolver_name: str,
+    bind_name: str,
     dns_integrator_name: str,
+    dns_resolver_name: str,
+    dns_secondary_name: str,
     full_deployment,  # pylint: disable=unused-argument
     integration_datasets: tuple[list[DnsEntry]],
 ):
@@ -150,10 +149,12 @@ async def test_active(
     """
     assert juju.status().apps[dns_resolver_name].is_active
 
-    bind_units = juju.status().get_units("bind")
-    bind_ip = bind_units["bind/0"].public_address
-    dns_resolver_units = juju.status().get_units("dns-resolver")
-    dns_resolver_ip = dns_resolver_units["dns-resolver/0"].public_address
+    bind_units = juju.status().get_units(bind_name)
+    bind_ip = bind_units[f"{bind_name}/0"].public_address
+    dns_secondary_units = juju.status().get_units(dns_secondary_name)
+    dns_secondary_ip = dns_secondary_units[f"{dns_secondary_name}/0"].public_address
+    dns_resolver_units = juju.status().get_units(dns_resolver_name)
+    dns_resolver_ip = dns_resolver_units[f"{dns_resolver_name}/0"].public_address
 
     integrator_config = ""
     for integration_data in integration_datasets:
@@ -174,10 +175,12 @@ async def test_active(
             "requests": integrator_config,
         },
     )
+
+    # Waiting for 2mn as this is the maximum time for bind's config to update and propagate
     time.sleep(120)
 
     # Check that bind and dns-resolver respond correctly
-    for ip in [bind_ip, dns_resolver_ip]:
+    for ip in [bind_ip, dns_resolver_ip, dns_secondary_ip]:
         for integration_data in integration_datasets:
             for entries in integration_data:
                 if not isinstance(entries, list):

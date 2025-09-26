@@ -23,8 +23,25 @@ done
 
 for project in \
   "bind-operator" \
-  "dns-resolver-operator"
+  "dns-resolver-operator" \
+  "dns-secondary-operator"
 do
   mkdir -p "$REPO_ROOT/$project/lib/charms"
   cp -r "$LIB_DIR/charms/dns_authority" "$REPO_ROOT/$project/lib/charms/"
+done
+
+for project in \
+  "bind-operator" \
+  "dns-secondary-operator"
+do
+  mkdir -p "$REPO_ROOT/$project/lib/charms"
+  cp -r "$LIB_DIR/charms/dns_transfer" "$REPO_ROOT/$project/lib/charms/"
+done
+
+for project in \
+  "bind-operator" \
+  "dns-secondary-operator"
+do
+  mkdir -p "$REPO_ROOT/$project/lib/charms"
+  cp -fr "$LIB_DIR/charms/topology" "$REPO_ROOT/$project/lib/charms/"
 done

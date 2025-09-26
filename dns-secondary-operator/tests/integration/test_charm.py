@@ -18,6 +18,6 @@ async def test_integration_primary(juju: jubilant.Juju, app, primary):
     act: relate both.
     assert: charm is in active status.
     """
-    juju.integrate(app, primary)
+    juju.integrate(f"{app}:dns-transfer", primary)
 
     juju.wait(jubilant.all_active, timeout=300)

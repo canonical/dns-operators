@@ -127,7 +127,7 @@ class DnsSecondaryCharm(ops.CharmBase):
                     for ip in str(self.config.get("public-ips", "")).split(",")
                     if ip.strip() != ""
                 ]
-            if not public_ips:
+            else:
                 logger.debug("Public ips not set, using units ip")
                 public_ips = t.units_ip
             requirer_data = dns_transfer.DNSTransferRequirerData(addresses=public_ips)

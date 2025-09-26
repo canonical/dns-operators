@@ -58,54 +58,69 @@ RECORDS = {
     ),
 }
 
+CONFIGS = {
+    "3_units_current_not_active": {
+        "public-ips": [],
+        "names": [],
+    },
+    "4_units_current_not_active": {
+        "public-ips": [],
+        "names": [],
+    },
+    "5_units_current_active": {
+        "public-ips": ["1.2.3.4"],
+        "names": ["nameserver.example.com"],
+    },
+    "single_unit": {
+        "public-ips": [],
+        "names": [],
+    },
+    "with_public_ips": {
+        "public-ips": ["203.0.113.1", "203.0.113.2"],
+        "names": [],
+    },
+    "with_custom_names": {
+        "public-ips": [],
+        "names": ["dns1", "dns2"],
+    },
+}
+
 TOPOLOGIES = {
     "3_units_current_not_active": {
         "units_ip": ["1.1.1.1", "2.2.2.2", "3.3.3.3"],
         "active_unit_ip": "1.1.1.1",
         "standby_units_ip": ["2.2.2.2", "3.3.3.3"],
         "current_unit_ip": "2.2.2.2",
-        "public_ips": [],
-        "names": [],
     },
     "4_units_current_not_active": {
         "units_ip": ["1.1.1.1", "2.2.2.2", "3.3.3.3", "4.4.4.4"],
         "active_unit_ip": "1.1.1.1",
         "standby_units_ip": ["2.2.2.2", "3.3.3.3", "4.4.4.4"],
         "current_unit_ip": "2.2.2.2",
-        "public_ips": [],
-        "names": [],
     },
     "5_units_current_active": {
         "units_ip": ["1.1.1.1", "2.2.2.2", "3.3.3.3", "4.4.4.4", "5.5.5.5"],
         "active_unit_ip": "5.5.5.5",
         "standby_units_ip": ["1.1.1.1", "2.2.2.2", "3.3.3.3", "4.4.4.4"],
         "current_unit_ip": "5.5.5.5",
-        "public_ips": ["1.2.3.4"],
-        "names": ["nameserver.example.com"],
     },
     "single_unit": {
         "units_ip": ["1.1.1.1"],
         "active_unit_ip": "1.1.1.1",
         "standby_units_ip": [],
         "current_unit_ip": "1.1.1.1",
-        "public_ips": [],
-        "names": [],
     },
     "with_public_ips": {
         "units_ip": ["1.1.1.1", "2.2.2.2", "3.3.3.3"],
         "active_unit_ip": "1.1.1.1",
         "standby_units_ip": ["2.2.2.2", "3.3.3.3"],
         "current_unit_ip": "2.2.2.2",
-        "public_ips": ["203.0.113.1", "203.0.113.2"],
-        "names": [],
     },
     "with_custom_names": {
         "units_ip": ["1.1.1.1", "2.2.2.2", "3.3.3.3"],
         "active_unit_ip": "1.1.1.1",
         "standby_units_ip": ["2.2.2.2", "3.3.3.3"],
         "current_unit_ip": "2.2.2.2",
-        "public_ips": [],
-        "names": ["dns1", "dns2"],
     },
 }
 

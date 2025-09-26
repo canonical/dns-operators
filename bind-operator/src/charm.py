@@ -15,16 +15,12 @@ import ops
 import pydantic
 from charms.bind.v0 import dns_record
 from charms.dns_authority.v0 import dns_authority
-from charms.dns_transfer.v0.dns_transfer import (
-    DNSTransferProviderData,
-    DNSTransferProvides,
-    TransportSecurity,
-)
+from charms.dns_transfer.v0 import dns_transfer
+from charms.topology.v0 import topology
 
 import constants
 import dns_data
 import events
-import topology
 from bind import BindService
 
 logger = logging.getLogger(__name__)
@@ -43,7 +39,7 @@ class BindCharm(ops.CharmBase):
         self.bind = BindService()
         self.dns_record = dns_record.DNSRecordProvides(self)
         self.dns_authority = dns_authority.DNSAuthorityProvides(self)
-        self.dns_transfer = DNSTransferProvides(self)
+        self.dns_transfer = dns_transfer.DNSTransferProvides(self)
         self.topology = topology.TopologyObserver(self, constants.PEER)
 
         self.on.define_event("reload_bind", events.ReloadBindEvent)
@@ -267,10 +263,10 @@ class BindCharm(ops.CharmBase):
             # Update dns_transfer relation's data
             data = {
                 "addresses": t.standby_units_ip or t.units_ip,
-                "transport": TransportSecurity.TCP,
+                "transport": dns_transfer.TransportSecurity.TCP,
                 "zones": [zone.domain for zone in zones],
             }
-            provider_data = DNSTransferProviderData.model_validate(data)
+            provider_data = dns_transfer.DNSTransferProviderData.model_validate(data)
             for relation in self.model.relations[self.dns_transfer.relation_name]:
                 self.dns_transfer.update_relation_data(relation, provider_data)
 

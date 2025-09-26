@@ -65,9 +65,7 @@ async def app_fixture(
         yield model.applications[app_name]
         return
 
-    application = await model.deploy(
-        f"./{charm_file}", application_name=app_name, resources={}
-    )
+    application = await model.deploy(f"./{charm_file}", application_name=app_name, resources={})
 
     await model.wait_for_idle(apps=[application.name], status="active")
 

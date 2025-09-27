@@ -61,11 +61,14 @@ def create_charm_file(
     target_directory: pathlib.Path,
 ) -> str:
     """Pack the charm and returns the filename.
+
     Args:
         metadata: charm's metadata
         target_directory: path to the directory of the charmcraft file
+
     Returns:
         charm file's path
+
     Raises:
         OSError: if error while packing the charm
     """
@@ -84,5 +87,7 @@ def create_charm_file(
     charm_path = pathlib.Path(target_directory)
     charms = [p.absolute() for p in charm_path.glob(f"{app_name}_*.charm")]
     assert charms, f"{app_name}.charm file not found"
-    assert len(charms) == 1, f"{app_name} has more than one .charm file, unsure which to use"
+    assert (
+        len(charms) == 1
+    ), f"{app_name} has more than one .charm file, unsure which to use"
     return str(charms[0])

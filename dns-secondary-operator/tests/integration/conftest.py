@@ -9,7 +9,6 @@ import typing
 
 import jubilant
 import pytest
-import pytest_asyncio
 import yaml
 from pytest_operator.plugin import Model, OpsTest
 
@@ -21,10 +20,48 @@ from .bind_fixtures import *  # noqa: F401, F403
 
 
 @pytest.fixture(scope="module", name="juju")
-def juju_fixture():
-    """Juju fixture"""
-    with jubilant.temp_model() as juju:
+def juju_fixture(
+    request: pytest.FixtureRequest,
+) -> typing.Generator[jubilant.Juju, None, None]:
+    """Pytest fixture that wraps jubilant.juju.
+
+    Args:
+        request: fixture request
+
+    Returns:
+        juju
+    """
+
+    def show_debug_log(juju: jubilant.Juju):
+        """Show debug log.
+
+        Args:
+            juju: Jubilant.juju
+        """
+        if request.session.testsfailed:
+            log = juju.debug_log(limit=1000)
+            print(log, end="")
+
+    use_existing = request.config.getoption("--use-existing", default=False)
+    if use_existing:
+        juju = jubilant.Juju()
         yield juju
+        show_debug_log(juju)
+        return
+
+    model = request.config.getoption("--model")
+    if model:
+        juju = jubilant.Juju(model=model)
+        yield juju
+        show_debug_log(juju)
+        return
+
+    keep_models = typing.cast(bool, request.config.getoption("--keep-models"))
+    with jubilant.temp_model(keep=keep_models) as juju:
+        juju.wait_timeout = 10 * 60
+        yield juju
+        show_debug_log(juju)
+        return
 
 
 @pytest.fixture(scope="module", name="metadata")
@@ -68,30 +105,10 @@ def charm_file_fixture(metadata: dict[str, typing.Any], pytestconfig: pytest.Con
     yield str(charms[0])
 
 
-@pytest_asyncio.fixture(scope="module", name="resources")
-async def resources_fixture(
-    app_name: str,
-    pytestconfig: pytest.Config,
-    model: Model,
-):
-    """Build the charm and deploys it."""
-    use_existing = pytestconfig.getoption("--use-existing", default=False)
-    if use_existing:
-        yield model.applications[app_name]
-        return
-
-    resources = {}
-
-    if pytestconfig.getoption("--charmed-bind-snap-file"):
-        resources.update({"charmed-bind-snap": pytestconfig.getoption("--charmed-bind-snap-file")})
-
-    yield resources
-
-
 @pytest.fixture(scope="module", name="app")
-def app_fixture(juju: jubilant.Juju, charm_file, app_name, resources):
+def app_fixture(juju: jubilant.Juju, charm_file, app_name):
     """Deploy secondary charm."""
-    juju.deploy(charm=charm_file, app=app_name, resources=resources)
+    juju.deploy(charm=charm_file, app=app_name, resources={})
     juju.wait(jubilant.all_agents_idle, timeout=600)
     juju.wait(jubilant.all_blocked)
     yield app_name  # run the test

@@ -3,7 +3,10 @@ name: Bind-operator integration tests
 on:
   pull_request:
     paths:
-      - 'bind-operator/**'
+      - 'bind-operator/src/**'
+      - 'bind-operator/tests/**'
+      - 'bind-operator/requirements.txt'
+      - 'bind-operator/charmcraft.yaml'
       - '.github/workflows/integration-test-bind-operator.yaml'
   push:
     branches:

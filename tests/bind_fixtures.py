@@ -6,24 +6,25 @@
 import typing
 from pathlib import Path
 
+import core_fixtures
 import jubilant
 import pytest
 import pytest_asyncio
 import yaml
 
-from .core_fixtures import create_charm_file
-
 
 @pytest.fixture(scope="module", name="bind_directory")
 def bind_directory_fixture():
     """Provide charm metadata."""
-    return Path("../bind-operator")
+    return Path("bind-operator")
 
 
 @pytest.fixture(scope="module", name="bind_metadata")
 def bind_metadata_fixture(bind_directory):
     """Provide charm metadata."""
-    yield yaml.safe_load(Path(bind_directory / "charmcraft.yaml").read_text(encoding="UTF-8"))
+    yield yaml.safe_load(
+        Path(bind_directory / "charmcraft.yaml").read_text(encoding="UTF-8")
+    )
 
 
 @pytest.fixture(scope="module", name="bind_name")
@@ -39,10 +40,12 @@ def bind_charm_file_fixture(
     pytestconfig: pytest.Config,
 ):
     """Create bind charm file.
+
     Args:
         bind_metadata: bind metadata
         bind_directory: path to bind's directory
         pytestconfig: pytest config options
+
     Returns:
         charm file's path
     """
@@ -50,7 +53,7 @@ def bind_charm_file_fixture(
     if charm_file:
         yield f"./{charm_file}"
         return
-    yield create_charm_file(bind_metadata, bind_directory)
+    yield core_fixtures.create_charm_file(bind_metadata, bind_directory)
 
 
 @pytest_asyncio.fixture(scope="module", name="bind")
@@ -58,7 +61,12 @@ async def bind_fixture(
     juju: jubilant.Juju,
     bind_charm_file: str,
     bind_name: str,
+    pytestconfig: pytest.Config,
 ):
     """Deploy the charm."""
+    use_existing = pytestconfig.getoption("--use-existing", default=False)
+    if use_existing:
+        return
+
     juju.deploy(bind_charm_file, bind_name, resources={})
     juju.wait(lambda status: jubilant.all_active(status, bind_name))

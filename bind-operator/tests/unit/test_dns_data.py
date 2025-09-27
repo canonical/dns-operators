@@ -6,10 +6,10 @@
 import logging
 
 import pytest
+from charms.topology.v0 import topology as topology_module
 
 import dns_data
 import tests.unit.helpers
-import topology as topology_module
 
 logger = logging.getLogger(__name__)
 

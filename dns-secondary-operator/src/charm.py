@@ -135,7 +135,7 @@ class DnsSecondaryCharm(ops.CharmBase):
 
             # Update dns_record authority's data
             if data is not None and data.zones:
-                ips = t.standby_units_ip or t.units_ip
+                ips = t.units_ip
                 data = dns_authority.DNSAuthorityRelationData(addresses=ips, zones=data.zones)
                 self.dns_authority.update_relation_data(data)
 

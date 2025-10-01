@@ -1,7 +1,88 @@
 # Copyright 2025 Canonical Ltd.
 # Licensed under the Apache2.0. See LICENSE file in charm source for details.
 
-"""Library to manage the integration with a primary DNS charm."""
+r"""Library to manage the integration with a primary DNS charm.
+
+This library contains the Requires and Provides classes for handling the integration
+between an application and a charm providing the `dns_record` integration.
+It is completely backwards compatible with the legacy bind.v0.dns_record library.
+
+### Requirer Charm
+
+```python
+
+from charms.dns_record.v0 import dns_record
+
+class DNSRecordRequirerCharm(ops.CharmBase):
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.dns_record = dns_record.DNSRecordRequires(self)
+        self.framework.observe(self.dns_record.on.relation_joined, self._handler)
+        ...
+
+    def _handler(self, events: RelationJoinedEvent) -> None:
+        self._update_relations()
+
+    def _update_relations(self) -> None:
+        if not self.model.unit.is_leader():
+            return
+        try:
+            self.dns_record.update_relation_data(self._get_dns_record_data())
+        except ops.model.ModelError as e:
+            logger.error("ERROR while updating relation data: %s", e)
+            raise
+
+    def _get_dns_record_data(self) -> list[dns_record.RecordRequest]:
+        entries = []
+        for request in str(self.config["requests"]).split("\n"):
+            try:
+                entries.append(self.dns_record.create_record_request(request))
+            except dns_record.CreateRecordRequestError:
+                logger.error("Invalid entry ignored: '%s'", request)
+                continue
+        return entries
+
+```
+
+As shown above, the library does not expose any custom event and the user has to rely
+on the generic RelationJoined, RelationChanged events to check when DNS data has been changed.
+
+The DNSRecordRequires provides an `update_relation_data` method to update the relation data by
+passing a list of RecordRequest, requesting new DNS records.
+
+### Provider Charm
+
+Following the previous example, this is an example of the provider charm.
+
+```python
+from charms.bind.v0.dns_record import DNSRecordProvides
+
+class DNSRecordProviderCharm(ops.CharmBase):
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.dns_record = DNSRecordProvides(self)
+        ...
+
+```
+The DNSRecordProvides object wraps the list of relations into a `relations` property
+and provides an `update_relation_data` method to update the relation data by passing
+a list of RecordRequest. It is expected that the provider updates the status of
+those requests before updating the relation data.
+
+```python
+class DNSRecordProviderCharm(ops.CharmBase):
+    ...
+
+    def _handler(self, _: RelationChangedEvent) -> None:
+
+        for relation in self.model.relations[self.dns_record.relation_name]:
+        requests = dns_record.get_relation_data()
+        for request in requests:
+            request.status = Status.APPROVED
+        self.dns_record.update_relation_data(requests)
+
+```
+"""
 
 # This is a rewrite of bind.v0.dns_record
 # there will be duplicate code
@@ -15,7 +96,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 PYDEPS = ["pydantic>=2"]
 
@@ -454,15 +535,16 @@ class DNSRecordRequires(DNSRecordBase):
 
     def update_relation_data(
         self,
-        relation: ops.Relation,
         record_requests: list[RecordRequest],
     ) -> None:
         """Update the relation data.
 
         Args:
-            relation: the relation for which to update the data.
             record_requests: list of RecordRequests
         """
+        relation = self.model.get_relation(self.relation_name)
+        if not relation:
+            return
         dns_entries: list[dict[str, str]] = [rr.serialize_as_request() for rr in record_requests]
         relation_data: dict[str, str] = {"dns_entries": json.dumps(dns_entries)}
         relation.data[self.charm.model.app].update(relation_data)
@@ -473,15 +555,16 @@ class DNSRecordProvides(DNSRecordBase):
 
     def update_relation_data(
         self,
-        relation: ops.Relation,
         record_requests: list[RecordRequest],
     ) -> None:
         """Update the relation data.
 
         Args:
-            relation: the relation for which to update the data.
             record_requests: list of RecordRequests
         """
+        relation = self.model.get_relation(self.relation_name)
+        if not relation:
+            return
         dns_entries: list[dict[str, str]] = [rr.serialize_as_response() for rr in record_requests]
         relation_data: dict[str, str] = {"dns_entries": json.dumps(dns_entries)}
         relation.data[self.charm.model.app].update(relation_data)

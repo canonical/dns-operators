@@ -306,7 +306,7 @@ class BindService:
                 mailbox=config.get("mailbox"),
             )
 
-            # If an public ip is configured, we use it for our NS records
+            # If a public ip is configured, we use it for our NS records
             if config.get("public-ips"):
                 ns_ip_list: list[str] = [
                     ip.strip()

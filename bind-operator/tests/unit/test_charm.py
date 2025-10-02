@@ -12,7 +12,6 @@ import ops
 import pytest
 from ops import testing
 
-import events
 import tests.unit.helpers
 
 logger = logging.getLogger(__name__)

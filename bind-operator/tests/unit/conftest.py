@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import ops
 import pytest
-import scenario
+from ops import testing
 
 import constants
 from src.charm import BindCharm
@@ -56,9 +56,12 @@ def context_fixture(tmp_path_factory):
 @pytest.fixture(name="peer_relation")
 def peer_relation_fixture():
     """Peer relation fixture."""
-    yield scenario.PeerRelation(
+    yield testing.PeerRelation(
         endpoint=constants.PEER,
-        peers_data={},
+        # We need to pass a bogus unit id here.
+        # This is because the remote_units_ids are inferred from the keys of the data.
+        # Without any, the inconsistency checker is going to complain.
+        peers_data={1: {}},
     )
 
 

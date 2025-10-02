@@ -9,8 +9,8 @@ from ipaddress import IPv4Address
 from unittest.mock import ANY, patch
 
 import ops
-from ops import testing
 import pytest
+from ops import testing
 from scenario.context import _Event  # needed for custom events for now
 
 import tests.unit.helpers

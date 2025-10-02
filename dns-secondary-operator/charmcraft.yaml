@@ -17,6 +17,10 @@ requires:
   bind-certificates:
     interface: tls-certificates
     limit: 1
+provides:
+  dns-authority:
+    interface: dns_authority
+    limit: 1
 type: charm
 bases:
   - build-on:

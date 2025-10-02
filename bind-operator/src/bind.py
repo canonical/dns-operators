@@ -16,13 +16,13 @@ import pydantic
 from charms.bind.v0.dns_record import DNSRecordProviderData, DNSRecordRequirerData
 from charms.operator_libs_linux.v1 import systemd
 from charms.operator_libs_linux.v2 import snap
+from charms.topology.v0 import topology as topology_module
 
 import constants
 import dns_data
 import exceptions
 import models
 import templates
-import topology as topology_module
 
 logger = logging.getLogger(__name__)
 
@@ -303,12 +303,16 @@ class BindService:
                 # The serial is the timestamp divided by 60.
                 # We only need precision to the minute and want to avoid overflows
                 serial=int(time.time() / 60),
-                mailbox=config["mailbox"],
+                mailbox=config.get("mailbox"),
             )
 
-            # If an public ip is configured, we use it for our NS records
-            if topology.public_ips:
-                ns_ip_list: list[pydantic.IPvAnyAddress] = topology.public_ips
+            # If a public ip is configured, we use it for our NS records
+            if config.get("public-ips"):
+                ns_ip_list: list[str] = [
+                    ip.strip()
+                    for ip in config.get("public-ips", "").split(",")
+                    if ip.strip() != ""
+                ]
             else:
                 # By default, we hide the active unit.
                 # So only the standbies are used to respond to queries and receive NOTIFY events
@@ -317,8 +321,12 @@ class BindService:
                 ns_ip_list = topology.standby_units_ip or [topology.current_unit_ip]
 
             # If an name list is configured, we use it for our NS records
-            if topology.names:
-                ns_name_list: list[str] = topology.names
+            if config.get("names"):
+                ns_name_list: list[str] = [
+                    name.strip()
+                    for name in config.get("names", "").split(",")
+                    if name.strip() != ""
+                ]
             else:
                 # By default we just use "ns" as host_label
                 # from the served domain for the nameserver

@@ -13,6 +13,7 @@ peers:
 requires:
   dns-authority:
     interface: dns_authority
+    limit: 1
 type: charm
 bases:
   - build-on:

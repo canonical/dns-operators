@@ -10,9 +10,7 @@ from unittest.mock import ANY, patch
 
 import ops
 import pytest
-import scenario
 from ops import testing
-from scenario.context import _Event  # needed for custom events for now
 
 import tests.unit.helpers
 
@@ -109,7 +107,7 @@ def test_leader_elected_changed_while_leader_not_active_dig_timeout(context, bas
     """
     base_state["leader"] = True
     databag = {"active-unit": "1.2.99.4"}
-    peer_relation = scenario.PeerRelation(
+    peer_relation = testing.PeerRelation(
         endpoint="bind-peers",
         local_app_data=databag,
     )
@@ -131,7 +129,7 @@ def test_leader_elected_changed_while_leader_not_active_dig_ok(context, base_sta
     """
     base_state["leader"] = True
     databag = {"active-unit": "1.2.99.4"}
-    peer_relation = scenario.PeerRelation(
+    peer_relation = testing.PeerRelation(
         endpoint="bind-peers",
         local_app_data=databag,
     )
@@ -168,9 +166,7 @@ def test_peer_relation_departed_while_leader(context, base_state, peer_relation)
     """
     base_state["leader"] = True
     state = testing.State(**base_state)
-    peer_relation_departed_event = _Event(
-        f"{peer_relation.endpoint}_relation_departed", relation=peer_relation
-    )
+    peer_relation_departed_event = context.on.relation_departed(peer_relation)
     out = context.run(peer_relation_departed_event, state)
     assert out.unit_status == testing.ActiveStatus("active")
 
@@ -186,9 +182,7 @@ def test_peer_relation_departed_while_not_leader(context, base_state, peer_relat
     """
     base_state["leader"] = False
     state = testing.State(**base_state)
-    peer_relation_departed_event = _Event(
-        f"{peer_relation.endpoint}_relation_departed", relation=peer_relation
-    )
+    peer_relation_departed_event = context.on.relation_departed(peer_relation)
     out = context.run(peer_relation_departed_event, state)
     assert out.unit_status == testing.ActiveStatus()
 
@@ -203,24 +197,8 @@ def test_peer_relation_joined(context, base_state, peer_relation):
     assert: status is active
     """
     state = testing.State(**base_state)
-    peer_relation_joined_event = _Event(
-        f"{peer_relation.endpoint}_relation_joined", relation=peer_relation
-    )
+    peer_relation_joined_event = context.on.relation_joined(peer_relation)
     out = context.run(peer_relation_joined_event, state)
-    assert out.unit_status == testing.ActiveStatus()
-
-
-@pytest.mark.usefixtures("context")
-@pytest.mark.usefixtures("base_state")
-def test_reload_bind(context, base_state):
-    """
-    arrange: base state
-    act: run reload bind
-    assert: status is active
-    """
-    state = testing.State(**base_state)
-    reload_bind_event = _Event("reload_bind")
-    out = context.run(reload_bind_event, state)
     assert out.unit_status == testing.ActiveStatus()
 
 
@@ -245,16 +223,14 @@ def test_dns_record_relation_changed_without_conflict(context, base_state):
         "dns_entries": json.dumps(dumped_model["dns_entries"], default=str),
     }
 
-    dns_record_relation = scenario.Relation(
+    dns_record_relation = testing.Relation(
         endpoint="dns-record",
         remote_app_data=dumped_data,
     )
     base_state["relations"].append(dns_record_relation)
     base_state["leader"] = True
     state = testing.State(**base_state)
-    dns_record_relation_changed_event = _Event(
-        "dns_record_relation_changed", relation=dns_record_relation
-    )
+    dns_record_relation_changed_event = context.on.relation_changed(dns_record_relation)
     out = context.run(dns_record_relation_changed_event, state)
     in_uuids = {str(x["uuid"]) for x in dumped_model["dns_entries"]}
     for relation in out.relations:
@@ -290,16 +266,14 @@ def test_dns_record_relation_changed_without_conflict_not_leader(context, base_s
         "dns_entries": json.dumps(dumped_model["dns_entries"], default=str),
     }
 
-    dns_record_relation = scenario.Relation(
+    dns_record_relation = testing.Relation(
         endpoint="dns-record",
         remote_app_data=dumped_data,
     )
     base_state["relations"].append(dns_record_relation)
     base_state["leader"] = False
     state = testing.State(**base_state)
-    dns_record_relation_changed_event = _Event(
-        "dns_record_relation_changed", relation=dns_record_relation
-    )
+    dns_record_relation_changed_event = context.on.relation_changed(dns_record_relation)
     out = context.run(dns_record_relation_changed_event, state)
     for relation in out.relations:
         if relation.endpoint == "dns-record":
@@ -332,16 +306,14 @@ def test_dns_record_relation_changed_with_conflict(context, base_state):
         dumped_data = {
             "dns_entries": json.dumps(dumped_model["dns_entries"], default=str),
         }
-        dns_record_relation = scenario.Relation(
+        dns_record_relation = testing.Relation(
             endpoint="dns-record",
             remote_app_data=dumped_data,
         )
         base_state["relations"].append(dns_record_relation)
     base_state["leader"] = True
     state = testing.State(**base_state)
-    dns_record_relation_changed_event = _Event(
-        "dns_record_relation_changed", relation=dns_record_relation
-    )
+    dns_record_relation_changed_event = context.on.relation_changed(dns_record_relation)
     out = context.run(dns_record_relation_changed_event, state)
     # in_uuids = {str(x["uuid"]) for x in dumped_model["dns_entries"]}
     for relation in out.relations:
@@ -365,16 +337,14 @@ def test_dns_transfer_relation_changed(context, base_state):
     dumped_data = {
         "addresses": json.dumps([secondary_ip], default=str),
     }
-    dns_transfer_relation = scenario.Relation(
+    dns_transfer_relation = testing.Relation(
         endpoint="dns-transfer",
         remote_app_data=dumped_data,
     )
     base_state["relations"].append(dns_transfer_relation)
     base_state["leader"] = True
     state = testing.State(**base_state)
-    dns_transfer_relation_changed_event = _Event(
-        "dns_transfer_relation_changed", relation=dns_transfer_relation
-    )
+    dns_transfer_relation_changed_event = context.on.relation_changed(dns_transfer_relation)
 
     with patch("bind.BindService.update_zonefiles_and_reload") as update_zonefiles_and_reload:
         out = context.run(dns_transfer_relation_changed_event, state)

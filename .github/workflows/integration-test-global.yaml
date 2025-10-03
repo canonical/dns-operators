@@ -71,7 +71,7 @@ jobs:
             --bind-charm-file=./bind_ubuntu-22.04-amd64.charm \
             --dns-integrator-charm-file=./dns-integrator_ubuntu-22.04-amd64.charm \
             --dns-resolver-charm-file=./dns-resolver_ubuntu-22.04-amd64.charm \
-            --dns-secondary-charm-file=./dns-secondary-22.04-amd64.charm
+            --dns-secondary-charm-file=./dns-secondary_ubuntu-22.04-amd64.charm
       - name: Juju debug-log
         if: failure()
         run: |

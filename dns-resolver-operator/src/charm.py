@@ -60,7 +60,7 @@ class DnsResolverCharm(ops.CharmBase):
             ops.ActiveStatus(
                 (
                     f"{len(relation_data.zones)}"
-                    f" zone{'e' if len(relation_data.zones) > 1 else ''},"
+                    f" zone{'s' if len(relation_data.zones) > 1 else ''},"
                     f" {len(relation_data.addresses)}"
                     f" authority address{'es' if len(relation_data.addresses) > 1 else ''}"
                 )

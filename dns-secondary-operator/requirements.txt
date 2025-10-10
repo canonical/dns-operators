@@ -1,4 +1,4 @@
 cryptography==46.0.2
-jubilant ==1.4.0
+jubilant ==1.5.0
 ops==3.3.0
 pydantic==2.12.0

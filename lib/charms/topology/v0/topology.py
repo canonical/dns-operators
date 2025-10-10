@@ -24,7 +24,7 @@ class CoolCharm(ops.CharmBase):
 ```
 
 You can also access the current unit's IP with `t.current_unit_ip`.
-The active/standby properties are a concept only used in bind-operator so far
+The active/standby properties are only used in bind-operator
 and may be removed from this module in the future.
 """
 

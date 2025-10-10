@@ -2,7 +2,7 @@
 # Licensed under the Apache2.0. See LICENSE file in charm source for details.
 """Library to retrieve topology information of the current deployment.
 
-This library gives access to some tools to easily find the IP addresses
+This library gives access to some tools to find the IP addresses
 of units within the charm's deployment.
 It does this by leveraging a peer relation between the units.
 
@@ -25,7 +25,7 @@ class CoolCharm(ops.CharmBase):
 ```
 
 You can also access the current unit's IP with `t.current_unit_ip`.
-The active/standby properties are a concept only used in bind-operator so far
+The active/standby properties are only used in bind-operator
 and may be removed from this module in the future.
 """
 

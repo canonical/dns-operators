@@ -7,7 +7,9 @@ of units within the charm's deployment.
 It does this by leveraging a peer relation between the units.
 
 ```python
+
 from charms.topology.v0 import topology
+
 class CoolCharm(ops.CharmBase):
     def __init__(self, *args: typing.Any):
         super().__init__(*args)
@@ -17,10 +19,9 @@ class CoolCharm(ops.CharmBase):
     def _reconcile(self, _: ops.HookEvent) -> None:
         try:
             t = self.topology.current()
+            do_something_cool_with(t.units_ip)
         except topology.TopologyUnavailableError as err:
             logger.info("Could not retrieve network topology: %s", err)
-            return
-        do_something_cool_with(t.units_ip)
 ```
 
 You can also access the current unit's IP with `t.current_unit_ip`.

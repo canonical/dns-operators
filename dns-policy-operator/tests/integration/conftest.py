@@ -27,7 +27,7 @@ def fixture_dns_policy_name(dns_policy_metadata):
 @fixture(scope="module", name="bind_metadata")
 def bind_metadata_fixture():
     """Provide charm metadata."""
-    yield yaml.safe_load(Path("../bind-operator/metadata.yaml").read_text(encoding="UTF-8"))
+    yield yaml.safe_load(Path("../bind-operator/charmcraft.yaml").read_text(encoding="UTF-8"))
 
 
 @fixture(scope="module", name="bind_name")

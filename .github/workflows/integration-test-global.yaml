@@ -58,13 +58,43 @@ jobs:
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /usr/lib/jvm
           sudo rm -rf /usr/local/julia*
-      - name: Pack charm
+      - name: Cache bind
+        id: cache-bind
+        uses: actions/cache@v4.3.0
+        with:
+          path: ./bind_ubuntu-22.04-amd64.charm
+          key: bind-charm-${{ hashFiles('./bind-operator/**') }}
+      - name: Pack charm bind
+        if: ${{ steps.cache-bind.outputs.cache-hit != 'true' }}
         run: |
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./bind-operator
+      - name: Cache dns-integrator
+        id: cache-dns-integrator
+        uses: actions/cache@v4.3.0
+        with:
+          path: ./dns-integrator_ubuntu-22.04-amd64.charm
+          key: dns-integrator-charm-${{ hashFiles('./dns-integrator-operator/**') }}
+      - name: Pack charm dns-integrator
+        run: |
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./dns-integrator-operator
+      - name: Cache dns-resolver
+        id: cache-dns-resolver
+        uses: actions/cache@v4.3.0
+        with:
+          path: ./dns-resolver-22.04-amd64.charm
+          key: dns-resolver-charm-${{ hashFiles('./dns-resolver-operator/**') }}
+      - name: Pack charm dns-resolver
+        run: |
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./dns-resolver-operator
+      - name: Cache dns-secondary
+        id: cache-dns-secondary
+        uses: actions/cache@v4.3.0
+        with:
+          path: ./dns-secondary-22.04-amd64.charm
+          key: dns-secondary-charm-${{ hashFiles('./dns-secondary-operator/**') }}
+      - name: Pack charm dns-secondary
+        run: |
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./dns-secondary-operator
-          ls -l
       - name: Run lxd integration tests
         run: |
           tox -e integration -- --keep-models \

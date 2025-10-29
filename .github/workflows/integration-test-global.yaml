@@ -76,6 +76,7 @@ jobs:
           path: ./dns-integrator_ubuntu-22.04-amd64.charm
           key: dns-integrator-charm-${{ hashFiles('./dns-integrator-operator/**') }}
       - name: Pack charm dns-integrator
+        if: ${{ steps.cache-dns-integrator.outputs.cache-hit != 'true' }}
         run: |
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./dns-integrator-operator
       - name: Cache dns-resolver
@@ -85,6 +86,7 @@ jobs:
           path: ./dns-resolver-22.04-amd64.charm
           key: dns-resolver-charm-${{ hashFiles('./dns-resolver-operator/**') }}
       - name: Pack charm dns-resolver
+        if: ${{ steps.cache-dns-resolver.outputs.cache-hit != 'true' }}
         run: |
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./dns-resolver-operator
       - name: Cache dns-secondary
@@ -94,6 +96,7 @@ jobs:
           path: ./dns-secondary-22.04-amd64.charm
           key: dns-secondary-charm-${{ hashFiles('./dns-secondary-operator/**') }}
       - name: Pack charm dns-secondary
+        if: ${{ steps.cache-dns-secondary.outputs.cache-hit != 'true' }}
         run: |
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./dns-secondary-operator
       - name: Run lxd integration tests

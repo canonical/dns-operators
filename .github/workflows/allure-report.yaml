@@ -1,0 +1,62 @@
+name: Allure Report
+
+on:
+  push:
+    branches:
+      - chore/enable-allure
+jobs:
+  integration-tests-bind-operator:
+    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    secrets: inherit
+    with:
+      self-hosted-runner: false
+      self-hosted-runner-label: "edge"
+      juju-channel: 3.6/stable
+      provider: lxd
+      working-directory: ./bind-operator
+    
+  integration-tests-dns-integrator-operator:
+    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    secrets: inherit
+    with:
+      self-hosted-runner: false
+      self-hosted-runner-label: "edge"
+      juju-channel: 3.6/stable
+      provider: lxd
+      working-directory: ./dns-integrator-operator
+
+  integration-tests-dns-policy-operator:
+    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    secrets: inherit
+    with:
+      self-hosted-runner: false
+      self-hosted-runner-label: "edge"
+      juju-channel: 3.6/stable
+      provider: lxd
+      working-directory: ./dns-policy-operator
+
+  integration-tests-dns-secondary-operator:
+    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    secrets: inherit
+    with:
+      self-hosted-runner: false
+      self-hosted-runner-label: "edge"
+      juju-channel: 3.6/stable
+      provider: lxd
+      working-directory: ./dns-secondary-operator
+  
+  integration-tests-dns-resolver-operator:
+    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    secrets: inherit
+    with: 
+      self-hosted-runner: false
+      self-hosted-runner-label: "edge"
+      juju-channel: 3.6/stable
+      provider: lxd
+      working-directory: ./dns-resolver-operator
+
+  allure-report:
+    if: always() && !cancelled()
+    needs: []
+    uses: canonical/operator-workflows/.github/workflows/allure_report.yaml@main
+    secrets: inherit

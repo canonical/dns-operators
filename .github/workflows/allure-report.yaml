@@ -1,9 +1,9 @@
 name: Allure Report
 
 on:
-  push:
-    branches:
-      - chore/enable-allure
+  schedule:
+    # Trigger at 6:00 AM and 6:00 PM UTC
+    - cron: "0 6,18 * * *"
 jobs:
   integration-tests:
     uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main

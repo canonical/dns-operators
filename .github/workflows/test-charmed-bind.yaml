@@ -22,7 +22,7 @@ jobs:
 
   build-snap:
     name: Build snap
-    uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v36
+    uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v37
     with:
       path-to-snap-project-directory: ./charmed-bind
 

@@ -202,6 +202,104 @@ ZONES = {
     },
 }
 
+EXPECTED_ZONE_FILES = {
+    "simple_case": {
+        "example.com": (
+            "$ORIGIN example.com.\n"
+            "$TTL 600\n"
+            "@ IN SOA example.com. testmail.example.com. ( 20576131 1d 1h 1h 10m )\n"
+            "@ IN NS ns\n"
+            "ns IN A 2.2.2.2\n"
+            "@ IN NS ns\n"
+            "ns IN A 3.3.3.3\n"
+            "sub IN A 1.2.3.4\n"
+        ),
+    },
+    "multiple_zones": {
+        "example.com": (
+            "$ORIGIN example.com.\n"
+            "$TTL 600\n"
+            "@ IN SOA example.com. mail.example.com. ( 20576131 1d 1h 1h 10m )\n"
+            "@ IN NS ns\n"
+            "ns IN A 2.2.2.2\n"
+            "@ IN NS ns\n"
+            "ns IN A 3.3.3.3\n"
+            "sub IN A 1.2.3.4\n"
+        ),
+        "test.org": (
+            "$ORIGIN test.org.\n"
+            "$TTL 600\n"
+            "@ IN SOA test.org. mail.test.org. ( 20576131 1d 1h 1h 10m )\n"
+            "@ IN NS ns\n"
+            "ns IN A 2.2.2.2\n"
+            "@ IN NS ns\n"
+            "ns IN A 3.3.3.3\n"
+            "ftp IN CNAME www\n"
+            "mail IN AAAA 2001:db8::1\n"
+            "www IN A 1.2.3.4\n"
+        ),
+    },
+    "single_unit": {
+        "example.com": (
+            "$ORIGIN example.com.\n"
+            "$TTL 600\n"
+            "@ IN SOA example.com. mail.example.com. ( 20576131 1d 1h 1h 10m )\n"
+            "@ IN NS ns\n"
+            "ns IN A 1.1.1.1\n"
+            "sub IN A 1.2.3.4\n"
+        ),
+    },
+    "with_public_ips": {
+        "example.com": (
+            "$ORIGIN example.com.\n"
+            "$TTL 600\n"
+            "@ IN SOA example.com. mail.example.com. ( 20576131 1d 1h 1h 10m )\n"
+            "@ IN NS ns\n"
+            "ns IN A 203.0.113.1\n"
+            "@ IN NS ns\n"
+            "ns IN A 203.0.113.2\n"
+            "sub IN A 1.2.3.4\n"
+        ),
+    },
+    "with_custom_names": {
+        "example.com": (
+            "$ORIGIN example.com.\n"
+            "$TTL 600\n"
+            "@ IN SOA example.com. mail.example.com. ( 20576131 1d 1h 1h 10m )\n"
+            "@ IN NS dns1\n"
+            "dns1 IN A 2.2.2.2\n"
+            "@ IN NS dns1\n"
+            "dns1 IN A 3.3.3.3\n"
+            "@ IN NS dns2\n"
+            "dns2 IN A 2.2.2.2\n"
+            "@ IN NS dns2\n"
+            "dns2 IN A 3.3.3.3\n"
+            "sub IN A 1.2.3.4\n"
+        ),
+    },
+    "empty_zone": {
+        "empty.test": (
+            "$ORIGIN empty.test.\n"
+            "$TTL 600\n"
+            "@ IN SOA empty.test. mail.empty.test. ( 20576131 1d 1h 1h 10m )\n"
+            "@ IN NS ns\n"
+            "ns IN A 1.1.1.1\n"
+        ),
+    },
+    "ipv6_mixed": {
+        "ipv6.example": (
+            "$ORIGIN ipv6.example.\n"
+            "$TTL 600\n"
+            "@ IN SOA ipv6.example. mail.ipv6.example. ( 20576131 1d 1h 1h 10m )\n"
+            "@ IN NS ns\n"
+            "ns IN A 1.1.1.1\n"
+            "mail IN MX 10 mail.ipv6.example.\n"
+            'txt IN TXT "v=spf1 include:_spf.google.com ~all"\n'
+            "www IN AAAA 2001:db8::1\n"
+        ),
+    },
+}
+
 
 def dns_record_requirers_data_from_integration_datasets(
     integration_datasets,

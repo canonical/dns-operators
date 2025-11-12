@@ -340,7 +340,9 @@ class BindService:
                         ip=ip,
                     )
 
-            for entry in zone.entries:
+            for entry in sorted(
+                zone.entries, key=lambda x: (x.host_label, x.record_type.value, x.record_data)
+            ):
                 content += templates.ZONE_RECORD_TEMPLATE.format(
                     host_label=entry.host_label,
                     record_class=entry.record_class.value,

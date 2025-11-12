@@ -92,6 +92,26 @@ logger = logging.getLogger(__name__)
             "mail",
             tests.unit.helpers.EXPECTED_ZONE_FILES["ipv6_mixed"],
         ),
+        (
+            [
+                tests.unit.helpers.ZONES["simple"],
+            ],
+            tests.unit.helpers.CONFIGS["3_units_current_not_active"],
+            tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
+            tests.unit.helpers.SECONDARY_IPS["one"],
+            "testmail",
+            tests.unit.helpers.EXPECTED_ZONE_FILES["simple_case_with_one_secondary"],
+        ),
+        (
+            [
+                tests.unit.helpers.ZONES["simple"],
+            ],
+            tests.unit.helpers.CONFIGS["3_units_current_not_active"],
+            tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
+            tests.unit.helpers.SECONDARY_IPS["two"],
+            "testmail",
+            tests.unit.helpers.EXPECTED_ZONE_FILES["simple_case_with_two_secondaries"],
+        ),
     ),
     ids=(
         "Test simple case",
@@ -101,6 +121,8 @@ logger = logging.getLogger(__name__)
         "Test with custom names configured",
         "Test with empty zone (no DNS entries)",
         "Test with IPv6 and mixed record types",
+        "Test simple case with one secondary",
+        "Test simple case with two secondaries",
     ),
 )
 @mock.patch("time.time", mock.MagicMock(return_value=1234567890))

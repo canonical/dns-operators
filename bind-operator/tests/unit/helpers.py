@@ -300,6 +300,28 @@ EXPECTED_ZONE_FILES = {
             "www IN AAAA 2001:db8::1\n"
         ),
     },
+    "simple_case_with_one_secondary": {
+        "example.com": (
+            "$ORIGIN example.com.\n"
+            "$TTL 600\n"
+            "@ IN SOA example.com. testmail.example.com. ( 20576131 1d 1h 1h 10m )\n"
+            "@ IN NS ns\n"
+            "ns IN A 10.10.11.11\n"
+            "sub IN A 1.2.3.4\n"
+        ),
+    },
+    "simple_case_with_two_secondaries": {
+        "example.com": (
+            "$ORIGIN example.com.\n"
+            "$TTL 600\n"
+            "@ IN SOA example.com. testmail.example.com. ( 20576131 1d 1h 1h 10m )\n"
+            "@ IN NS ns\n"
+            "ns IN A 10.10.11.11\n"
+            "@ IN NS ns\n"
+            "ns IN A 10.10.12.12\n"
+            "sub IN A 1.2.3.4\n"
+        ),
+    },
 }
 
 

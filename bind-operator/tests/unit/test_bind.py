@@ -3,21 +3,23 @@
 
 """Unit tests for the dns_data module."""
 
+# pylint: disable=too-many-positional-arguments
+
 import logging
 from unittest import mock
 
 import pytest
-from charms.topology.v0 import topology as topology_module
 
 import bind
 import models
 import tests.unit.helpers
+from lib.charms.topology.v0 import topology as topology_module
 
 logger = logging.getLogger(__name__)
 
 
 @pytest.mark.parametrize(
-    "zones_data, config_data, topology_data, mailbox, expected",
+    "zones_data, config_data, topology_data, secondary_ips, mailbox, expected",
     (
         (
             [
@@ -25,6 +27,7 @@ logger = logging.getLogger(__name__)
             ],
             tests.unit.helpers.CONFIGS["3_units_current_not_active"],
             tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
+            tests.unit.helpers.SECONDARY_IPS["none"],
             "testmail",
             tests.unit.helpers.EXPECTED_ZONE_FILES["simple_case"],
         ),
@@ -35,6 +38,7 @@ logger = logging.getLogger(__name__)
             ],
             tests.unit.helpers.CONFIGS["3_units_current_not_active"],
             tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
+            tests.unit.helpers.SECONDARY_IPS["none"],
             "mail",
             tests.unit.helpers.EXPECTED_ZONE_FILES["multiple_zones"],
         ),
@@ -44,6 +48,7 @@ logger = logging.getLogger(__name__)
             ],
             tests.unit.helpers.CONFIGS["single_unit"],
             tests.unit.helpers.TOPOLOGIES["single_unit"],
+            tests.unit.helpers.SECONDARY_IPS["none"],
             "mail",
             tests.unit.helpers.EXPECTED_ZONE_FILES["single_unit"],
         ),
@@ -53,6 +58,7 @@ logger = logging.getLogger(__name__)
             ],
             tests.unit.helpers.CONFIGS["with_public_ips"],
             tests.unit.helpers.TOPOLOGIES["with_public_ips"],
+            tests.unit.helpers.SECONDARY_IPS["none"],
             "mail",
             tests.unit.helpers.EXPECTED_ZONE_FILES["with_public_ips"],
         ),
@@ -62,6 +68,7 @@ logger = logging.getLogger(__name__)
             ],
             tests.unit.helpers.CONFIGS["with_custom_names"],
             tests.unit.helpers.TOPOLOGIES["with_custom_names"],
+            tests.unit.helpers.SECONDARY_IPS["none"],
             "mail",
             tests.unit.helpers.EXPECTED_ZONE_FILES["with_custom_names"],
         ),
@@ -71,6 +78,7 @@ logger = logging.getLogger(__name__)
             ],
             tests.unit.helpers.CONFIGS["single_unit"],
             tests.unit.helpers.TOPOLOGIES["single_unit"],
+            tests.unit.helpers.SECONDARY_IPS["none"],
             "mail",
             tests.unit.helpers.EXPECTED_ZONE_FILES["empty_zone"],
         ),
@@ -80,6 +88,7 @@ logger = logging.getLogger(__name__)
             ],
             tests.unit.helpers.CONFIGS["single_unit"],
             tests.unit.helpers.TOPOLOGIES["single_unit"],
+            tests.unit.helpers.SECONDARY_IPS["none"],
             "mail",
             tests.unit.helpers.EXPECTED_ZONE_FILES["ipv6_mixed"],
         ),
@@ -95,7 +104,9 @@ logger = logging.getLogger(__name__)
     ),
 )
 @mock.patch("time.time", mock.MagicMock(return_value=1234567890))
-def test_zone_file_content(zones_data, config_data, topology_data, mailbox, expected):
+def test_zone_file_content(
+    zones_data, config_data, topology_data, secondary_ips, mailbox, expected
+):
     """
     arrange: prepare some zones and network topology
     act: create zone file content
@@ -116,5 +127,5 @@ def test_zone_file_content(zones_data, config_data, topology_data, mailbox, expe
         config["public-ips"] = ",".join(config_data["public-ips"])
 
     # pylint: disable=protected-access
-    file_content = bind.BindService._zones_to_files_content(zones, topology, config)
+    file_content = bind.BindService._zones_to_files_content(zones, topology, config, secondary_ips)
     assert file_content == expected

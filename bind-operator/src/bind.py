@@ -228,7 +228,7 @@ class BindService:
             if topology is not None and topology.is_current_unit_active:
                 # Write zone files
                 zone_files: dict[str, str] = BindService._zones_to_files_content(
-                    zones, topology, config
+                    zones, topology, config, secondary_transfer_ips
                 )
                 for domain, content in zone_files.items():
                     self._write_file(pathlib.Path(tempdir) / f"db.{domain}", content)
@@ -284,6 +284,7 @@ class BindService:
         zones: list[models.Zone],
         topology: topology_module.Topology,
         config: dict[str, str],
+        secondary_transfer_ips: list[pydantic.IPvAnyAddress] | None,
     ) -> dict[str, str]:
         """Return zone files and their content.
 
@@ -291,6 +292,7 @@ class BindService:
             zones: list of the zones to transform to text
             topology: Topology of the current deployment
             config: Relevant charm config
+            secondary_transfer_ips: ips from secondary dns that should be used as NS
 
         Returns:
             A dict whose keys are the domain of each zone
@@ -306,9 +308,14 @@ class BindService:
                 mailbox=config.get("mailbox"),
             )
 
+            # If secondary ips are defined, we use them for our NS records.
+            # This allows bind-operator to work as a hidden primary deployment
+            # when related to dns-secondary.
+            if secondary_transfer_ips:
+                ns_ip_list: list[str] = [str(ip) for ip in secondary_transfer_ips]
             # If a public ip is configured, we use it for our NS records
-            if config.get("public-ips"):
-                ns_ip_list: list[str] = [
+            elif config.get("public-ips"):
+                ns_ip_list = [
                     ip.strip()
                     for ip in config.get("public-ips", "").split(",")
                     if ip.strip() != ""

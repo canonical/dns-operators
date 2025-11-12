@@ -202,6 +202,8 @@ ZONES = {
     },
 }
 
+SECONDARY_IPS = {"none": [], "one": ["10.10.11.11"], "two": ["10.10.11.11", "10.10.12.12"]}
+
 EXPECTED_ZONE_FILES = {
     "simple_case": {
         "example.com": (

@@ -15,10 +15,7 @@ Container_Boundary(dns-resolver-operator, "DNS Resolver Operator") {
     Component(templates, "templates.py", "Module", "Provides templates for BIND configuration files")
     Component(charm, "charm.py", "Module", "Handles charm events and interactions with Juju")
     Component(empty1, "")
-    Component(empty2, "")
     Component(bind, "bind.py", "Module", "Controls BIND workload execution")
-    Component(empty3, "")
-    Component(empty4, "")
 
     UpdateElementStyle(empty1,  $bgColor="#0000", $borderColor="#0000")
     UpdateElementStyle(empty2,  $bgColor="#0000", $borderColor="#0000")

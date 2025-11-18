@@ -74,9 +74,9 @@ The workload of this charm is the charmed-bind snap, the same snap used by the b
 
 The charm configures BIND to operate as a recursive DNS resolver with zone forwarding capabilities. It generates three main configuration files:
 
-1. **named.conf.options**: Configures BIND with recursion enabled, allowing it to resolve any DNS query
-2. **named.conf.local**: Defines zone forwarding rules for zones managed by the authority servers and includes a local `service.test` zone for health checks
-3. **db.service.test**: A zone file for the internal service zone used for monitoring
+1. **named.conf.options**: Configures BIND with recursion enabled, allowing it to resolve any DNS query.
+2. **named.conf.local**: Defines zone forwarding rules for zones managed by the authority servers and includes a local `service.test` zone for health checks.
+3. **db.service.test**: A zone file for the internal service zone used for monitoring.
 
 Unlike the bind-operator charm which runs BIND as an authoritative server, the dns-resolver charm configures BIND as a recursive resolver that forwards specific zones to upstream authoritative servers while handling all other queries through standard DNS recursion.
 

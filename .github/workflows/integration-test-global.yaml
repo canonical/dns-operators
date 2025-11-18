@@ -28,7 +28,7 @@ jobs:
     steps:
       - name: Disable snap autorefresh
         run: sudo snap refresh --hold=2h
-      - uses: actions/checkout@v5.0.0
+      - uses: actions/checkout@v5.0.1
       - name: Install tox
         run: |
           sudo apt-get update -yqq
@@ -48,7 +48,7 @@ jobs:
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- juju bootstrap localhost lxd
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- juju model-defaults --cloud=localhost logging-config='<root>=WARNING;unit=DEBUG;http=TRACE'
       - run: snap list
-      - uses: actions/checkout@v5.0.0
+      - uses: actions/checkout@v5.0.1
       - run: sudo apt install skopeo -y
       - name: Remove some stuff to regain storage space
         # We remove things before charm packing to make sure that it still works

@@ -3,21 +3,23 @@
 
 """Unit tests for the dns_data module."""
 
+# pylint: disable=too-many-positional-arguments
+
 import logging
 from unittest import mock
 
 import pytest
-from charms.topology.v0 import topology as topology_module
 
 import bind
 import models
 import tests.unit.helpers
+from lib.charms.topology.v0 import topology as topology_module
 
 logger = logging.getLogger(__name__)
 
 
 @pytest.mark.parametrize(
-    "zones_data, config_data, topology_data, mailbox, expected",
+    "zones_data, config_data, topology_data, secondary_ips, mailbox, expected",
     (
         (
             [
@@ -25,19 +27,9 @@ logger = logging.getLogger(__name__)
             ],
             tests.unit.helpers.CONFIGS["3_units_current_not_active"],
             tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
+            tests.unit.helpers.SECONDARY_IPS["none"],
             "testmail",
-            {
-                "example.com": (
-                    "$ORIGIN example.com.\n"
-                    "$TTL 600\n"
-                    "@ IN SOA example.com. testmail.example.com. ( 20576131 1d 1h 1h 10m )\n"
-                    "@ IN NS ns\n"
-                    "ns IN A 2.2.2.2\n"
-                    "@ IN NS ns\n"
-                    "ns IN A 3.3.3.3\n"
-                    "sub IN A 1.2.3.4\n"
-                ),
-            },
+            tests.unit.helpers.EXPECTED_ZONE_FILES["simple_case"],
         ),
         (
             [
@@ -46,31 +38,9 @@ logger = logging.getLogger(__name__)
             ],
             tests.unit.helpers.CONFIGS["3_units_current_not_active"],
             tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
+            tests.unit.helpers.SECONDARY_IPS["none"],
             "mail",
-            {
-                "example.com": (
-                    "$ORIGIN example.com.\n"
-                    "$TTL 600\n"
-                    "@ IN SOA example.com. mail.example.com. ( 20576131 1d 1h 1h 10m )\n"
-                    "@ IN NS ns\n"
-                    "ns IN A 2.2.2.2\n"
-                    "@ IN NS ns\n"
-                    "ns IN A 3.3.3.3\n"
-                    "sub IN A 1.2.3.4\n"
-                ),
-                "test.org": (
-                    "$ORIGIN test.org.\n"
-                    "$TTL 600\n"
-                    "@ IN SOA test.org. mail.test.org. ( 20576131 1d 1h 1h 10m )\n"
-                    "@ IN NS ns\n"
-                    "ns IN A 2.2.2.2\n"
-                    "@ IN NS ns\n"
-                    "ns IN A 3.3.3.3\n"
-                    "ftp IN CNAME www\n"
-                    "mail IN AAAA 2001:db8::1\n"
-                    "www IN A 1.2.3.4\n"
-                ),
-            },
+            tests.unit.helpers.EXPECTED_ZONE_FILES["multiple_zones"],
         ),
         (
             [
@@ -78,17 +48,9 @@ logger = logging.getLogger(__name__)
             ],
             tests.unit.helpers.CONFIGS["single_unit"],
             tests.unit.helpers.TOPOLOGIES["single_unit"],
+            tests.unit.helpers.SECONDARY_IPS["none"],
             "mail",
-            {
-                "example.com": (
-                    "$ORIGIN example.com.\n"
-                    "$TTL 600\n"
-                    "@ IN SOA example.com. mail.example.com. ( 20576131 1d 1h 1h 10m )\n"
-                    "@ IN NS ns\n"
-                    "ns IN A 1.1.1.1\n"
-                    "sub IN A 1.2.3.4\n"
-                ),
-            },
+            tests.unit.helpers.EXPECTED_ZONE_FILES["single_unit"],
         ),
         (
             [
@@ -96,19 +58,9 @@ logger = logging.getLogger(__name__)
             ],
             tests.unit.helpers.CONFIGS["with_public_ips"],
             tests.unit.helpers.TOPOLOGIES["with_public_ips"],
+            tests.unit.helpers.SECONDARY_IPS["none"],
             "mail",
-            {
-                "example.com": (
-                    "$ORIGIN example.com.\n"
-                    "$TTL 600\n"
-                    "@ IN SOA example.com. mail.example.com. ( 20576131 1d 1h 1h 10m )\n"
-                    "@ IN NS ns\n"
-                    "ns IN A 203.0.113.1\n"
-                    "@ IN NS ns\n"
-                    "ns IN A 203.0.113.2\n"
-                    "sub IN A 1.2.3.4\n"
-                ),
-            },
+            tests.unit.helpers.EXPECTED_ZONE_FILES["with_public_ips"],
         ),
         (
             [
@@ -116,23 +68,9 @@ logger = logging.getLogger(__name__)
             ],
             tests.unit.helpers.CONFIGS["with_custom_names"],
             tests.unit.helpers.TOPOLOGIES["with_custom_names"],
+            tests.unit.helpers.SECONDARY_IPS["none"],
             "mail",
-            {
-                "example.com": (
-                    "$ORIGIN example.com.\n"
-                    "$TTL 600\n"
-                    "@ IN SOA example.com. mail.example.com. ( 20576131 1d 1h 1h 10m )\n"
-                    "@ IN NS dns1\n"
-                    "dns1 IN A 2.2.2.2\n"
-                    "@ IN NS dns1\n"
-                    "dns1 IN A 3.3.3.3\n"
-                    "@ IN NS dns2\n"
-                    "dns2 IN A 2.2.2.2\n"
-                    "@ IN NS dns2\n"
-                    "dns2 IN A 3.3.3.3\n"
-                    "sub IN A 1.2.3.4\n"
-                ),
-            },
+            tests.unit.helpers.EXPECTED_ZONE_FILES["with_custom_names"],
         ),
         (
             [
@@ -140,16 +78,9 @@ logger = logging.getLogger(__name__)
             ],
             tests.unit.helpers.CONFIGS["single_unit"],
             tests.unit.helpers.TOPOLOGIES["single_unit"],
+            tests.unit.helpers.SECONDARY_IPS["none"],
             "mail",
-            {
-                "empty.test": (
-                    "$ORIGIN empty.test.\n"
-                    "$TTL 600\n"
-                    "@ IN SOA empty.test. mail.empty.test. ( 20576131 1d 1h 1h 10m )\n"
-                    "@ IN NS ns\n"
-                    "ns IN A 1.1.1.1\n"
-                ),
-            },
+            tests.unit.helpers.EXPECTED_ZONE_FILES["empty_zone"],
         ),
         (
             [
@@ -157,19 +88,29 @@ logger = logging.getLogger(__name__)
             ],
             tests.unit.helpers.CONFIGS["single_unit"],
             tests.unit.helpers.TOPOLOGIES["single_unit"],
+            tests.unit.helpers.SECONDARY_IPS["none"],
             "mail",
-            {
-                "ipv6.example": (
-                    "$ORIGIN ipv6.example.\n"
-                    "$TTL 600\n"
-                    "@ IN SOA ipv6.example. mail.ipv6.example. ( 20576131 1d 1h 1h 10m )\n"
-                    "@ IN NS ns\n"
-                    "ns IN A 1.1.1.1\n"
-                    "mail IN MX 10 mail.ipv6.example.\n"
-                    'txt IN TXT "v=spf1 include:_spf.google.com ~all"\n'
-                    "www IN AAAA 2001:db8::1\n"
-                ),
-            },
+            tests.unit.helpers.EXPECTED_ZONE_FILES["ipv6_mixed"],
+        ),
+        (
+            [
+                tests.unit.helpers.ZONES["simple"],
+            ],
+            tests.unit.helpers.CONFIGS["3_units_current_not_active"],
+            tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
+            tests.unit.helpers.SECONDARY_IPS["one"],
+            "testmail",
+            tests.unit.helpers.EXPECTED_ZONE_FILES["simple_case_with_one_secondary"],
+        ),
+        (
+            [
+                tests.unit.helpers.ZONES["simple"],
+            ],
+            tests.unit.helpers.CONFIGS["3_units_current_not_active"],
+            tests.unit.helpers.TOPOLOGIES["3_units_current_not_active"],
+            tests.unit.helpers.SECONDARY_IPS["two"],
+            "testmail",
+            tests.unit.helpers.EXPECTED_ZONE_FILES["simple_case_with_two_secondaries"],
         ),
     ),
     ids=(
@@ -180,10 +121,14 @@ logger = logging.getLogger(__name__)
         "Test with custom names configured",
         "Test with empty zone (no DNS entries)",
         "Test with IPv6 and mixed record types",
+        "Test simple case with one secondary",
+        "Test simple case with two secondaries",
     ),
 )
 @mock.patch("time.time", mock.MagicMock(return_value=1234567890))
-def test_zone_file_content(zones_data, config_data, topology_data, mailbox, expected):
+def test_zone_file_content(
+    zones_data, config_data, topology_data, secondary_ips, mailbox, expected
+):
     """
     arrange: prepare some zones and network topology
     act: create zone file content
@@ -204,5 +149,5 @@ def test_zone_file_content(zones_data, config_data, topology_data, mailbox, expe
         config["public-ips"] = ",".join(config_data["public-ips"])
 
     # pylint: disable=protected-access
-    file_content = bind.BindService._zones_to_files_content(zones, topology, config)
+    file_content = bind.BindService._zones_to_files_content(zones, topology, config, secondary_ips)
     assert file_content == expected

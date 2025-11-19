@@ -20,8 +20,6 @@ $TTL 600
 @ IN SOA {zone}. {mailbox}.{zone}. ( {serial} 1d 1h 1h 10m )
 """
 
-ZONE_APEX_NS_TEMPLATE = "@ IN NS {name}\n{name} IN A {ip}\n"
-
 ZONE_RECORD_TEMPLATE = "{host_label} {record_class} {record_type} {record_data}\n"
 
 NAMED_CONF_PRIMARY_ZONE_DEF_TEMPLATE = (

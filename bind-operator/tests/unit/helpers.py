@@ -212,7 +212,6 @@ EXPECTED_ZONE_FILES = {
             "@ IN SOA example.com. testmail.example.com. ( 20576131 1d 1h 1h 10m )\n"
             "@ IN NS ns\n"
             "ns IN A 2.2.2.2\n"
-            "@ IN NS ns\n"
             "ns IN A 3.3.3.3\n"
             "sub IN A 1.2.3.4\n"
         ),
@@ -224,7 +223,6 @@ EXPECTED_ZONE_FILES = {
             "@ IN SOA example.com. mail.example.com. ( 20576131 1d 1h 1h 10m )\n"
             "@ IN NS ns\n"
             "ns IN A 2.2.2.2\n"
-            "@ IN NS ns\n"
             "ns IN A 3.3.3.3\n"
             "sub IN A 1.2.3.4\n"
         ),
@@ -234,7 +232,6 @@ EXPECTED_ZONE_FILES = {
             "@ IN SOA test.org. mail.test.org. ( 20576131 1d 1h 1h 10m )\n"
             "@ IN NS ns\n"
             "ns IN A 2.2.2.2\n"
-            "@ IN NS ns\n"
             "ns IN A 3.3.3.3\n"
             "ftp IN CNAME www\n"
             "mail IN AAAA 2001:db8::1\n"
@@ -258,7 +255,6 @@ EXPECTED_ZONE_FILES = {
             "@ IN SOA example.com. mail.example.com. ( 20576131 1d 1h 1h 10m )\n"
             "@ IN NS ns\n"
             "ns IN A 203.0.113.1\n"
-            "@ IN NS ns\n"
             "ns IN A 203.0.113.2\n"
             "sub IN A 1.2.3.4\n"
         ),
@@ -269,12 +265,10 @@ EXPECTED_ZONE_FILES = {
             "$TTL 600\n"
             "@ IN SOA example.com. mail.example.com. ( 20576131 1d 1h 1h 10m )\n"
             "@ IN NS dns1\n"
+            "@ IN NS dns2\n"
             "dns1 IN A 2.2.2.2\n"
-            "@ IN NS dns1\n"
             "dns1 IN A 3.3.3.3\n"
-            "@ IN NS dns2\n"
             "dns2 IN A 2.2.2.2\n"
-            "@ IN NS dns2\n"
             "dns2 IN A 3.3.3.3\n"
             "sub IN A 1.2.3.4\n"
         ),
@@ -317,7 +311,6 @@ EXPECTED_ZONE_FILES = {
             "@ IN SOA example.com. testmail.example.com. ( 20576131 1d 1h 1h 10m )\n"
             "@ IN NS ns\n"
             "ns IN A 10.10.11.11\n"
-            "@ IN NS ns\n"
             "ns IN A 10.10.12.12\n"
             "sub IN A 1.2.3.4\n"
         ),

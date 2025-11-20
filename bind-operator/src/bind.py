@@ -340,12 +340,13 @@ class BindService:
                 ns_name_list = ["ns"]
 
             # We sort the list to hopefully present the NS in a stable order in the file
+            # First declare the NS records
+            for name in sorted(ns_name_list):
+                content += f"@ IN NS {name}\n"
+            # Then add the A records for each nameserver
             for name in sorted(ns_name_list):
                 for ip in sorted(ns_ip_list):
-                    content += templates.ZONE_APEX_NS_TEMPLATE.format(
-                        name=name,
-                        ip=ip,
-                    )
+                    content += f"{name} IN A {ip}\n"
 
             for entry in sorted(
                 zone.entries, key=lambda x: (x.host_label, x.record_type.value, x.record_data)

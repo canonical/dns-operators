@@ -1,0 +1,26 @@
+name: Allure Report
+
+on:
+  schedule:
+    # Trigger at 6:00 AM and 6:00 PM UTC
+    - cron: "0 6,18 * * *"
+jobs:
+  integration-tests:
+    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    secrets: inherit
+    strategy:
+      matrix:
+        charm: ["bind-operator", "dns-integrator-operator", "dns-policy-operator", "dns-secondary-operator"]
+    with:
+      self-hosted-runner: false
+      juju-channel: 3.6/stable
+      provider: lxd
+      identifier: ${{ matrix.charm }}
+      working-directory: ./${{ matrix.charm }}
+
+  allure-report:
+    if: always() && !cancelled()
+    needs:
+      - integration-tests
+    uses: canonical/operator-workflows/.github/workflows/allure_report.yaml@main
+    secrets: inherit

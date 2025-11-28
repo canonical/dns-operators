@@ -3,7 +3,13 @@ name: Dns-policy-operator tests
 on:
   pull_request:
     paths:
-      - 'dns-policy-operator/**'
+      - 'dns-policy-operator/charmcraft.yaml'
+      - 'dns-policy-operator/lib/**'
+      - 'dns-policy-operator/pyproject.toml'
+      - 'dns-policy-operator/requirements.txt'
+      - 'dns-policy-operator/src/**'
+      - 'dns-policy-operator/tests/**'
+      - 'dns-policy-operator/tox.ini'
       - '.github/workflows/unit-test-dns-policy-operator.yaml'
   push:
     branches:

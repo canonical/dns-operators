@@ -15,6 +15,14 @@ jobs:
   validate:
     name: Validate terraform configuration files
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        workdir:
+          - bind-operator/terraform
+          - dns-integrator-operator/terraform
+          - dns-policy-operator/terraform
+          - dns-resolver-operator/terraform
+          - dns-secondary-operator/terraform
     env:
       WORKING_DIR: 'terraform'
     steps:
@@ -26,7 +34,7 @@ jobs:
 
       - name: Run terraform fmt
         run: terraform fmt -check -recursive
-        working-directory: ${{env.WORKING_DIR}}
+        working-directory: ${{ matrix.workdir }}
 
       - name: Setup Tflint
         uses: terraform-linters/setup-tflint@v6.2.1
@@ -38,7 +46,7 @@ jobs:
           tflint --version
           tflint --init
           tflint -f compact --recursive
-        working-directory: ${{env.WORKING_DIR}}
+        working-directory: ${{ matrix.workdir }}
 
   required_status_checks:
     name: Required Terraform Validate Status Checks

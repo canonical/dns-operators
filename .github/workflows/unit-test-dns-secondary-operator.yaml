@@ -3,7 +3,13 @@ name: Dns-secondary-operator tests
 on:
   pull_request:
     paths:
-      - 'dns-policy-secondary/**'
+      - 'dns-secondary-operator/charmcraft.yaml'
+      - 'dns-secondary-operator/lib/**'
+      - 'dns-secondary-operator/pyproject.toml'
+      - 'dns-secondary-operator/requirements.txt'
+      - 'dns-secondary-operator/src/**'
+      - 'dns-secondary-operator/tests/**'
+      - 'dns-secondary-operator/tox.ini'
       - '.github/workflows/unit-test-dns-secondary-operator.yaml'
   push:
     branches:

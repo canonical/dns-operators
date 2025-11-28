@@ -1,71 +1,3 @@
-# Bind Terraform Module
-
-Terraform module for deploying the [Bind charm](https://charmhub.io/bind).
-
-The Bind charm provides a centralized DNS server using BIND9, supporting DNS record management, zone transfers, and DNS authority delegation.
-
-## Usage
-
-```hcl
-module "bind" {
-  source = "git::https://github.com/canonical/dns-operators//bind-operator/terraform?ref=main"
-
-  model   = juju_model.my_model.name
-  channel = "latest/stable"
-  units   = 3
-
-  config = {
-    mailbox    = "admin@example.com"
-    public-ips = "192.168.1.10,192.168.1.11,192.168.1.12"
-    names      = "ns1,ns2,ns3"
-  }
-}
-```
-
-## Integration Example
-
-Deploy Bind and connect it to a DNS integrator:
-
-```hcl
-data "juju_model" "dns" {
-  name = "dns-model"
-}
-
-module "bind" {
-  source = "git::https://github.com/canonical/dns-operators//bind-operator/terraform"
-  model  = data.juju_model.dns.name
-  units  = 2
-
-  config = {
-    mailbox = "hostmaster@example.com"
-  }
-}
-
-module "dns_integrator" {
-  source = "git::https://github.com/canonical/dns-operators//dns-integrator-operator/terraform"
-  model  = data.juju_model.dns.name
-
-  config = {
-    requests = "www example.com 300 IN A 192.168.1.100"
-  }
-}
-
-resource "juju_integration" "dns_record" {
-  model = data.juju_model.dns.name
-
-  application {
-    name     = module.bind.app_name
-    endpoint = module.bind.provides.dns_record
-  }
-
-  application {
-    name     = module.dns_integrator.app_name
-    endpoint = module.dns_integrator.requires.dns_record
-  }
-}
-```
-
-<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -106,4 +38,3 @@ resource "juju_integration" "dns_record" {
 | <a name="output_application"></a> [application](#output\_application) | The deployed application |
 | <a name="output_provides"></a> [provides](#output\_provides) | Provided endpoints |
 | <a name="output_requires"></a> [requires](#output\_requires) | Required endpoints |
-<!-- END_TF_DOCS -->

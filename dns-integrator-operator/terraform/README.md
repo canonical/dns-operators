@@ -1,59 +1,3 @@
-# DNS Integrator Terraform Module
-
-Terraform module for deploying the [DNS Integrator charm](https://charmhub.io/dns-integrator).
-
-The DNS Integrator charm provides a simple way to create DNS records via configuration, integrating with compatible DNS operator providers.
-
-## Usage
-
-```hcl
-module "dns_integrator" {
-  source = "git::https://github.com/canonical/dns-operators//dns-integrator-operator/terraform?ref=main"
-
-  model   = juju_model.my_model.name
-  channel = "latest/stable"
-
-  config = {
-    requests = "test example.com 300 IN A 192.168.1.100"
-  }
-}
-```
-
-## Integration Example
-
-Connect the DNS integrator to a DNS provider like Bind:
-
-```hcl
-module "bind" {
-  source = "git::https://github.com/canonical/dns-operators//bind-operator/terraform"
-  model  = juju_model.dns.name
-}
-
-module "dns_integrator" {
-  source = "git::https://github.com/canonical/dns-operators//dns-integrator-operator/terraform"
-  model  = juju_model.dns.name
-
-  config = {
-    requests = "www example.com 300 IN A 192.168.1.100"
-  }
-}
-
-resource "juju_integration" "dns_record" {
-  model = juju_model.dns.name
-
-  application {
-    name     = module.bind.app_name
-    endpoint = module.bind.provides.dns_record
-  }
-
-  application {
-    name     = module.dns_integrator.app_name
-    endpoint = module.dns_integrator.requires.dns_record
-  }
-}
-```
-
-<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -94,4 +38,3 @@ resource "juju_integration" "dns_record" {
 | <a name="output_application"></a> [application](#output\_application) | The deployed application |
 | <a name="output_provides"></a> [provides](#output\_provides) | Provided endpoints |
 | <a name="output_requires"></a> [requires](#output\_requires) | Required endpoints |
-<!-- END_TF_DOCS -->

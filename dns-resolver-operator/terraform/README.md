@@ -1,57 +1,3 @@
-# DNS Resolver Terraform Module
-
-Terraform module for deploying the [DNS Resolver charm](https://charmhub.io/dns-resolver).
-
-The DNS Resolver charm provides a DNS resolver service that can integrate with DNS authority providers to offer DNS resolution services.
-
-## Usage
-
-```hcl
-module "dns_resolver" {
-  source = "git::https://github.com/canonical/dns-operators//dns-resolver-operator/terraform?ref=main"
-
-  model   = juju_model.my_model.name
-  channel = "latest/stable"
-  units   = 2
-}
-```
-
-## Integration Example
-
-Deploy DNS resolver and connect it to a DNS authority provider:
-
-```hcl
-data "juju_model" "dns" {
-  name = "dns-model"
-}
-
-module "bind" {
-  source = "git::https://github.com/canonical/dns-operators//bind-operator/terraform"
-  model  = data.juju_model.dns.name
-}
-
-module "dns_resolver" {
-  source = "git::https://github.com/canonical/dns-operators//dns-resolver-operator/terraform"
-  model  = data.juju_model.dns.name
-  units  = 2
-}
-
-resource "juju_integration" "dns_authority" {
-  model = data.juju_model.dns.name
-
-  application {
-    name     = module.bind.app_name
-    endpoint = module.bind.provides.dns_authority
-  }
-
-  application {
-    name     = module.dns_resolver.app_name
-    endpoint = module.dns_resolver.requires.dns_authority
-  }
-}
-```
-
-<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -92,4 +38,3 @@ resource "juju_integration" "dns_authority" {
 | <a name="output_application"></a> [application](#output\_application) | The deployed application |
 | <a name="output_provides"></a> [provides](#output\_provides) | Provided endpoints |
 | <a name="output_requires"></a> [requires](#output\_requires) | Required endpoints |
-<!-- END_TF_DOCS -->

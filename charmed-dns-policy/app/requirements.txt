@@ -1,4 +1,4 @@
 Django==5.2.8
-psycopg[binary]==3.2.13
+psycopg[binary]==3.3.0
 djangorestframework==3.16.1
 djangorestframework-simplejwt==5.5.1

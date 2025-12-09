@@ -3,7 +3,13 @@ name: Bind-operator tests
 on:
   pull_request:
     paths:
-      - 'bind-operator/**'
+      - 'bind-operator/charmcraft.yaml'
+      - 'bind-operator/lib/**'
+      - 'bind-operator/pyproject.toml'
+      - 'bind-operator/requirements.txt'
+      - 'bind-operator/src/**'
+      - 'bind-operator/tests/**'
+      - 'bind-operator/tox.ini'
       - '.github/workflows/unit-test-bind-operator.yaml'
   push:
     branches:

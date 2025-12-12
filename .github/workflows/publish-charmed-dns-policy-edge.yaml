@@ -3,7 +3,7 @@ name: Publish charmed-dns-policy to edge
 on:
   workflow_dispatch:
     secrets:
-      SNAP_STORE_TOKEN:
+      SNAPSTORE_TOKEN:
         required: true
 
 jobs:
@@ -32,4 +32,4 @@ jobs:
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- snapcraft upload --release="latest/edge" charmed-dns-policy_*.snap
         env:
           SNAPCRAFT_STORE_AUTH: candid
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_STORE_TOKEN }}
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPSTORE_TOKEN }}

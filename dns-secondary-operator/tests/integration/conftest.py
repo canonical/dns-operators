@@ -19,51 +19,6 @@ from pytest_operator.plugin import Model, OpsTest
 from .bind_fixtures import *  # noqa: F401, F403
 
 
-@pytest.fixture(scope="module", name="juju")
-def juju_fixture(
-    request: pytest.FixtureRequest,
-) -> typing.Generator[jubilant.Juju, None, None]:
-    """Pytest fixture that wraps jubilant.juju.
-
-    Args:
-        request: fixture request
-
-    Returns:
-        juju
-    """
-
-    def show_debug_log(juju: jubilant.Juju):
-        """Show debug log.
-
-        Args:
-            juju: Jubilant.juju
-        """
-        if request.session.testsfailed:
-            log = juju.debug_log(limit=1000)
-            print(log, end="")
-
-    use_existing = request.config.getoption("--use-existing", default=False)
-    if use_existing:
-        juju = jubilant.Juju()
-        yield juju
-        show_debug_log(juju)
-        return
-
-    model = request.config.getoption("--model")
-    if model:
-        juju = jubilant.Juju(model=model)
-        yield juju
-        show_debug_log(juju)
-        return
-
-    keep_models = typing.cast(bool, request.config.getoption("--keep-models"))
-    with jubilant.temp_model(keep=keep_models) as juju:
-        juju.wait_timeout = 10 * 60
-        yield juju
-        show_debug_log(juju)
-        return
-
-
 @pytest.fixture(scope="module", name="metadata")
 def fixture_metadata():
     """Provide charm metadata."""

@@ -18,6 +18,12 @@ from pytest_operator.plugin import Model, OpsTest
 # pylint: disable=unused-wildcard-import
 from .bind_fixtures import *  # noqa: F401, F403
 
+# Wildcard imports are used to make all the fixtures
+# available in test files
+# pylint: disable=wildcard-import
+# pylint: disable=unused-wildcard-import
+from .core_fixtures import *  # noqa: F401, F403
+
 
 @pytest.fixture(scope="module", name="metadata")
 def fixture_metadata():

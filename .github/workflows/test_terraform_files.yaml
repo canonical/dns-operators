@@ -23,6 +23,7 @@ jobs:
           - dns-policy-operator/terraform
           - dns-resolver-operator/terraform
           - dns-secondary-operator/terraform
+          - terraform/
     env:
       WORKING_DIR: 'terraform'
     steps:

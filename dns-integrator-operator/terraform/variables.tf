@@ -31,15 +31,55 @@ variable "constraints" {
   default     = null
 }
 
-variable "model" {
-  description = "Reference to a `juju_model` resource"
+variable "endpoint_bindings" {
+  description = "Map of endpoint bindings"
+  type        = map(string)
+  default     = {}
+}
+
+variable "expose" {
+  description = "Expose configuration"
+  type = list(object({
+    spaces    = optional(list(string))
+    cidrs     = optional(list(string))
+    endpoints = optional(list(string))
+  }))
+  default = null
+}
+
+variable "expose_endpoints" {
+  description = "List of endpoints to expose as offers"
+  type        = list(string)
+  default     = []
+}
+
+variable "machines" {
+  description = "List of machine IDs to deploy to"
+  type        = set(string)
+  default     = []
+}
+
+variable "model_uuid" {
+  description = "Reference to a `juju_model` resource UUID"
   type        = string
+}
+
+variable "resources" {
+  description = "Resources to use with the charm"
+  type        = map(string)
+  default     = {}
 }
 
 variable "revision" {
   description = "Revision number of the charm"
   type        = number
   default     = null
+}
+
+variable "storage_directives" {
+  description = "Storage directives for the application"
+  type        = map(string)
+  default     = {}
 }
 
 variable "units" {

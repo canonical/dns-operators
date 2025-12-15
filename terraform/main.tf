@@ -24,7 +24,7 @@ resource "juju_model" "dns" {
 
 # Bind charm module
 module "bind" {
-  source = "../../bind-operator/terraform"
+  source = "../bind-operator/terraform"
 
   app_name    = lookup(var.bind, "app_name", "bind")
   channel     = lookup(var.bind, "channel", "latest/edge")
@@ -38,7 +38,7 @@ module "bind" {
 
 # DNS Secondary charm module
 module "dns_secondary" {
-  source = "../../dns-secondary-operator/terraform"
+  source = "../dns-secondary-operator/terraform"
 
   app_name    = lookup(var.dns_secondary, "app_name", "dns-secondary")
   channel     = lookup(var.dns_secondary, "channel", "latest/edge")
@@ -52,7 +52,7 @@ module "dns_secondary" {
 
 # DNS Resolver charm module
 module "dns_resolver" {
-  source = "../../dns-resolver-operator/terraform"
+  source = "../dns-resolver-operator/terraform"
 
   app_name    = lookup(var.dns_resolver, "app_name", "dns-resolver")
   channel     = lookup(var.dns_resolver, "channel", "latest/edge")

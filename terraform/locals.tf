@@ -12,23 +12,4 @@ locals {
   }
 
   model = merge(local.model_defaults, var.model)
-
-  juju_provider = {
-    proxy = var.proxy
-  }
-
-  bind = {
-    name  = lookup(var.bind, "app_name", "bind")
-    units = lookup(var.bind, "units", 2)
-  }
-
-  dns_secondary = {
-    name  = lookup(var.dns_secondary, "app_name", "dns-secondary")
-    units = lookup(var.dns_secondary, "units", 1)
-  }
-
-  dns_resolver = {
-    name  = lookup(var.dns_resolver, "app_name", "dns-resolver")
-    units = lookup(var.dns_resolver, "units", 1)
-  }
 }

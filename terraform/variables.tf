@@ -8,24 +8,6 @@ variable "model_name" {
   type        = string
 }
 
-variable "juju_controller" {
-  description = "Controller connection information (not consumed directly by this module)"
-  type        = map(string)
-  default     = {}
-}
-
-variable "proxy" {
-  description = "Proxy configuration (optional)"
-  type        = map(string)
-  default     = {}
-}
-
-variable "logging_config" {
-  description = "Logging configuration"
-  type        = string
-  default     = ""
-}
-
 variable "bind" {
   description = "Configuration for the bind charm module"
   type = object({
@@ -72,22 +54,6 @@ variable "model" {
   description = "Partial overrides for the model configuration."
   type        = any
   default     = {}
-}
-
-variable "constraints" {
-  description = "Constraints for each application."
-  type        = map(string)
-  default     = {}
-}
-
-variable "config_model" {
-  description = "Configuration for the juju model."
-  type        = map(string)
-  default = {
-    juju-http-proxy  = "" # override or set via locals
-    juju-https-proxy = "" # override or set via locals
-    juju-no-proxy    = "127.0.0.1,localhost,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,.canonical.com,.launchpad.net,.internal,.jujucharms.com,.ubuntu.com"
-  }
 }
 
 variable "model_uuid" {

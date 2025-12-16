@@ -18,7 +18,6 @@ module "dns" {
   source = "../../terraform"
 
   model_name = var.model_name
-  model_uuid = "" # Not needed when using CLI import
 
   # All other variables will use their defaults from the module
   # You can override them here if needed:

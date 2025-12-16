@@ -64,9 +64,3 @@ variable "model" {
   })
   default = {}
 }
-
-variable "model_uuid" {
-  description = "UUID of an existing juju_model"
-  type        = string
-  default     = ""
-}

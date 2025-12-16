@@ -41,7 +41,6 @@
 | <a name="input_model_name"></a> [model\_name](#input\_model\_name) | Name of the juju model (required) | `string` | n/a | yes |
 | <a name="input_model_uuid"></a> [model\_uuid](#input\_model\_uuid) | UUID of an existing juju\_model to import (optional). Used with the import block to reuse an existing model instead of creating a new one. You can find it with `juju show-model <model-name>`. If not provided, a new model will be created. | `string` | `""` | no |
 | <a name="input_proxy"></a> [proxy](#input\_proxy) | Proxy configuration (optional) | `map(string)` | `{}` | no |
-| <a name="input_storage_constraint"></a> [storage\_constraint](#input\_storage\_constraint) | Storage constraint for the Juju model (e.g., 'root-disk-source=default'). Leave empty to use LXD's default storage pool. | `string` | `""` | no |
 
 ## Outputs
 

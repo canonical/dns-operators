@@ -1,21 +1,18 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import {
-  to = juju_model.dns
-  id = var.model_uuid
-}
+# Juju model
 
 resource "juju_model" "dns" {
   name = var.model_name
 
   cloud {
-    name   = local.model.cloud_name
-    region = local.model.cloud_region
+    name   = var.model.cloud_name
+    region = var.model.cloud_region
   }
 
-  config      = local.config_model
-  constraints = local.model.constraints
+  config      = var.model.config
+  constraints = var.model.constraints
 
   lifecycle {
     prevent_destroy = true

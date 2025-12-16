@@ -51,19 +51,22 @@ variable "dns_resolver" {
 }
 
 variable "model" {
-  description = "Partial overrides for the model configuration."
-  type        = any
-  default     = {}
+  type = object({
+    cloud_name = optional(string, "localhost")
+    cloud_region = optional(string, "localhost")
+    model_name = optional(string, "machine")
+    constraints = optional(string, "")
+    config = optional(map(string), {
+      juju-http-proxy  = "" # override or set via locals
+      juju-https-proxy = "" # override or set via locals
+      juju-no-proxy    = "127.0.0.1,localhost,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,.canonical.com,.launchpad.net,.internal,.jujucharms.com,.ubuntu.com"
+    })
+  })
+  default = {}
 }
 
 variable "model_uuid" {
-  description = "UUID of an existing juju_model to import (optional). Used with the import block to reuse an existing model instead of creating a new one. You can find it with `juju show-model <model-name>`. If not provided, a new model will be created."
-  type        = string
-  default     = ""
-}
-
-variable "storage_constraint" {
-  description = "Storage constraint for the Juju model (e.g., 'root-disk-source=default'). Leave empty to use LXD's default storage pool."
+  description = "UUID of an existing juju_model"
   type        = string
   default     = ""
 }

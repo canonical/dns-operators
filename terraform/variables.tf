@@ -52,10 +52,10 @@ variable "dns_resolver" {
 
 variable "model" {
   type = object({
-    cloud_name = optional(string, "localhost")
+    cloud_name   = optional(string, "localhost")
     cloud_region = optional(string, "localhost")
-    model_name = optional(string, "machine")
-    constraints = optional(string, "")
+    model_name   = optional(string, "machine")
+    constraints  = optional(string, "")
     config = optional(map(string), {
       juju-http-proxy  = "" # override or set via locals
       juju-https-proxy = "" # override or set via locals

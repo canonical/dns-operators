@@ -221,6 +221,7 @@ async def test_basic_dns_config(app: str, juju: jubilant.Juju):
 )
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
+# pylint: disable=too-many-locals
 async def test_dns_record_relation(
     app: str,
     juju: jubilant.Juju,
@@ -234,7 +235,7 @@ async def test_dns_record_relation(
     """
     # Remove previously deployed instances of any-app
     apps = juju.status().apps
-    for any_app_number in range(10):
+    for any_app_number in range(5):
         anyapp_name = f"anyapp-t{any_app_number}"
         if anyapp_name in apps:
             juju.remove_application(anyapp_name)

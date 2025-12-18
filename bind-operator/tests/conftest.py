@@ -5,7 +5,11 @@
 
 
 def pytest_addoption(parser):
-    """Parse additional pytest options."""
+    """Parse additional pytest options.
+
+    Args:
+        parser: the parser
+    """
     parser.addoption("--charm-file", action="store", default=None)
     parser.addoption(
         "--use-existing",

@@ -8,10 +8,8 @@ import logging
 import time
 
 import dns.resolver
-import juju.application
-import ops
+import jubilant
 import pytest
-from pytest_operator.plugin import Model, OpsTest
 
 import constants
 import models
@@ -22,30 +20,31 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
-async def test_lifecycle(app: juju.application.Application, ops_test: OpsTest):
+async def test_lifecycle(app: str, juju: jubilant.Juju):
     """
     arrange: build and deploy the charm.
     act: nothing.
     assert: that the charm ends up in an active state.
     """
-    unit = app.units[0]
+    units = juju.status().get_units(app)
+    unit_name = list(units.keys())[0]
+    unit_status = units[unit_name]
 
-    assert unit.workload_status == ops.model.ActiveStatus.name
+    assert unit_status.workload_status.current == "active"
 
     status = await tests.integration.helpers.dig_query(
-        ops_test,
-        unit,
+        juju,
+        unit_name,
         f"@127.0.0.1 status.{constants.ZONE_SERVICE_NAME} TXT +short",
         retry=True,
         wait=5,
     )
     assert status == '"ok"'
 
-    await tests.integration.helpers.dispatch_to_unit(ops_test, unit, "stop")
+    await tests.integration.helpers.dispatch_to_unit(juju, unit_name, "stop")
     time.sleep(5)
-    _, service_status, _ = await ops_test.juju(
-        "exec", "--unit", unit.name, "snap services charmed-bind"
-    )
+
+    service_status = juju.exec("snap services charmed-bind", unit=unit_name).stdout
     logger.info(service_status)
     assert "inactive" in service_status
 
@@ -55,24 +54,24 @@ async def test_lifecycle(app: juju.application.Application, ops_test: OpsTest):
     logger.info(service_status)
     assert "inactive" in service_status
 
-    await tests.integration.helpers.dispatch_to_unit(ops_test, unit, "start")
+    await tests.integration.helpers.dispatch_to_unit(juju, unit_name, "start")
     time.sleep(5)
-    _, service_status, _ = await ops_test.juju(
-        "exec", "--unit", unit.name, "snap services charmed-bind"
-    )
+
+    service_status = juju.exec("snap services charmed-bind", unit=unit_name).stdout
     logger.info(service_status)
     assert "active" in service_status
 
 
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
-async def test_basic_dns_config(app: juju.application.Application, ops_test: OpsTest):
+async def test_basic_dns_config(app: str, juju: jubilant.Juju):
     """
     arrange: build, deploy the charm and change its configuration.
     act: request the test domain.
     assert: the output of the dig command is the expected one
     """
-    unit = app.units[0]
+    units = juju.status().get_units(app)
+    unit_name = list(units.keys())[0]
 
     test_zone_def = f"""zone "dns.test" IN {{
     type primary;
@@ -82,11 +81,11 @@ async def test_basic_dns_config(app: juju.application.Application, ops_test: Ops
     """
     # We need to stop the dispatch-reload-bind timer for this test
     stop_timer_cmd = "sudo systemctl stop dispatch-reload-bind.timer"
-    await tests.integration.helpers.run_on_unit(ops_test, unit.name, stop_timer_cmd)
+    await tests.integration.helpers.run_on_unit(juju, unit_name, stop_timer_cmd)
 
     await tests.integration.helpers.push_to_unit(
-        ops_test=ops_test,
-        unit=unit,
+        juju=juju,
+        unit_name=unit_name,
         source=test_zone_def,
         destination=f"{constants.DNS_CONFIG_DIR}/named.conf.local",
     )
@@ -104,24 +103,24 @@ async def test_basic_dns_config(app: juju.application.Application, ops_test: Ops
 @       IN      TXT     "this-is-a-test"
     """
     await tests.integration.helpers.push_to_unit(
-        ops_test=ops_test,
-        unit=unit,
+        juju=juju,
+        unit_name=unit_name,
         source=test_zone,
         destination=f"{constants.DNS_CONFIG_DIR}/db.dns.test",
     )
 
     restart_cmd = f"sudo snap restart --reload {constants.DNS_SNAP_NAME}"
-    await tests.integration.helpers.run_on_unit(ops_test, unit.name, restart_cmd)
+    await tests.integration.helpers.run_on_unit(juju, unit_name, restart_cmd)
 
     assert (
         await tests.integration.helpers.run_on_unit(
-            ops_test, unit.name, "dig @127.0.0.1 dns.test TXT +short"
+            juju, unit_name, "dig @127.0.0.1 dns.test TXT +short"
         )
     ).strip() == '"this-is-a-test"'
 
     # Restart the timer for the subsequent tests
     start_timer_cmd = "sudo systemctl start dispatch-reload-bind.timer"
-    await tests.integration.helpers.run_on_unit(ops_test, unit.name, start_timer_cmd)
+    await tests.integration.helpers.run_on_unit(juju, unit_name, start_timer_cmd)
 
 
 @pytest.mark.parametrize(
@@ -156,7 +155,7 @@ async def test_basic_dns_config(app: juju.application.Application, ops_test: Ops
                     ),
                 ],
             ),
-            ops.model.ActiveStatus,
+            "active",
         ),
         (
             (
@@ -181,7 +180,7 @@ async def test_basic_dns_config(app: juju.application.Application, ops_test: Ops
                     ),
                 ],
             ),
-            ops.model.BlockedStatus,
+            "blocked",
         ),
         (
             (
@@ -216,17 +215,16 @@ async def test_basic_dns_config(app: juju.application.Application, ops_test: Ops
                     ),
                 ],
             ),
-            ops.model.ActiveStatus,
+            "active",
         ),
     ),
 )
 @pytest.mark.asyncio
 @pytest.mark.abort_on_fail
 async def test_dns_record_relation(
-    app: juju.application.Application,
-    ops_test: OpsTest,
-    model: Model,
-    status: ops.model.StatusBase,
+    app: str,
+    juju: jubilant.Juju,
+    status: str,
     integration_datasets: tuple[list[models.DnsEntry]],
 ):
     """
@@ -235,36 +233,43 @@ async def test_dns_record_relation(
     assert: bind-operator should have the correct status and respond to dig queries
     """
     # Remove previously deployed instances of any-app
+    apps = juju.status().apps
     for any_app_number in range(10):
         anyapp_name = f"anyapp-t{any_app_number}"
-        if anyapp_name in model.applications:
-            await model.remove_application(anyapp_name, block_until_done=True)
+        if anyapp_name in apps:
+            juju.remove_application(anyapp_name)
+            juju.wait(jubilant.all_agents_idle)
+
     # Start by deploying the any-app instances and integrate them with the bind charm
     any_app_number = 0
     for integration_data in integration_datasets:
         anyapp_name = f"anyapp-t{any_app_number}"
         await tests.integration.helpers.generate_anycharm_relation(
             app,
-            ops_test,
+            juju,
             anyapp_name,
             integration_data,
             None,
         )
         any_app_number += 1
 
-    await model.wait_for_idle(idle_period=30)
-    await tests.integration.helpers.force_reload_bind(ops_test, app.units[0])
-    await model.wait_for_idle(idle_period=30)
+    juju.wait(jubilant.all_agents_idle, timeout=30)
+
+    units = juju.status().get_units(app)
+    unit_name = list(units.keys())[0]
+    await tests.integration.helpers.force_reload_bind(juju, unit_name)
+    juju.wait(jubilant.all_agents_idle, timeout=30)
 
     # Test the status of the bind-operator instance
-    assert app.units[0].workload_status == status.name
+    unit_status = juju.status().get_units(app)[unit_name]
+    assert unit_status.workload_status.current == status
 
     # Test if the records give the correct results
     # Do that only if we have an active status
-    if status == ops.model.ActiveStatus:
+    if status == "active":
         for integration_data in integration_datasets:
             for entry in integration_data:
-                ips = await tests.integration.helpers.get_unit_ips(ops_test, app.units[0])
+                ips = await tests.integration.helpers.get_unit_ips(juju, app)
                 logger.info(ips)
                 for ip in ips:
                     # Create a DNS resolver

@@ -5,11 +5,7 @@
 
 
 def pytest_addoption(parser):
-    """Parse additional pytest options.
-
-    Args:
-        parser: Pytest parser.
-    """
+    """Parse additional pytest options."""
     parser.addoption("--charm-file", action="store", default=None)
     parser.addoption(
         "--use-existing",
@@ -17,3 +13,5 @@ def pytest_addoption(parser):
         default=False,
         help="This will skip deployment of the charms. Useful for local testing.",
     )
+    parser.addoption("--model", action="store", default=None)
+    parser.addoption("--keep-models", action="store_true", default=False)

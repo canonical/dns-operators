@@ -16,7 +16,7 @@ jobs:
       juju-channel: 3.6/stable
       provider: lxd
       identifier: ${{ matrix.charm }}
-      working-directory: ./${{ matrix.charm }}
+      working-directory: ./${{ matrix.charm }}/
 
   allure-report:
     if: always() && !cancelled()

@@ -1,4 +1,4 @@
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # Licensed under the Apache2.0. See LICENSE file in charm source for details.
 # pylint: disable=R0801
 """Library to manage the integration between primary and secondary DNS charms.

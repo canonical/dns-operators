@@ -3,7 +3,13 @@ name: Dns-integrator-operator integration tests
 on:
   pull_request:
     paths:
-      - 'dns-integrator-operator/**'
+      - 'dns-integrator-operator/charmcraft.yaml'
+      - 'dns-integrator-operator/lib/**'
+      - 'dns-integrator-operator/pyproject.toml'
+      - 'dns-integrator-operator/requirements.txt'
+      - 'dns-integrator-operator/src/**'
+      - 'dns-integrator-operator/tests/**'
+      - 'dns-integrator-operator/tox.ini'
       - '.github/workflows/integration-test-dns-integrator-operator.yaml'
   push:
     branches:

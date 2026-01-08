@@ -10,6 +10,9 @@ __pycache__/
 .mypy_cache
 *.egg-info/
 */*.rock
+**/*tfstate*
+**/.terraform/
+**/.terraform.lock.hcl
 
 # BEGIN VALE WORKFLOW IGNORE
 .vale/styles/*

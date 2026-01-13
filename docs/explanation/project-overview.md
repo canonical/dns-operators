@@ -6,12 +6,7 @@ The goal of the suite of DNS charms is to provide an easy-to-use and somewhat op
 
 The first and simplest way to use these charms is by only deploying an authoritative DNS server (here `bind-operator`) and giving it a list of DNS records to be published. We want the operator to be able to give a list of DNS records as they usually would in a zone file. The format should therefore ideally be `host_label`, `TTL`, `record_class`, `record_type` and `record_data`. We can see that in that situation, someone is asking for those records to be published and someone is publishing them. The operator or charm asking for those records will be the requirer and the authoritative nameserver is the provider.
 
-<figure>
-    <img src="./record.png" alt="DNS record" width="360" />
-    <figcaption>
-        A DNS record
-    </figcaption>
-</figure>
+<img src="./record.png" alt="DNS record" width="480" />
 
 This realization led us to design the `dns_record` interface where the requirer basically sends a list of DNS records with a UUID for each (creating a DNS entry/request that way) and the provider can respond to those requests by stating the status of each request (using the UUID given by the requirer as an identification mechanism).
 

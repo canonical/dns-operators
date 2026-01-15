@@ -1,0 +1,102 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/any-charm-124
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  anyapp-t0/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  anyapp-t0/2 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  anyapp-t0/2 [executing] maintenance: installing charm software
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [executing] active: active
+  anyapp-t0/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/any-charm-124
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  anyapp-t1/1 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  anyapp-t1/1 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  anyapp-t1/1 [idle] active: 
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [executing] active: active
+  anyapp-t0/2 [idle] active: 
+  anyapp-t1/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/any-charm-124
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  anyapp-t2/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  anyapp-t2/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  anyapp-t2/0 [idle] active: 
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [executing] active: active
+  anyapp-t0/2 [idle] active: 
+  anyapp-t1/1 [idle] active: 
+  anyapp-t2/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [idle] active: active
+  anyapp-t0/2 [idle] active: 
+  anyapp-t1/1 [idle] active: 
+  anyapp-t2/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [idle] active: active
+  anyapp-t0/2 [idle] active: 
+  anyapp-t1/1 [idle] active: 
+  anyapp-t2/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [idle] active: active
+[32mINFO    [0m integration.test_charm:test_charm.py:268 ['10.189.102.133']
+[32mINFO    [0m integration.test_charm:test_charm.py:275 admin.dns.test
+[32mINFO    [0m integration.test_charm:test_charm.py:279 ['42.42.42.42']
+[32mINFO    [0m integration.test_charm:test_charm.py:268 ['10.189.102.133']
+[32mINFO    [0m integration.test_charm:test_charm.py:275 somehost.dns-app-2.test
+[32mINFO    [0m integration.test_charm:test_charm.py:279 ['41.41.41.41']
+[32mINFO    [0m integration.test_charm:test_charm.py:268 ['10.189.102.133']
+[32mINFO    [0m integration.test_charm:test_charm.py:275 somehost.dns-app-3.test
+[32mINFO    [0m integration.test_charm:test_charm.py:279 ['40.40.40.40']
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model            Controller           Cloud/Region         Version  SLA          Timestamp
+test-charm-l142  github-pr-74251-lxd  localhost/localhost  3.6.12   unsupported  18:41:38Z
+
+App        Version  Status  Scale  Charm      Channel      Rev  Exposed  Message
+anyapp-t0           active      1  any-charm  latest/beta  124  no       
+anyapp-t1           active      1  any-charm  latest/beta  124  no       
+anyapp-t2           active      1  any-charm  latest/beta  124  no       
+bind                active      1  bind                      0  no       active
+
+Unit          Workload  Agent  Machine  Public address  Ports          Message
+anyapp-t0/2*  active    idle   4        10.189.102.167                 
+anyapp-t1/1*  active    idle   5        10.189.102.198                 
+anyapp-t2/0*  active    idle   6        10.189.102.108                 
+bind/0*       active    idle   0        10.189.102.133  53/tcp 53/udp  active
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.189.102.133  juju-d87287-0  ubuntu@22.04  runnervmi13qx  Running
+4        started  10.189.102.167  juju-d87287-4  ubuntu@24.04  runnervmi13qx  Running
+5        started  10.189.102.198  juju-d87287-5  ubuntu@24.04  runnervmi13qx  Running
+6        started  10.189.102.108  juju-d87287-6  ubuntu@24.04  runnervmi13qx  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+machine-0: 18:25:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 18:25:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 18:28:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 18:28:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-anyapp-t0-0: 18:30:32 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "5fd61f14-8d57-4aa7-8600-346b6ad87287:r#2#bind": settings 5fd61f14-8d57-4aa7-8600-346b6ad87287:r#2#bind not found (not found)
+unit-anyapp-t0-0: 18:30:36 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "5fd61f14-8d57-4aa7-8600-346b6ad87287:r#1#anyapp-t0": settings 5fd61f14-8d57-4aa7-8600-346b6ad87287:r#1#anyapp-t0 not found (not found)
+machine-2: 18:31:30 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 18:31:30 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 18:33:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 18:33:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 18:35:05 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-bind-0: 18:35:05 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+machine-4: 18:36:04 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 18:36:04 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 18:37:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 18:37:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 18:39:22 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 18:39:22 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

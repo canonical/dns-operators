@@ -1,0 +1,62 @@
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:762 Adding model github-pr-c3b89-lxd:test-charm-0pfw on cloud localhost
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHTunneler received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:621 Using tmp_path: /home/runner/work/dns-operators/dns-operators/dns-policy-operator/.tox/integration/tmp/pytest/test-charm-0pfw0
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1212 Building charm bind
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1217 Built charm bind in 603.80s
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:bind-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [idle] active: active
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:dns-policy-0
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/postgresql-987
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [executing] maintenance: installing PostgreSQL
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [executing] waiting: waiting to start PostgreSQL
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [idle] active: Primary
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  dns-policy (not enough units yet - 0/1)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  dns-policy/0 [executing] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model            Controller           Cloud/Region         Version  SLA          Timestamp
+test-charm-0pfw  github-pr-c3b89-lxd  localhost/localhost  3.6.13   unsupported  18:36:02Z
+
+App         Version  Status  Scale  Charm       Channel    Rev  Exposed  Message
+bind                 active      1  bind                     0  no       active
+dns-policy           active      1  dns-policy               0  no       
+postgresql  14.20    active      1  postgresql  14/stable  987  no       
+
+Unit             Workload  Agent  Machine  Public address  Ports          Message
+bind/0*          active    idle   0        10.139.227.123  53/tcp 53/udp  active
+  dns-policy/0*  active    idle            10.139.227.123  8080/tcp       
+postgresql/0*    active    idle   1        10.139.227.201  5432/tcp       Primary
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.139.227.123  juju-772cea-0  ubuntu@22.04  runnervmymu0l  Running
+1        started  10.139.227.201  juju-772cea-1  ubuntu@22.04  runnervmymu0l  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+machine-0: 18:32:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 18:32:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 18:33:54 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 18:33:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

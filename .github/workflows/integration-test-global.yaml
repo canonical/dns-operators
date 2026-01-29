@@ -61,7 +61,7 @@ jobs:
           sudo rm -rf /usr/local/julia*
       - name: Cache bind
         id: cache-bind
-        uses: actions/cache@v5.0.2
+        uses: actions/cache@v5.0.3
         with:
           path: ./bind_ubuntu-22.04-amd64.charm
           key: bind-charm-${{ hashFiles('./bind-operator/**') }}
@@ -71,7 +71,7 @@ jobs:
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./bind-operator
       - name: Cache dns-integrator
         id: cache-dns-integrator
-        uses: actions/cache@v5.0.2
+        uses: actions/cache@v5.0.3
         with:
           path: ./dns-integrator_ubuntu-22.04-amd64.charm
           key: dns-integrator-charm-${{ hashFiles('./dns-integrator-operator/**') }}
@@ -81,7 +81,7 @@ jobs:
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./dns-integrator-operator
       - name: Cache dns-resolver
         id: cache-dns-resolver
-        uses: actions/cache@v5.0.2
+        uses: actions/cache@v5.0.3
         with:
           path: ./dns-resolver-22.04-amd64.charm
           key: dns-resolver-charm-${{ hashFiles('./dns-resolver-operator/**') }}
@@ -91,7 +91,7 @@ jobs:
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- charmcraft pack -v -p ./dns-resolver-operator
       - name: Cache dns-secondary
         id: cache-dns-secondary
-        uses: actions/cache@v5.0.2
+        uses: actions/cache@v5.0.3
         with:
           path: ./dns-secondary-22.04-amd64.charm
           key: dns-secondary-charm-${{ hashFiles('./dns-secondary-operator/**') }}

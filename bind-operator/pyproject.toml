@@ -57,6 +57,9 @@ disable = ["too-many-arguments"]
 [tool.pytest.ini_options]
 minversion = "6.0"
 log_cli_level = "INFO"
+markers = [
+    "abort_on_fail: abort test execution on first failure in marked test",
+]
 
 # Linting tools configuration
 [tool.ruff]

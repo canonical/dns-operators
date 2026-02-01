@@ -1,0 +1,52 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"
+    arrange: build and deploy the charm. Also, deploy a primary charm.
+    act: relate both.
+    assert: charm is in active status.
+    ","13632","test_integration_primary","tests.integration","2026-02-01","passed","2026-02-01","","test_charm","",""
+"
+    arrange: given deployed bind-operator
+    act: integrate any-charm instances to the deployed app
+    assert: bind-operator should have the correct status and respond to dig queries
+    ","293734","test_dns_record_relation[integration_datasets1-BlockedStatus]","tests.integration","2026-02-01","passed","2026-02-01","","test_charm","",""
+"
+    arrange: build and deploy the charm.
+    act: nothing.
+    assert: that the charm ends up in an active state.
+    ","82734","test_lifecycle","tests.integration","2026-02-01","passed","2026-02-01","","test_charm","",""
+"
+    arrange: given deployed bind-operator
+    act: change the number of units
+    assert: there always is an active unit
+    ","390722","test_multi_units","tests.integration","2026-02-01","passed","2026-02-01","","test_multi_units","",""
+"Empty integration test.","0","test_empty_test","tests.integration","2026-02-01","passed","2026-02-01","","test_charm","",""
+"
+    arrange: build and deploy the charm.
+    act: deploy a lot of applications and integrate them to the bind operator
+    assert:
+    ","0","test_lots_of_record_requests","tests.integration","2026-02-01","skipped","2026-02-01","","test_scale","",""
+"
+    arrange: build, deploy the charm and change its configuration.
+    act: request the test domain.
+    assert: the output of the dig command is the expected one
+    ","3513","test_basic_dns_config","tests.integration","2026-02-01","passed","2026-02-01","","test_charm","",""
+"
+    arrange: build and deploy the charm.
+    act: nothing.
+    assert: that the charm ends up in an active state.
+    ","0","test_active","tests.integration","2026-02-01","passed","2026-02-01","","test_charm","",""
+"
+    arrange: given deployed bind-operator
+    act: integrate any-charm instances to the deployed app
+    assert: bind-operator should have the correct status and respond to dig queries
+    ","380389","test_dns_record_relation[integration_datasets2-ActiveStatus]","tests.integration","2026-02-01","passed","2026-02-01","","test_charm","",""
+"
+    arrange: given deployed bind-operator
+    act: integrate any-charm instances to the deployed app
+    assert: bind-operator should have the correct status and respond to dig queries
+    ","169692","test_dns_record_relation[integration_datasets0-ActiveStatus]","tests.integration","2026-02-01","passed","2026-02-01","","test_charm","",""
+"
+    arrange: build and deploy the charm.
+    act: deploy a lot of applications and integrate them to the bind operator
+    assert:
+    ","0","test_lots_of_applications","tests.integration","2026-02-01","skipped","2026-02-01","","test_scale","",""

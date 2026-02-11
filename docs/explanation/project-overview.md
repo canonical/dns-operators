@@ -18,7 +18,7 @@ We just explained that all DNS record requests received by `bind-operator` throu
 
 The first thing that is done by `bind-operator` is to organize the record requests into zones, based on the declared domain of each. Doing that enables the creation of one zone file for each zone. It also detects any conflicts between records: if they have the same domain, host label, record class and type but not the same TTL and/or data. Any errors during these processes stop it from updating the configuration files of bind and are reported through the relations so that operators can take action accordingly (by fixing the conflict, for example).
 
-<img src="./merge.png" alt="Requests merging" width="360" />
+<img src="./merge.png" alt="Requests merging" width="680" />
 
 This conflict handling mechanism is one expression of our opinionated way to handle this DNS deployment since it doesn't really exist in the DNS world. We wanted to make sure that operators of different teams would not step on each other's shoes while deploying applications and relating them to `bind-operator`. If you want the usual round-robin response that a DNS server like bind should give when multiple records with different data are published, we are working on allowing conflicts on a per-record basis in the `dns_record` interface.
 
@@ -34,6 +34,6 @@ With `bind-operator` and dns-integrator, we have the core functionality necessar
 
 We also want to be able to deploy DNS resolvers, and that's the role of the `dns-resolver` charm. Once related to `bind-operator` or `dns-secondary`, it will serve their zones without being involved in their definition.
 
-<img src="./dns-charms.png" alt="Example deployment of DNS charms" width="720" />
+<img src="./dns-charms.png" alt="Example deployment of DNS charms" width="682">
 
 With all these charms, we cover the most basic but also the most-used DNS deployment patterns in a simple but production-ready package.

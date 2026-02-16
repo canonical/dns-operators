@@ -179,6 +179,8 @@ class BindService:
             encoding="utf-8",
         )
 
+    # All arguments are needed
+    # pylint: disable=too-many-positional-arguments
     def update_zonefiles_and_reload(
         self,
         relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],

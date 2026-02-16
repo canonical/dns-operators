@@ -66,7 +66,8 @@ def test_config_changed_with_primary(
     assert f"primaries {{ {PRIMARY_ADDRESS}; }}" in content
     assert f'db.{PRIMARY_ZONE}"' in content
     assert out.get_relation(dns_transfer_relation.id).local_app_data == {
-        "addresses": f'["{PUBLIC_IPS}"]'
+        "addresses": f'["{PUBLIC_IPS}"]',
+        "transfer_sources": '["192.0.2.0"]',
     }
 
 

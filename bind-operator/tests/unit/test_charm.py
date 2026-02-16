@@ -351,5 +351,5 @@ def test_dns_transfer_relation_changed(context, base_state):
 
         assert isinstance(out.unit_status, ops.ActiveStatus)
         update_zonefiles_and_reload.assert_called_once_with(
-            ANY, ANY, ANY, [IPv4Address(secondary_ip)]
+            ANY, ANY, ANY, [IPv4Address(secondary_ip)], []
         )

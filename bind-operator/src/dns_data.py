@@ -172,6 +172,7 @@ def dns_record_relations_data_to_zones(
 def dump_state(
     zones: list[models.Zone],
     topology: topology_module.Topology,
+    secondary_zone_ips: list[pydantic.IPvAnyAddress],
     secondary_transfer_ips: list[pydantic.IPvAnyAddress],
 ) -> str:
     """Dump the current state.
@@ -184,6 +185,7 @@ def dump_state(
     Args:
         zones: list of the zones
         topology: Topology of the current deployment
+        secondary_zone_ips: list of dns secondary public ips
         secondary_transfer_ips: list of dns secondary ips
 
     Returns:
@@ -192,6 +194,7 @@ def dump_state(
     to_dump = {
         "topology": topology.model_dump(mode="json") if topology is not None else None,
         "zones": [zone.model_dump(mode="json") for zone in zones if zone is not None],
+        "secondary_zone_ips": sorted([str(ip) for ip in secondary_zone_ips]),
         "secondary_transfer_ips": sorted([str(ip) for ip in secondary_transfer_ips]),
     }
     return json.dumps(to_dump)

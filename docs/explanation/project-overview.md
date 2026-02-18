@@ -14,7 +14,7 @@ And this is exactly what we do when integrating `bind-operator` to `dns-integrat
 
 ## Handling DNS record request merges
 
-We just explained that all DNS record requests received by `bind-operator` through its `dns_record` relations are merged into one cohesive set of zone files for it to publish. This is very different from what traditional DNS servers do, and it is also opinionated in the way those files are created.
+We just explained that all DNS record requests received by `bind-operator` through all its `dns_record` relations are merged into one cohesive set of zone files for it to publish. This is very different from what traditional DNS servers do, and it is also opinionated in the way those files are created.
 
 The first thing that is done by `bind-operator` is to organize the record requests into zones, based on the declared domain of each record. This enables `bind-operator` to produce the corresponding zone file for each zone. It also detects any conflicts between records: if they have the same domain, host label, record class and type but not the same TTL and/or data. Any errors during these processes stop the charm from updating the configuration files of bind and are reported through the relations so that operators can take action accordingly (by fixing the conflict, for example).
 

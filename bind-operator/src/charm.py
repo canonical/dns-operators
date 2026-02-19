@@ -222,11 +222,13 @@ class BindCharm(ops.CharmBase):
             return
 
         # Get DNS transfer data
+        secondary_zone_ips = []
         secondary_transfer_ips = []
         for relation in self.model.relations[self.dns_transfer.relation_name]:
             try:
                 dns_secondary_data = self.dns_transfer.get_remote_relation_data(relation)
-                secondary_transfer_ips.extend(dns_secondary_data.addresses)
+                secondary_zone_ips.extend(dns_secondary_data.addresses)
+                secondary_transfer_ips.extend(dns_secondary_data.transfer_sources)
             except pydantic.ValidationError:
                 logger.warning("validation for dns secondary data failed, skipping")
                 continue
@@ -244,7 +246,7 @@ class BindCharm(ops.CharmBase):
 
         if dns_data.has_changed(relation_data, t, secondary_transfer_ips, last_valid_state):
             self.bind.update_zonefiles_and_reload(
-                relation_data, t, self.config, secondary_transfer_ips
+                relation_data, t, self.config, secondary_zone_ips, secondary_transfer_ips
             )
 
         if self.unit.is_leader():

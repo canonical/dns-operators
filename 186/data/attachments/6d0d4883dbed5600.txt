@@ -1,0 +1,26 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/any-charm-133
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  anyapp-t0/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  anyapp-t0/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  anyapp-t0/0 [idle] active: 
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [executing] active: active
+  anyapp-t0/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [idle] active: active
+  anyapp-t0/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [idle] active: active
+  anyapp-t0/0 [idle] active: 
+[32mINFO    [0m integration.test_charm:test_charm.py:268 ['10.17.131.208']
+[32mINFO    [0m integration.test_charm:test_charm.py:275 admin.dns.test
+[32mINFO    [0m integration.test_charm:test_charm.py:279 ['42.42.42.42']
+[32mINFO    [0m integration.test_charm:test_charm.py:268 ['10.17.131.208']
+[32mINFO    [0m integration.test_charm:test_charm.py:275 admin2.dns.test
+[32mINFO    [0m integration.test_charm:test_charm.py:279 ['42.42.42.43']
+[32mINFO    [0m integration.test_charm:test_charm.py:268 ['10.17.131.208']
+[32mINFO    [0m integration.test_charm:test_charm.py:275 admin.dns2.test
+[32mINFO    [0m integration.test_charm:test_charm.py:279 ['42.42.44.44']

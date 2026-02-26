@@ -14,6 +14,7 @@ import scenario
 from src.charm import DnsPolicyCharm
 
 logger = logging.getLogger(__name__)
+TEST_SECRET = "bar"  # nosec B105
 
 
 @pytest.fixture(name="api_root_token")
@@ -62,7 +63,7 @@ def database_relation_fixture():
     data = {
         "database": "somedb",
         "endpoints": "1.2.3.4:5432",
-        "password": "bar",
+        "password": TEST_SECRET,
         "username": "foo",
     }
     return scenario.Relation(

@@ -1,4 +1,4 @@
-(explanation_dns_policy_charm_architecture)=
+(reference_dns_policy_charm_architecture)=
 
 # DNS policy charm architecture
 

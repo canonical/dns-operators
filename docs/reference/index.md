@@ -12,5 +12,7 @@ The pages in this section contain technical information for topics relevant to t
 
 ```{toctree}
 :maxdepth: 1
+components.md
 bind-charm-architecture.md
+dns-policy-charm-architecture.md
 ```

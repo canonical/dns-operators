@@ -36,21 +36,21 @@ Only `dns-policy` is using an external database to store its data, through a `po
 
 Follow the instructions of the PostgreSQL charm:
 
- - For [`postgresql-k8s`](https://charmhub.io/postgresql-k8s/docs/h-create-backup).
- - For [`postgresql`](https://charmhub.io/postgresql/docs/h-create-backup).
+- For `postgresql-k8s`: {doc}`Create a backup <postgresql-k8s:how-to/back-up-and-restore/create-a-backup>`
+- For `postgresql`: {doc}`Create a backup <postgresql-vm:how-to/back-up-and-restore/create-a-backup>`
 
 If you plan to restore PostgreSQL in a different model or cluster, you will need
 to also back up the cluster passwords. See:
 
- - For [`postgresql-k8s`](https://charmhub.io/postgresql-k8s/docs/h-migrate-cluster).
- - For [`postgresql`](https://charmhub.io/postgresql/docs/h-migrate-cluster).
+- For `postgresql-k8s`: {doc}`Migrate a cluster <postgresql-k8s:how-to/back-up-and-restore/migrate-a-cluster>`
+- For `postgresql`: {doc}`Migrate a cluster <postgresql-vm:how-to/back-up-and-restore/migrate-a-cluster>`
 
 ### Restore PostgreSQL
 
 Follow the instructions given by PostgreSQL:
 
- - For `postgresql-k8s`: [local restore](https://charmhub.io/postgresql/docs/h-restore-backup), [foreign backup](https://charmhub.io/postgresql/docs/h-migrate-cluster).
- - For `postgresql`: [local restore](https://charmhub.io/postgresql/docs/h-restore-backup), [foreign backup](https://charmhub.io/postgresql/docs/h-migrate-cluster).
+- For `postgresql-k8s`: {doc}`local restore <postgresql-k8s:how-to/back-up-and-restore/restore-a-backup>`, {doc}`foreign backup <postgresql-k8s:how-to/back-up-and-restore/migrate-a-cluster>`.
+- For `postgresql`: {doc}`local restore <postgresql-vm:how-to/back-up-and-restore/restore-a-backup>`, {doc}`foreign backup <postgresql-vm:how-to/back-up-and-restore/migrate-a-cluster>`.
 
 ## Reviewers
 

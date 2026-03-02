@@ -367,5 +367,8 @@ if os.path.exists('./reuse/substitutions.yaml'):
 # Map only the Sphinx documentation sets that you need to link to from your docs set.
 intersphinx_mapping = {
     "juju": ("https://documentation.ubuntu.com/juju/3.6/", None),
-    'sphinxcontrib-mermaid': ('https://sphinxcontrib-mermaid-demo.readthedocs.io/en/latest', None)
+    'sphinxcontrib-mermaid': ('https://sphinxcontrib-mermaid-demo.readthedocs.io/en/latest', None),
+    'postgresql-k8s': ('https://canonical-charmed-postgresql-k8s.readthedocs-hosted.com/14/', None),
+    'postgresql-vm': ('https://canonical-charmed-postgresql.readthedocs-hosted.com/14/', None),
+    'starter-pack': ("https://canonical-starter-pack.readthedocs-hosted.com/stable/", None),
 }

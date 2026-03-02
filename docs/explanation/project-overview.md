@@ -1,3 +1,4 @@
+(explanation_project_overview)=
 # The DNS charms project
 
 The goal of the suite of DNS charms is to provide an easy-to-use and somewhat opinionated way to deploy DNS for your infrastructure using Juju. Since DNS can be used in many different ways and bind (the DNS server that we use as a workload for these charms) can be configured in many different ways, it is difficult to choose “one true way”. Since we intend to use these charms for our own infrastructure, we had some constraints that guided our decisions along the way. We still hope that the result is usable by a large majority of people who want a quick, production-ready solution that also scales to quite large deployments.

@@ -1,9 +1,12 @@
+(explanation_security)=
+
 # Security
 
 This document outlines common risks and possible best practices specifically for the DNS charms. It
 focuses on configurations and protections available through the charms themselves.
 
-The overall best practice is to [keep your charms updated](https://documentation.ubuntu.com/juju/3.6/reference/juju-cli/list-of-juju-cli-commands/refresh/) to the latest version available.  
+The overall best practice is to {ref}`keep your charms updated <juju:command-juju-refresh>`
+to the latest version available.  
 A good understanding of [the DNS system](https://bind9.readthedocs.io/en/stable/chapter1.html) is also helpful.
 
 ## Configuration
@@ -32,17 +35,20 @@ Only `dns-policy` is using an external database to store its data, through a `po
 ### Back up PostgreSQL
 
 Follow the instructions of the PostgreSQL charm:
+
  - For [`postgresql-k8s`](https://charmhub.io/postgresql-k8s/docs/h-create-backup).
  - For [`postgresql`](https://charmhub.io/postgresql/docs/h-create-backup).
 
 If you plan to restore PostgreSQL in a different model or cluster, you will need
 to also back up the cluster passwords. See:
+
  - For [`postgresql-k8s`](https://charmhub.io/postgresql-k8s/docs/h-migrate-cluster).
  - For [`postgresql`](https://charmhub.io/postgresql/docs/h-migrate-cluster).
 
 ### Restore PostgreSQL
 
 Follow the instructions given by PostgreSQL:
+
  - For `postgresql-k8s`: [local restore](https://charmhub.io/postgresql/docs/h-restore-backup), [foreign backup](https://charmhub.io/postgresql/docs/h-migrate-cluster).
  - For `postgresql`: [local restore](https://charmhub.io/postgresql/docs/h-restore-backup), [foreign backup](https://charmhub.io/postgresql/docs/h-migrate-cluster).
 

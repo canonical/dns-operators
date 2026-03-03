@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    "description lang=en": "A list of all components (snaps and charms) in the DNS operators project."
+---
+
 (reference_components)=
 
 # Components

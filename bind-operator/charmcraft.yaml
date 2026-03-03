@@ -5,9 +5,9 @@ title: Bind
 summary: Bind DNS charm for a centralised DNS server.
 type: charm
 links:
-  documentation: https://discourse.charmhub.io/t/bind-documentation-overview/13753
-  issues: https://github.com/canonical/bind-operator/issues
-  source: https://github.com/canonical/bind-operator
+  documentation: https://github.com/canonical/dns-operators
+  issues: https://github.com/canonical/dns-operators/issues
+  source: https://github.com/canonical/dns-operators
 description: |
   A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/)
   deploying and managing a DNS server Integrator on Kubernetes and bare metal.

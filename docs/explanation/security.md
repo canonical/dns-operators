@@ -21,6 +21,7 @@ No security-related configurations available.
 
 `dns-policy` uses a Django application under the hood for its API and web interface. As such, it can be configured following
 some of Django's configurations.  
+
 - **debug**: Puts the application in [debug mode](https://docs.djangoproject.com/en/stable/ref/settings/#std-setting-DEBUG).
 - **allowed-hosts**: Configures the [hosts allowed](https://docs.djangoproject.com/en/stable/ref/settings/#std-setting-ALLOWED_HOSTS) to reach the API and web interface of the application.
 

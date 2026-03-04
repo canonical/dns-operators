@@ -1,3 +1,5 @@
+(explanation_charm_architecture)=
+
 # Project architecture
 
 DNS operators are a family of charms used to integrate a fully functional DNS solution in [Juju](https://juju.is/).
@@ -6,7 +8,7 @@ The underlying workload uses [Bind](https://bind9.readthedocs.io), packaged as a
 
 The following diagram shows how these charms are intended to be used with other charms:
 
-```mermaid
+```{mermaid}
 C4Context
 title DNS charms story
 
@@ -61,7 +63,7 @@ are snaps, they can work on the same machine. It was therefore decided to make d
 
 The following diagram shows the interactions between bind-operator, dns-policy, and external components of a typical deployment of the DNS charms:
 
-```mermaid
+```{mermaid}
 C4Container
 title DNS charms components
 
@@ -123,7 +125,10 @@ Container_Boundary(machine-1, "Machine 1") {
 ```
 
 After having deployed and integrated all the DNS charms in one model, you should see the following output with `juju status --relations`:
-```
+
+```{terminal}
+juju status --relations
+
 Model    Controller  Cloud/Region         Version  SLA          Timestamp
 machine  lxd         localhost/localhost  3.6.5    unsupported  13:14:27-04:00
 

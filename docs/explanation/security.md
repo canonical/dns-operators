@@ -1,9 +1,12 @@
+(explanation_security)=
+
 # Security
 
 This document outlines common risks and possible best practices specifically for the DNS charms. It
 focuses on configurations and protections available through the charms themselves.
 
-The overall best practice is to [keep your charms updated](https://documentation.ubuntu.com/juju/3.6/reference/juju-cli/list-of-juju-cli-commands/refresh/) to the latest version available.  
+The overall best practice is to {ref}`keep your charms updated <juju:command-juju-refresh>`
+to the latest version available.  
 A good understanding of [the DNS system](https://bind9.readthedocs.io/en/stable/chapter1.html) is also helpful.
 
 ## Configuration
@@ -18,6 +21,7 @@ No security-related configurations available.
 
 `dns-policy` uses a Django application under the hood for its API and web interface. As such, it can be configured following
 some of Django's configurations.  
+
 - **debug**: Puts the application in [debug mode](https://docs.djangoproject.com/en/stable/ref/settings/#std-setting-DEBUG).
 - **allowed-hosts**: Configures the [hosts allowed](https://docs.djangoproject.com/en/stable/ref/settings/#std-setting-ALLOWED_HOSTS) to reach the API and web interface of the application.
 
@@ -32,19 +36,22 @@ Only `dns-policy` is using an external database to store its data, through a `po
 ### Back up PostgreSQL
 
 Follow the instructions of the PostgreSQL charm:
- - For [`postgresql-k8s`](https://charmhub.io/postgresql-k8s/docs/h-create-backup).
- - For [`postgresql`](https://charmhub.io/postgresql/docs/h-create-backup).
+
+- For `postgresql-k8s`: {doc}`Create a backup <postgresql-k8s:how-to/back-up-and-restore/create-a-backup>`
+- For `postgresql`: {doc}`Create a backup <postgresql-vm:how-to/back-up-and-restore/create-a-backup>`
 
 If you plan to restore PostgreSQL in a different model or cluster, you will need
 to also back up the cluster passwords. See:
- - For [`postgresql-k8s`](https://charmhub.io/postgresql-k8s/docs/h-migrate-cluster).
- - For [`postgresql`](https://charmhub.io/postgresql/docs/h-migrate-cluster).
+
+- For `postgresql-k8s`: {doc}`Migrate a cluster <postgresql-k8s:how-to/back-up-and-restore/migrate-a-cluster>`
+- For `postgresql`: {doc}`Migrate a cluster <postgresql-vm:how-to/back-up-and-restore/migrate-a-cluster>`
 
 ### Restore PostgreSQL
 
 Follow the instructions given by PostgreSQL:
- - For `postgresql-k8s`: [local restore](https://charmhub.io/postgresql/docs/h-restore-backup), [foreign backup](https://charmhub.io/postgresql/docs/h-migrate-cluster).
- - For `postgresql`: [local restore](https://charmhub.io/postgresql/docs/h-restore-backup), [foreign backup](https://charmhub.io/postgresql/docs/h-migrate-cluster).
+
+- For `postgresql-k8s`: {doc}`local restore <postgresql-k8s:how-to/back-up-and-restore/restore-a-backup>`, {doc}`foreign backup <postgresql-k8s:how-to/back-up-and-restore/migrate-a-cluster>`.
+- For `postgresql`: {doc}`local restore <postgresql-vm:how-to/back-up-and-restore/restore-a-backup>`, {doc}`foreign backup <postgresql-vm:how-to/back-up-and-restore/migrate-a-cluster>`.
 
 ## Reviewers
 

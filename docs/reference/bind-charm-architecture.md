@@ -1,9 +1,11 @@
+(reference_bind_charm_architecture)=
+
 # Bind charm architecture
 
 The following diagram shows the different modules of this charm
 and how they interact with each other.
 
-```mermaid
+```{mermaid}
 C4Component
 title Bind Operator Components
 
@@ -69,7 +71,9 @@ All the `standby` units have Bind working as a secondary server, replicating the
 
 The `src/charm.py` is the default entry point for a charm and has the `BindCharm` Python class which inherits from `CharmBase`. `CharmBase` is the base class from which all charms are formed, defined by [Ops](https://juju.is/docs/sdk/ops) Python framework for developing charms.
 
-> See more in the Juju docs: [Charm](https://documentation.ubuntu.com/juju/3.6/user/reference/charm/)
+```{seealso}
+See more in the Juju docs: {ref}`Charm <juju:charm>`
+```
 
 ## Workload
 

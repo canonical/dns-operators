@@ -12,6 +12,7 @@ from ops.framework import Object
 import constants
 
 logger = logging.getLogger(__name__)
+DEFAULT_DB_VALUE = ""
 
 
 class DatabaseHandler(Object):
@@ -41,11 +42,11 @@ class DatabaseHandler(Object):
             Returns default if the relation data is not correctly initialized.
         """
         default = {
-            "POSTGRES_USER": "",
-            "POSTGRES_PASSWORD": "",
-            "POSTGRES_HOST": "",
-            "POSTGRES_PORT": "",
-            "POSTGRES_DB": "",
+            "POSTGRES_USER": DEFAULT_DB_VALUE,
+            "POSTGRES_PASSWORD": DEFAULT_DB_VALUE,
+            "POSTGRES_HOST": DEFAULT_DB_VALUE,
+            "POSTGRES_PORT": DEFAULT_DB_VALUE,
+            "POSTGRES_DB": DEFAULT_DB_VALUE,
         }
 
         if self.model.get_relation(self.relation_name) is None:

@@ -218,9 +218,9 @@ def test_dns_record_relation_changed_without_conflict(context, base_state):
             ],
         ],
     )
-    dumped_model = record_requirers_data[0].model_dump(exclude_unset=True)
+    dns_entries = [entry.model_dump(mode="json") for entry in record_requirers_data[0].dns_entries]
     dumped_data = {
-        "dns_entries": json.dumps(dumped_model["dns_entries"], default=str),
+        "dns_entries": json.dumps(dns_entries, default=str),
     }
 
     dns_record_relation = testing.Relation(
@@ -232,7 +232,7 @@ def test_dns_record_relation_changed_without_conflict(context, base_state):
     state = testing.State(**base_state)
     dns_record_relation_changed_event = context.on.relation_changed(dns_record_relation)
     out = context.run(dns_record_relation_changed_event, state)
-    in_uuids = {str(x["uuid"]) for x in dumped_model["dns_entries"]}
+    in_uuids = {str(x["uuid"]) for x in dns_entries}
     for relation in out.relations:
         if relation.endpoint == "dns-record":
             data = json.loads(relation.local_app_data["dns_entries"])
@@ -261,9 +261,9 @@ def test_dns_record_relation_changed_without_conflict_not_leader(context, base_s
             ],
         ],
     )
-    dumped_model = record_requirers_data[0].model_dump(exclude_unset=True)
+    dns_entries = [entry.model_dump(mode="json") for entry in record_requirers_data[0].dns_entries]
     dumped_data = {
-        "dns_entries": json.dumps(dumped_model["dns_entries"], default=str),
+        "dns_entries": json.dumps(dns_entries, default=str),
     }
 
     dns_record_relation = testing.Relation(
@@ -302,9 +302,9 @@ def test_dns_record_relation_changed_with_conflict(context, base_state):
         ],
     )
     for record_requirer_data in record_requirers_data:
-        dumped_model = record_requirer_data.model_dump(exclude_unset=True)
+        dns_entries = [entry.model_dump(mode="json") for entry in record_requirer_data.dns_entries]
         dumped_data = {
-            "dns_entries": json.dumps(dumped_model["dns_entries"], default=str),
+            "dns_entries": json.dumps(dns_entries, default=str),
         }
         dns_record_relation = testing.Relation(
             endpoint="dns-record",
@@ -351,5 +351,5 @@ def test_dns_transfer_relation_changed(context, base_state):
 
         assert isinstance(out.unit_status, ops.ActiveStatus)
         update_zonefiles_and_reload.assert_called_once_with(
-            ANY, ANY, ANY, [IPv4Address(secondary_ip)]
+            ANY, ANY, ANY, [IPv4Address(secondary_ip)], []
         )

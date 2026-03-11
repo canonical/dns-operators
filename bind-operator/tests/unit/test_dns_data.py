@@ -220,7 +220,7 @@ def test_has_changed(
         if topology_data_before is not None
         else None
     )
-    serialized_state = dns_data.dump_state(zones, topology_before, [])
+    serialized_state = dns_data.dump_state(zones, topology_before, [], [])
 
     record_requirers_data_after = (
         tests.unit.helpers.dns_record_requirers_data_from_integration_datasets(
@@ -286,7 +286,12 @@ def test_load_dump_state(integration_datasets, topology_data):
     )
     topology = topology_module.Topology(**topology_data) if topology_data is not None else None
 
-    serialized = dns_data.dump_state(zones, topology, [])
+    serialized = dns_data.dump_state(zones, topology, [], [])
     state = dns_data.load_state(serialized)
 
-    assert state == {"zones": zones, "topology": topology, "secondary_transfer_ips": []}
+    assert state == {
+        "zones": zones,
+        "topology": topology,
+        "secondary_zone_ips": [],
+        "secondary_transfer_ips": [],
+    }

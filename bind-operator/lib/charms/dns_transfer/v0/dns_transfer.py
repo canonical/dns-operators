@@ -72,14 +72,14 @@ class DNSTransferProviderCharm(ops.CharmBase):
 """
 
 # The unique Charmhub library identifier, never change it
-LIBID = "908bcd1f0ad14cabbc9dca25fa0fc87c"
+LIBID = "4bb8e858-b80e-4f87-9ad9-dda65e4d0229"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 5
+LIBPATCH = 6
 
 PYDEPS = ["pydantic>=2"]
 
@@ -149,13 +149,18 @@ class DNSTransferProviderData(pydantic.BaseModel):
     """List of information for the provider to manage and transfer.
 
     Attributes:
-        addresses: IP list of the units composing the provider's deployment.
+        addresses: IP list of the units composing the provider's deployment
+            as they will appear in the NS records of the zonefiles.
+        transfer_sources: IP list of the units composing the provider's
+            deployment when different from the one in the zonefiles.
         transport: Type of transport (tls or tcp).
-        remote_hostname: Advertised name of the host in the TLS certificate (optional).
+        remote_hostname: Advertised name of the host in the TLS certificate
+            (optional).
         zones: List of zone names.
     """
 
     addresses: list[pydantic.IPvAnyAddress]
+    transfer_sources: list[pydantic.IPvAnyAddress] = []
     transport: TransportSecurity
     remote_hostname: Optional[str] = None
     zones: list[str]
@@ -164,6 +169,19 @@ class DNSTransferProviderData(pydantic.BaseModel):
     @pydantic.field_validator("addresses", mode="before")
     def deduplicate_addresses(cls, v: Any) -> list:  # noqa: N805 pylint: disable=E0213
         """Deduplicate addresses.
+
+        Args:
+            v: value
+
+        Returns:
+            list with unique values.
+        """
+        return list(set(v))
+
+    # pydantic wants 'self' as first argument
+    @pydantic.field_validator("transfer_sources", mode="before")
+    def deduplicate_transfer_sources(cls, v: Any) -> list:  # noqa: N805 pylint: disable=E0213
+        """Deduplicate transfer_sources.
 
         Args:
             v: value
@@ -258,15 +276,31 @@ class DNSTransferRequirerData(pydantic.BaseModel):
     """List of information for the requirer to manage and transfer.
 
     Attributes:
-        addresses: IP list of the units composing the provider's deployment.
+        addresses: IP list of the units composing the requirer's deployment.
+        transfer_sources: IP list of the units composing the requirer's
+            deployment when different from the one in the zonefiles.
     """
 
     addresses: list[pydantic.IPvAnyAddress]
+    transfer_sources: list[pydantic.IPvAnyAddress] = []
 
     # pydantic wants 'self' as first argument
     @pydantic.field_validator("addresses", mode="before")
     def deduplicate_addresses(cls, v: Any) -> list:  # noqa: N805 pylint: disable=E0213
         """Deduplicate addresses.
+
+        Args:
+            v: value
+
+        Returns:
+            list with unique values.
+        """
+        return list(set(v))
+
+    # pydantic wants 'self' as first argument
+    @pydantic.field_validator("transfer_sources", mode="before")
+    def deduplicate_transfer_sources(cls, v: Any) -> list:  # noqa: N805 pylint: disable=E0213
+        """Deduplicate transfer_sources.
 
         Args:
             v: value
@@ -282,7 +316,11 @@ class DNSTransferRequirerData(pydantic.BaseModel):
         Returns:
             Dict containing the representation.
         """
-        return {"addresses": json.dumps(self.addresses, default=str)}
+        dumped_model = self.model_dump(exclude_unset=True)
+        dumped_data = {}
+        for key, value in dumped_model.items():
+            dumped_data[key] = json.dumps(value, default=str)
+        return dumped_data
 
     @classmethod
     def from_relation_data(cls, relation: ops.Relation) -> "DNSTransferRequirerData":

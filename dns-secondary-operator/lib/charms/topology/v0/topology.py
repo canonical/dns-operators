@@ -1,7 +1,33 @@
 # Copyright 2026 Canonical Ltd.
-# See LICENSE file for licensing details.
+# Licensed under the Apache2.0. See LICENSE file in charm source for details.
+"""Library to retrieve topology information of the current deployment.
 
-"""Bind charm topology logic."""
+This library gives access to some tools to find the IP addresses
+of units within the charm's deployment.
+It does this by leveraging a peer relation between the units.
+
+```python
+
+from charms.topology.v0 import topology
+
+class CoolCharm(ops.CharmBase):
+    def __init__(self, *args: typing.Any):
+        super().__init__(*args)
+        self.topology = topology.TopologyObserver(self, "some-peer-relation-name")
+        self.framework.observe(self.topology.on.topology_changed, self._reconcile)
+
+    def _reconcile(self, _: ops.HookEvent) -> None:
+        try:
+            t = self.topology.current()
+            do_something_cool_with(t.units_ip)
+        except topology.TopologyUnavailableError as err:
+            logger.info("Could not retrieve network topology: %s", err)
+```
+
+You can also access the current unit's IP with `t.current_unit_ip`.
+The active/standby properties are only used in bind-operator
+and may be removed from this module in the future.
+"""
 
 # The unique Charmhub library identifier, never change it
 LIBID = "8238c723c4b92ba1295c7a46a03da099"

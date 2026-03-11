@@ -179,11 +179,14 @@ class BindService:
             encoding="utf-8",
         )
 
+    # All arguments are needed
+    # pylint: disable=too-many-positional-arguments
     def update_zonefiles_and_reload(
         self,
         relation_data: list[tuple[DNSRecordRequirerData, DNSRecordProviderData]],
         topology: topology_module.Topology | None,
         config: dict[str, str],
+        secondary_zone_ips: list[pydantic.IPvAnyAddress] | None = None,
         secondary_transfer_ips: list[pydantic.IPvAnyAddress] | None = None,
     ) -> None:
         """Update the zonefiles from bind's config and reload bind.
@@ -192,7 +195,8 @@ class BindService:
             relation_data: input relation data
             topology: Topology of the current deployment
             config: Relevant charm's config
-            secondary_transfer_ips: ips from secondary dns that should be allowed to transfer.
+            secondary_zone_ips: ips from secondary dns that should be in the zonefile
+            secondary_transfer_ips: ips from secondary dns that should be allowed to transfer
         """
         start_time = time.time_ns()
         logger.debug("Starting update of zonefiles")
@@ -200,6 +204,8 @@ class BindService:
         logger.debug("Zones: %s", [z.domain for z in zones])
         if not secondary_transfer_ips:
             secondary_transfer_ips = []
+        if not secondary_zone_ips:
+            secondary_zone_ips = []
 
         # Check for conflicts
         _, conflicting = dns_data.get_conflicts(zones)
@@ -213,7 +219,7 @@ class BindService:
             # Write the serialized state to a json file for future comparison
             self._write_file(
                 pathlib.Path(constants.DNS_CONFIG_DIR) / "state.json",
-                dns_data.dump_state(zones, topology, secondary_transfer_ips),
+                dns_data.dump_state(zones, topology, secondary_zone_ips, secondary_transfer_ips),
             )
 
             # Write the service.test file
@@ -228,7 +234,7 @@ class BindService:
             if topology is not None and topology.is_current_unit_active:
                 # Write zone files
                 zone_files: dict[str, str] = BindService._zones_to_files_content(
-                    zones, topology, config, secondary_transfer_ips
+                    zones, topology, config, secondary_zone_ips
                 )
                 for domain, content in zone_files.items():
                     self._write_file(pathlib.Path(tempdir) / f"db.{domain}", content)
@@ -237,7 +243,9 @@ class BindService:
             self._write_file(
                 pathlib.Path(tempdir) / "named.conf.local",
                 self._generate_named_conf_local(
-                    [z.domain for z in zones], topology, secondary_transfer_ips
+                    [z.domain for z in zones],
+                    topology,
+                    secondary_transfer_ips or secondary_zone_ips,
                 ),
             )
 

@@ -172,7 +172,10 @@ dns-integrator/0*  active    idle   1        10.124.97.236
 ```
 
 Let's check the status again:
-```
+
+```{terminal}
+:output-only:
+
 App             Version  Status   Scale  Charm           Channel      Rev  Exposed  Message
 bind                     active       1  bind            latest/edge   80  no       active
 dns-integrator           blocked      1  dns-integrator  latest/edge    2  no       Waiting for integration

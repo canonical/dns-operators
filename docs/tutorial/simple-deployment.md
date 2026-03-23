@@ -110,8 +110,11 @@ Now that we have everything we need, let's deploy our DNS server!
 juju deploy bind --channel=latest/edge
 ```
 
-Doing a `juju status` should show you the following after waiting a bit for things to settle:
-```
+Running `juju status` should show you the following after waiting a bit for things to settle:
+
+```{terminal}
+:output-only:
+
 App   Version  Status  Scale  Charm  Channel      Rev  Exposed  Message
 bind           active      1  bind   latest/edge   80  no       active
 

@@ -129,7 +129,9 @@ dig @10.124.97.210 status.service.test TXT +short
 "ok"
 ```
 
-> **Note:** Replace `10.124.97.210` with the public address of your bind unit, as shown in `juju status`.
+```{note}
+Replace `10.124.97.210` with the public address of your bind unit, as shown in `juju status`.
+```
 
 ## Deploy dns-integrator
 

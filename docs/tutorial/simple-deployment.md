@@ -228,7 +228,7 @@ bind/2             active    idle   3        10.124.97.201   53/tcp 53/udp
 dns-integrator/0*  active    idle   1        10.124.97.236
 ```
 
-Now bind has 3 units! We can query each one with dig to get the same results.
+Now bind has three units! We can query each one with dig to get the same results.
 Note that only one unit is marked as "active" at a time. This unit will act as a hidden primary and you should not expose it publicly, leaving the task of responding to client queries to the other units instead.
 
 ## Conclusion

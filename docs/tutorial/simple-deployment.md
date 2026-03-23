@@ -125,10 +125,9 @@ bind/0*  active    idle   0        10.124.97.210   53/tcp 53/udp  active
 Our bind DNS server is now deployed and running. You can see it's listening on ports 53/tcp and 53/udp, which are the standard DNS ports.
 We can check the health of our DNS server using the built-in status record:
 
-```bash
+```{terminal}
 dig @10.124.97.210 status.service.test TXT +short
-```
-```
+
 "ok"
 ```
 

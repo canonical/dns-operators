@@ -185,7 +185,7 @@ dns-integrator/0*  blocked   idle   1        10.124.97.236                  Wait
 The dns-integrator is still in a `blocked` state because it needs to be related to a DNS server.
 
 ```bash
-juju relate bind dns-integrator
+juju integrate bind dns-integrator
 ```
 
 And now, everything should be active:

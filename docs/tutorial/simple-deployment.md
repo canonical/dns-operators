@@ -213,7 +213,9 @@ dig @10.124.97.210 message.flying-saucer.local TXT +short
 "Hello"
 ```
 
-> **Note:** Replace `10.124.97.210` with the public address of your bind unit, as shown in `juju status`.
+```{note}
+Replace `10.124.97.210` with the public address of your bind unit, as shown in `juju status`.
+```
 
 Our DNS server is up and serving records. You've just deployed a fully functional authoritative DNS server using Juju charms!
 

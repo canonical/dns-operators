@@ -223,7 +223,10 @@ Bind can be scaled up to prevent outages and divide incoming requests among mult
 To do that, you just need to execute `juju add-unit -n 2 bind`.
 
 After letting things settle down a bit, we can now see:
-```
+
+```{terminal}
+:output-only:
+
 App             Version  Status  Scale  Charm           Channel      Rev  Exposed  Message
 bind                     active      3  bind            latest/edge   80  no       active
 dns-integrator           active      1  dns-integrator  latest/edge    2  no

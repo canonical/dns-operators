@@ -222,7 +222,10 @@ Our DNS server is up and serving records. You've just deployed a fully functiona
 ## Scale up
 
 Bind can be scaled up to prevent outages and divide incoming requests among multiple units.
-To do that, you just need to execute `juju add-unit -n 2 bind`.
+To do that, you just need to run: 
+```
+juju add-unit -n 2 bind
+```
 
 After letting things settle down a bit, we can now see:
 

@@ -207,10 +207,9 @@ dns-integrator/0*  active    executing  1        10.124.97.236
 
 Now let's query the TXT record we just created for our `flying-saucer.local` domain:
 
-```bash
+```{terminal}
 dig @10.124.97.210 message.flying-saucer.local TXT +short
-```
-```
+
 "Hello"
 ```
 

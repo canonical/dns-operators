@@ -33,7 +33,7 @@ jobs:
         working-directory: ${{ matrix.workdir }}
 
       - name: Setup Tflint
-        uses: terraform-linters/setup-tflint@v6.2.1
+        uses: terraform-linters/setup-tflint@v6.2.2
         with:
           tflint_wrapper_enabled: true
 

@@ -1,0 +1,20 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model            Controller           Cloud/Region         Version  SLA          Timestamp
+test-charm-udn5  github-pr-82af5-lxd  localhost/localhost  3.6.20   unsupported  18:24:57Z
+
+App   Version  Status  Scale  Charm  Channel  Rev  Exposed  Message
+bind           active      1  bind              0  no       active
+
+Unit     Workload  Agent  Machine  Public address  Ports          Message
+bind/0*  active    idle   0        10.151.46.38    53/tcp 53/udp  active
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.151.46.38  juju-40d743-0  ubuntu@22.04  runnervmrg6be  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+machine-0: 18:24:31 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 18:24:31 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

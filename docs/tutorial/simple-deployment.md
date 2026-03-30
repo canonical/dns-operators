@@ -231,6 +231,7 @@ Our DNS server is up and serving records. You've just deployed a fully functiona
 
 Bind can be scaled up to prevent outages and divide incoming requests among multiple units.
 To do that, you just need to run: 
+
 ```
 juju add-unit -n 2 bind
 ```

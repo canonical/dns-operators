@@ -72,13 +72,13 @@ See the [Multipass installation instructions](https://multipass.run/docs/install
 Once Multipass is ready, create the VM with the following command:
 
 ```bash
-multipass launch --disk 10G --name rock-dev 24.04
+multipass launch --disk 10G --name dns-dev 24.04
 ```
 
 Finally, once the VM is up, open a shell into it:
 
 ```bash
-multipass shell rock-dev
+multipass shell dns-dev
 ```
 
 > **Note:** Unless stated otherwise, we will work entirely within the VM from now on.

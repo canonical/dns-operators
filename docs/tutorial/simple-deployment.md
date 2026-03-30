@@ -85,21 +85,43 @@ multipass shell rock-dev
 
 ### 3. Install dependencies
 
-#### **LXD**
-
-LXD is required to deploy the charm. Make sure it is installed and initialised:
+Use [Concierge](https://github.com/canonical/concierge) to set up Juju:
 
 ```bash
-sudo snap install lxd
-lxd init --auto
+sudo snap install --classic concierge
+sudo concierge prepare -p machine
 ```
 
-#### **Juju**
+This installs Concierge and uses it to install and configure Juju with a local LXD cloud.
 
-Juju is required to deploy charms. Make sure it is installed:
+For this tutorial, Juju must be bootstrapped to a LXD controller. Concierge should
+complete this step for you. You can verify by running:
 
 ```bash
-sudo snap install juju
+juju controllers
+```
+
+You should see output similar to:
+
+```{terminal}
+:output-only:
+Controller      Model    User   Access     Cloud/Region         Models  Nodes    HA  Version
+concierge-lxd*  testing  admin  superuser  localhost/localhost       2      1  none  3.6.13
+```
+
+Delete the default `testing` model that Juju creates, we will create a new model for this tutorial in the next step.
+
+```bash
+juju destroy-model testing
+```
+
+## Set up a tutorial model
+
+To manage resources effectively and to separate this tutorial's workload from
+your usual work, create a new model using the following command.
+
+```bash
+juju add-model dns-tutorial
 ```
 
 ## Deploy bind
@@ -113,8 +135,6 @@ juju deploy bind --channel=latest/edge
 Running `juju status` should show you the following after waiting a bit for things to settle:
 
 ```{terminal}
-:output-only:
-
 App   Version  Status  Scale  Charm  Channel      Rev  Exposed  Message
 bind           active      1  bind   latest/edge   80  no       active
 
@@ -147,8 +167,6 @@ juju deploy dns-integrator --channel=latest/edge
 After waiting a bit, `juju status` should show:
 
 ```{terminal}
-:output-only:
-
 App             Version  Status   Scale  Charm           Channel      Rev  Exposed  Message
 bind                     active       1  bind            latest/edge   80  no       active
 dns-integrator           blocked      1  dns-integrator  latest/edge    2  no       Waiting for some configuration
@@ -165,22 +183,9 @@ Let's create a DNS record for our `flying-saucer.local` domain. We'll add a simp
 juju config dns-integrator requests="message flying-saucer.local 600 IN TXT Hello"
 ```
 
-After a moment, `juju status` should show both charms as `active`:
-```
-App             Version  Status  Scale  Charm           Channel      Rev  Exposed  Message
-bind                     active      1  bind            latest/edge   80  no       active
-dns-integrator           active      1  dns-integrator  latest/edge    2  no
-
-Unit               Workload  Agent  Machine  Public address  Ports          Message
-bind/0*            active    idle   0        10.124.97.210   53/tcp 53/udp  active
-dns-integrator/0*  active    idle   1        10.124.97.236
-```
-
 Let's check the status again:
 
 ```{terminal}
-:output-only:
-
 App             Version  Status   Scale  Charm           Channel      Rev  Exposed  Message
 bind                     active       1  bind            latest/edge   80  no       active
 dns-integrator           blocked      1  dns-integrator  latest/edge    2  no       Waiting for integration
@@ -199,8 +204,6 @@ juju integrate bind dns-integrator
 And now, everything should be active:
 
 ```{terminal}
-:output-only:
-
 App             Version  Status  Scale  Charm           Channel      Rev  Exposed  Message
 bind                     active      1  bind            latest/edge   80  no       active
 dns-integrator           active      1  dns-integrator  latest/edge    2  no
@@ -235,8 +238,6 @@ juju add-unit -n 2 bind
 After letting things settle down a bit, we can now see:
 
 ```{terminal}
-:output-only:
-
 App             Version  Status  Scale  Charm           Channel      Rev  Exposed  Message
 bind                     active      3  bind            latest/edge   80  no       active
 dns-integrator           active      1  dns-integrator  latest/edge    2  no

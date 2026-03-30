@@ -10,7 +10,7 @@ myst:
 
 This section collects step-by-step tutorials for deploying and operating the DNS charms.
 
-- [Simple deployment](tutorial/simple-deployment)
+- [Simple deployment](simple-deployment)
 
 ```{toctree}
 :hidden:

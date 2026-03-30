@@ -106,7 +106,7 @@ You should see output similar to:
 ```{terminal}
 :output-only:
 Controller      Model    User   Access     Cloud/Region         Models  Nodes    HA  Version
-concierge-lxd*  testing  admin  superuser  localhost/localhost       2      1  none  3.6.13
+concierge-lxd*  testing  admin  superuser  localhost/localhost       2      1  none  3.6.20
 ```
 
 Delete the default `testing` model that Juju creates, we will create a new model for this tutorial in the next step.

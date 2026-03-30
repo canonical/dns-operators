@@ -4,13 +4,16 @@ myst:
     "description lang=en": "The DNS charms tutorials that walks a user through some DNS deployments."
 ---
 
+(tutorial_index)=
+
 # Tutorials
 
 This section collects step-by-step tutorials for deploying and operating the DNS charms.
 
-```{toctree}
-:maxdepth: 2
-:caption: Tutorials
+* {ref}`simple-deployment`
 
-simple-deployment.md
+```{toctree}
+:hidden:
+
+simple-deployment
 ```

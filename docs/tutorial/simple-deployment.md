@@ -136,6 +136,11 @@ juju deploy bind --channel=latest/edge
 Running `juju status` should show you the following after waiting a bit for things to settle:
 
 ```{terminal}
+:user: ubuntu
+:host: dns-dev
+
+juju status
+
 App   Version  Status  Scale  Charm  Channel      Rev  Exposed  Message
 bind           active      1  bind   latest/edge   80  no       active
 

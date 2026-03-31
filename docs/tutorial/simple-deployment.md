@@ -82,7 +82,9 @@ Finally, once the VM is up, open a shell into it:
 multipass shell dns-dev
 ```
 
-> **Note:** Unless stated otherwise, we will work entirely within the VM from now on.
+```{note}
+Unless stated otherwise, we will work entirely within the VM from now on.
+```
 
 ### 3. Install dependencies
 

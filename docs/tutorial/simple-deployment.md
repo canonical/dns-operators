@@ -75,7 +75,7 @@ See the [Multipass installation instructions](https://multipass.run/docs/install
 Once Multipass is ready, create the VM with the following command:
 
 ```bash
-multipass launch --disk 10G --name dns-dev 24.04
+multipass launch --cpus 4 --memory 4G --disk 50G --name dns-dev 24.04
 ```
 
 Finally, once the VM is up, open a shell into it:

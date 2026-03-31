@@ -3,10 +3,7 @@
 Imagine that you just acquired the lovely domain `flying-saucer.local` and that you want to host your own authoritative DNS server.
 In a traditional setup, you would need to learn how to install and configure a DNS server like BIND on Ubuntu and then get through the hassle of understanding how to create a high availability setup. But with our DNS charm, this is going to be easy and you'll be able to do it in no time.
 
-## Introduction
-
-In this short tutorial we will deploy an authoritative DNS charm locally on your machine and create a test zone for you to query. It will take us about 20 min.
-
+In this short tutorial we will deploy an authoritative DNS charm locally on your machine and create a test zone for you to query. It will take us about 20 minutes.  
 If you're new to the charming world, don't worry: we'll explain every step.
 
 ### What you'll need
@@ -27,11 +24,11 @@ than the sufficient resources, the tutorial will take longer to complete.
 3. Edit your zone and query it.
 4. Scale up your charm to make it highly available.
 
-**important**
+```{important}
+Should you get stuck or notice issues, please get in touch on [Matrix](https://matrix.to/#/#charmhub-charmdev:ubuntu.com) or [Discourse](https://discourse.charmhub.io/).
+```
 
-Should you get stuck or notice issues, please get in touch on [Matrix](https://matrix.to/#/#12-factor-charms:ubuntu.com) or [Discourse](https://discourse.charmhub.io/).
-
-## Getting Started
+## Set things up
 
 We recommend starting from a clean Ubuntu installation. If you don't have one available, you can create one using [Multipass](https://multipass.run/docs/install-multipass).
 

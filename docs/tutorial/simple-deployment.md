@@ -200,6 +200,11 @@ juju config dns-integrator requests="message flying-saucer.local 600 IN TXT Hell
 Let's check the status again:
 
 ```{terminal}
+:user: ubuntu
+:host: dns-dev
+
+juju status
+
 App             Version  Status   Scale  Charm           Channel      Rev  Exposed  Message
 bind                     active       1  bind            latest/edge   80  no       active
 dns-integrator           blocked      1  dns-integrator  latest/edge    2  no       Waiting for integration

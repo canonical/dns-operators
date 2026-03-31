@@ -138,6 +138,11 @@ juju deploy bind --channel=latest/edge
 Running `juju status` should show you the following after waiting a bit for things to settle:
 
 ```{terminal}
+:user: ubuntu
+:host: dns-dev
+
+juju status
+
 App   Version  Status  Scale  Charm  Channel      Rev  Exposed  Message
 bind           active      1  bind   latest/edge   80  no       active
 
@@ -149,6 +154,9 @@ Our bind DNS server is now deployed and running. You can see it's listening on p
 We can check the health of our DNS server using the built-in status record:
 
 ```{terminal}
+:user: ubuntu
+:host: dns-dev
+
 dig @10.124.97.210 status.service.test TXT +short
 
 "ok"
@@ -170,6 +178,11 @@ juju deploy dns-integrator --channel=latest/edge
 After waiting a bit, `juju status` should show:
 
 ```{terminal}
+:user: ubuntu
+:host: dns-dev
+
+juju status
+
 App             Version  Status   Scale  Charm           Channel      Rev  Exposed  Message
 bind                     active       1  bind            latest/edge   80  no       active
 dns-integrator           blocked      1  dns-integrator  latest/edge    2  no       Waiting for some configuration
@@ -189,6 +202,11 @@ juju config dns-integrator requests="message flying-saucer.local 600 IN TXT Hell
 Let's check the status again:
 
 ```{terminal}
+:user: ubuntu
+:host: dns-dev
+
+juju status
+
 App             Version  Status   Scale  Charm           Channel      Rev  Exposed  Message
 bind                     active       1  bind            latest/edge   80  no       active
 dns-integrator           blocked      1  dns-integrator  latest/edge    2  no       Waiting for integration
@@ -207,6 +225,11 @@ juju integrate bind dns-integrator
 And now, everything should be active:
 
 ```{terminal}
+:user: ubuntu
+:host: dns-dev
+
+juju status
+
 App             Version  Status  Scale  Charm           Channel      Rev  Exposed  Message
 bind                     active      1  bind            latest/edge   80  no       active
 dns-integrator           active      1  dns-integrator  latest/edge    2  no

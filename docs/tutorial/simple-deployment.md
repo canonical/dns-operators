@@ -86,8 +86,6 @@ multipass shell dns-dev
 Unless stated otherwise, we will work entirely within the VM from now on.
 ```
 
-### 3. Install dependencies
-
 Use [Concierge](https://github.com/canonical/concierge) to set up Juju:
 
 ```bash

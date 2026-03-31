@@ -248,6 +248,11 @@ juju add-unit -n 2 bind
 After letting things settle down a bit, we can now see:
 
 ```{terminal}
+:user: ubuntu
+:host: dns-dev
+
+juju status
+
 App             Version  Status  Scale  Charm           Channel      Rev  Exposed  Message
 bind                     active      3  bind            latest/edge   80  no       active
 dns-integrator           active      1  dns-integrator  latest/edge    2  no

@@ -70,8 +70,6 @@ See the [Multipass installation instructions](https://multipass.run/docs/install
 
 `````
 
-### 2. Create the VM
-
 Once Multipass is ready, create the VM with the following command:
 
 ```bash

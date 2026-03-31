@@ -110,7 +110,7 @@ Controller      Model    User   Access     Cloud/Region         Models  Nodes   
 concierge-lxd*  testing  admin  superuser  localhost/localhost       2      1  none  3.6.20
 ```
 
-Delete the default `testing` model that Juju creates, we will create a new model for this tutorial in the next step.
+Delete the default `testing` model that Juju creates. We will create a new model for this tutorial in the next step.
 
 ```bash
 juju destroy-model testing

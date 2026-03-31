@@ -1,5 +1,7 @@
 # Your first DNS charm deployment
 
+## Introduction
+
 Imagine that you just acquired the lovely domain `flying-saucer.local` and that you want to host your own authoritative DNS server.
 In a traditional setup, you would need to learn how to install and configure a DNS server like BIND on Ubuntu and then get through the hassle of understanding how to create a high availability setup. But with our DNS charm, this is going to be easy and you'll be able to do it in no time.
 

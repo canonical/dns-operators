@@ -35,11 +35,9 @@ Should you get stuck or notice issues, please get in touch on [Matrix](https://m
 
 We recommend starting from a clean Ubuntu installation. If you don't have one available, you can create one using [Multipass](https://multipass.run/docs/install-multipass).
 
-### 1. Multipass installation
+`````{tab-set}
 
-Depending on your operating system, follow the instructions below:
-
-#### **Ubuntu**
+````{tab-item} Ubuntu
 
 Is Multipass already installed and active? Check by running:
 
@@ -47,25 +45,33 @@ Is Multipass already installed and active? Check by running:
 snap services multipass
 ```
 
-* If you see the `multipass` service but it isn't "active", run:
+If you see the `multipass` service but it isn't "active", run:
 
-  ```bash
-  sudo snap start multipass
-  ```
+```bash
+sudo snap start multipass
+```
 
-* If you get an error saying `snap "multipass" not found`, install it with:
+If you get an error saying `snap "multipass" not found`, install it with:
 
-  ```bash
-  sudo snap install multipass
-  ```
+```bash
+sudo snap install multipass
+```
 
-#### **Windows**
+````
+
+````{tab-item} Windows
 
 See the [Multipass installation instructions](https://multipass.run/docs/install-multipass) and switch to **Windows** in the dropdown menu.
 
-#### **macOS**
+````
+
+````{tab-item} macOS
 
 See the [Multipass installation instructions](https://multipass.run/docs/install-multipass) and switch to **macOS** in the dropdown menu.
+
+````
+
+`````
 
 ### 2. Create the VM
 

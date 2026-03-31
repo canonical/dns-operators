@@ -32,11 +32,9 @@ Should you get stuck or notice issues, please get in touch on [Matrix](https://m
 
 We recommend starting from a clean Ubuntu installation. If you don't have one available, you can create one using [Multipass](https://multipass.run/docs/install-multipass).
 
-### 1. Multipass installation
+`````{tab-set}
 
-Depending on your operating system, follow the instructions below:
-
-#### **Ubuntu**
+````{tab-item} Ubuntu
 
 Is Multipass already installed and active? Check by running:
 
@@ -44,25 +42,33 @@ Is Multipass already installed and active? Check by running:
 snap services multipass
 ```
 
-* If you see the `multipass` service but it isn't "active", run:
+If you see the `multipass` service but it isn't "active", run:
 
-  ```bash
-  sudo snap start multipass
-  ```
+```bash
+sudo snap start multipass
+```
 
-* If you get an error saying `snap "multipass" not found`, install it with:
+If you get an error saying `snap "multipass" not found`, install it with:
 
-  ```bash
-  sudo snap install multipass
-  ```
+```bash
+sudo snap install multipass
+```
 
-#### **Windows**
+````
+
+````{tab-item} Windows
 
 See the [Multipass installation instructions](https://multipass.run/docs/install-multipass) and switch to **Windows** in the dropdown menu.
 
-#### **macOS**
+````
+
+````{tab-item} macOS
 
 See the [Multipass installation instructions](https://multipass.run/docs/install-multipass) and switch to **macOS** in the dropdown menu.
+
+````
+
+`````
 
 ### 2. Create the VM
 
@@ -213,6 +219,9 @@ dns-integrator/0*  active    executing  1        10.124.97.236
 Now let's query the TXT record we just created for our `flying-saucer.local` domain:
 
 ```{terminal}
+:user: ubuntu
+:host: dns-dev
+
 dig @10.124.97.210 message.flying-saucer.local TXT +short
 
 "Hello"
@@ -236,6 +245,11 @@ juju add-unit -n 2 bind
 After letting things settle down a bit, we can now see:
 
 ```{terminal}
+:user: ubuntu
+:host: dns-dev
+
+juju status
+
 App             Version  Status  Scale  Charm           Channel      Rev  Exposed  Message
 bind                     active      3  bind            latest/edge   80  no       active
 dns-integrator           active      1  dns-integrator  latest/edge    2  no
@@ -247,7 +261,7 @@ bind/2             active    idle   3        10.124.97.201   53/tcp 53/udp
 dns-integrator/0*  active    idle   1        10.124.97.236
 ```
 
-Now bind has three units! We can query each one with dig to get the same results.
+Now bind has three units! We can query each one with `dig` to get the same results.
 Note that only one unit is marked as "active" at a time. This unit will act as a hidden primary and you should not expose it publicly, leaving the task of responding to client queries to the other units instead.
 
 ## Conclusion
@@ -256,3 +270,18 @@ You've reached the end of this tutorial. You have now:
 - deployed a functioning DNS server
 - instructed it to serve a list of records
 - scaled it up using a hidden primary architecture
+
+### Tear things down
+
+If you'd like to quickly tear things down, start by exiting the Multipass VM:
+
+```bash
+exit
+```
+
+And then you can proceed with its deletion:
+
+```bash
+multipass delete dns-dev
+multipass purge
+```

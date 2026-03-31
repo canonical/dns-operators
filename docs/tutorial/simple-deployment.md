@@ -152,6 +152,9 @@ Our bind DNS server is now deployed and running. You can see it's listening on p
 We can check the health of our DNS server using the built-in status record:
 
 ```{terminal}
+:user: ubuntu
+:host: dns-dev
+
 dig @10.124.97.210 status.service.test TXT +short
 
 "ok"

@@ -273,3 +273,18 @@ You've reached the end of this tutorial. You have now:
 - deployed a functioning DNS server
 - instructed it to serve a list of records
 - scaled it up using a hidden primary architecture
+
+### Tear things down
+
+If you'd like to quickly tear things down, start by exiting the Multipass VM:
+
+```bash
+exit
+```
+
+And then you can proceed with its deletion:
+
+```bash
+multipass delete dns-dev
+multipass purge
+```

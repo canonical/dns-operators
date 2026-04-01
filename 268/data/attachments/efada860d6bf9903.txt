@@ -1,0 +1,116 @@
+[31m[1mERROR   [0m asyncio:base_events.py:1821 Task exception was never retrieved
+future: <Task finished name='Task-944' coro=<Connection.reconnect() done, defined at /home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py:697> exception=InvalidMessage('did not receive a valid HTTP response')>
+Traceback (most recent call last):
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/websockets/http11.py", line 244, in parse
+    status_line = yield from parse_line(read_line)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/websockets/http11.py", line 320, in parse_line
+    line = yield from read_line(MAX_LINE_LENGTH)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/websockets/streams.py", line 46, in read_line
+    raise EOFError(f"stream ends after {p} bytes, before end of line")
+EOFError: stream ends after 0 bytes, before end of line
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/websockets/client.py", line 303, in parse
+    response = yield from Response.parse(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/websockets/http11.py", line 246, in parse
+    raise EOFError("connection closed while reading HTTP status line") from exc
+EOFError: connection closed while reading HTTP status line
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 709, in reconnect
+    res = await connector(
+          ^^^^^^^^^^^^^^^^
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 800, in _connect_with_login
+    await self._connect(endpoints)
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 743, in _connect
+    result = await task
+             ^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/tasks.py", line 631, in _wait_for_one
+    return f.result()  # May raise f.exception().
+           ^^^^^^^^^^
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 729, in _try_endpoint
+    return await self._open(endpoint, cacert)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 333, in _open
+    await websockets.connect(
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/websockets/asyncio/client.py", line 546, in __await_impl__
+    await self.connection.handshake(
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/websockets/asyncio/client.py", line 115, in handshake
+    raise self.protocol.handshake_exc
+websockets.exceptions.InvalidMessage: did not receive a valid HTTP response
+[31m[1mERROR   [0m asyncio:base_events.py:1821 Task exception was never retrieved
+future: <Task finished name='Task-948' coro=<Connection.reconnect() done, defined at /home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py:697> exception=InvalidMessage('did not receive a valid HTTP response')>
+Traceback (most recent call last):
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/websockets/http11.py", line 244, in parse
+    status_line = yield from parse_line(read_line)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/websockets/http11.py", line 320, in parse_line
+    line = yield from read_line(MAX_LINE_LENGTH)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/websockets/streams.py", line 46, in read_line
+    raise EOFError(f"stream ends after {p} bytes, before end of line")
+EOFError: stream ends after 0 bytes, before end of line
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/websockets/client.py", line 303, in parse
+    response = yield from Response.parse(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/websockets/http11.py", line 246, in parse
+    raise EOFError("connection closed while reading HTTP status line") from exc
+EOFError: connection closed while reading HTTP status line
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 709, in reconnect
+    res = await connector(
+          ^^^^^^^^^^^^^^^^
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 800, in _connect_with_login
+    await self._connect(endpoints)
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 743, in _connect
+    result = await task
+             ^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/tasks.py", line 631, in _wait_for_one
+    return f.result()  # May raise f.exception().
+           ^^^^^^^^^^
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 729, in _try_endpoint
+    return await self._open(endpoint, cacert)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 333, in _open
+    await websockets.connect(
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/websockets/asyncio/client.py", line 546, in __await_impl__
+    await self.connection.handshake(
+  File "/home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/websockets/asyncio/client.py", line 115, in handshake
+    raise self.protocol.handshake_exc
+websockets.exceptions.InvalidMessage: did not receive a valid HTTP response
+[31m[1mERROR   [0m juju.client.connection:connection.py:587 RPC: Automatic reconnect failed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model            Controller           Cloud/Region         Version  SLA          Timestamp
+test-charm-14mo  github-pr-82af5-lxd  localhost/localhost  3.6.20   unsupported  18:35:01Z
+
+App   Version  Status   Scale  Charm  Channel  Rev  Exposed  Message
+bind           waiting    0/1  bind              0  no       agent initialising
+
+Unit     Workload  Agent       Machine  Public address  Ports  Message
+bind/0*  waiting   allocating  0        10.77.239.134          agent initialising
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.77.239.134  juju-d2b68a-0  ubuntu@22.04  runnervmrg6be  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+machine-0: 18:34:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 18:34:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-bind-0: 18:34:57 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

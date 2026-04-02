@@ -43,9 +43,5 @@ reference/index.md
 explanation/index.md
 terraform/index.md
 tutorial/index.md
-how-to/index.md
-reference/index.md
-explanation/index.md
-terraform/index.md
 changelog.md
 ```

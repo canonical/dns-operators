@@ -15,10 +15,6 @@ If you're new to the charming world, don't worry: we'll explain every step.
   CPUs, 4 GB RAM, and a 50 GB disk.
 - Familiarity with Linux.
 
-The RAM and disk space are necessary to set up all the required software and
-to facilitate the creation of the rock and charm. If your local system has less
-than the sufficient resources, the tutorial will take longer to complete.
-
 ### What you'll do
 
 1. Deploy the bind charm.

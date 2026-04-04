@@ -1,0 +1,32 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model            Controller           Cloud/Region         Version  SLA          Timestamp
+test-charm-w2hc  github-pr-d11f3-lxd  localhost/localhost  3.6.20   unsupported  06:40:04Z
+
+App   Version  Status  Scale  Charm  Channel  Rev  Exposed  Message
+bind           active      1  bind              0  no       active
+
+Unit     Workload  Agent  Machine  Public address  Ports          Message
+bind/0*  active    idle   0        10.252.31.137   53/tcp 53/udp  active
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.252.31.137  juju-05b7bc-0  ubuntu@22.04  runnervm727z3  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+machine-0: 06:38:31 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 06:38:31 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 06:39:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 06:39:03 ERROR juju.worker.dependency "migration-minion" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 06:39:03 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.252.31.137:53074: use of closed network connection
+machine-0: 06:39:03 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 06:39:03 ERROR juju.worker.dependency "valid-credential-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 06:39:03 ERROR juju.worker.dependency "machine-action-runner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 06:39:03 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-0: 06:39:08 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [69b168] "machine-0" cannot open api: unable to connect to API: dial tcp 10.252.31.44:17070: connect: connection refused
+machine-0: 06:39:13 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [69b168] "machine-0" cannot open api: unable to connect to API: dial tcp 10.252.31.44:17070: connect: connection refused
+machine-0: 06:39:20 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [69b168] "machine-0" cannot open api: unable to connect to API: dial tcp 10.252.31.44:17070: connect: connection refused
+machine-0: 06:39:28 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [69b168] "machine-0" cannot open api: unable to connect to API: dial tcp 10.252.31.44:17070: connect: connection refused
+machine-0: 06:39:36 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [69b168] "machine-0" cannot open api: unable to connect to API: dial tcp 10.252.31.44:17070: connect: connection refused
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

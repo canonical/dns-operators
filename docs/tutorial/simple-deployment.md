@@ -153,13 +153,13 @@ We can check the health of our DNS server using the built-in status record:
 :user: ubuntu
 :host: dns-dev
 
-dig @10.124.97.210 status.service.test TXT +short
+dig @<IP> status.service.test TXT +short
 
 "ok"
 ```
 
 ```{note}
-Replace `10.124.97.210` with the public address of your bind unit, as shown in `juju status`.
+Replace `<IP>` with the public address of your bind unit, as shown in `juju status`. In my case, it would be `10.124.97.210`.
 ```
 
 ## Deploy dns-integrator
@@ -241,13 +241,13 @@ Now let's query the TXT record we just created for our `flying-saucer.local` dom
 :user: ubuntu
 :host: dns-dev
 
-dig @10.124.97.210 message.flying-saucer.local TXT +short
+dig @<IP> message.flying-saucer.local TXT +short
 
 "Hello"
 ```
 
 ```{note}
-Replace `10.124.97.210` with the public address of your bind unit, as shown in `juju status`.
+Replace `<IP>` with the public address of your bind unit, as shown in `juju status`. In my case, it would be `10.124.97.210`.
 ```
 
 Our DNS server is up and serving records. You've just deployed a fully functional authoritative DNS server using Juju charms!

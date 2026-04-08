@@ -1,0 +1,28 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model            Controller           Cloud/Region         Version  SLA          Timestamp
+test-charm-tzse  github-pr-ca5e0-lxd  localhost/localhost  3.6.20   unsupported  18:50:01Z
+
+App        Version  Status   Scale  Charm      Channel      Rev  Exposed  Message
+anyapp-t0           waiting    0/1  any-charm  latest/beta  140  no       waiting for machine
+bind                active     0/1  bind                      0  no       active
+
+Unit         Workload  Agent       Machine  Public address  Ports          Message
+anyapp-t0/1  waiting   allocating  2        10.103.212.158                 waiting for machine
+bind/0*      unknown   lost        0        10.103.212.124  53/tcp 53/udp  agent lost, see 'juju show-status-log bind/0'
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        down     10.103.212.124  juju-1cb0fe-0  ubuntu@22.04  runnervm727z3  Running
+2        pending  10.103.212.158  juju-1cb0fe-2  ubuntu@24.04  runnervm727z3  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+machine-0: 18:43:32 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 18:43:32 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 18:46:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 18:46:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-anyapp-t0-0: 18:48:46 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "32fe3c69-48da-423a-81d6-efac911cb0fe:r#2#bind": settings 32fe3c69-48da-423a-81d6-efac911cb0fe:r#2#bind not found (not found)
+unit-anyapp-t0-0: 18:48:50 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "32fe3c69-48da-423a-81d6-efac911cb0fe:r#1#anyapp-t0": settings 32fe3c69-48da-423a-81d6-efac911cb0fe:r#1#anyapp-t0 not found (not found)
+machine-1: 18:48:54 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

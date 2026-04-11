@@ -13,5 +13,6 @@ using the suite of DNS charms.
 
 ```{toctree}
 :maxdepth: 1
+Upgrade <upgrade>
 Contribute <contribute.md>
 ```

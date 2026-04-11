@@ -1,0 +1,36 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model            Controller           Cloud/Region         Version  SLA          Timestamp
+test-charm-qwxf  github-pr-415a4-lxd  localhost/localhost  3.6.21   unsupported  18:27:03Z
+
+App   Version  Status  Scale  Charm  Channel  Rev  Exposed  Message
+bind           active      1  bind              0  no       active
+
+Unit     Workload  Agent  Machine  Public address  Ports          Message
+bind/0*  active    idle   0        10.18.7.8       53/tcp 53/udp  active
+
+Machine  State    Address    Inst id        Base          AZ             Message
+0        started  10.18.7.8  juju-748d7a-0  ubuntu@22.04  runnervm35a4x  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+machine-0: 18:25:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 18:25:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 18:26:03 ERROR juju.worker.dependency "migration-minion" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 18:26:03 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.18.7.8:37948: use of closed network connection
+machine-0: 18:26:03 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-0: 18:26:03 ERROR juju.worker.dependency "instance-mutater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 18:26:03 ERROR juju.worker.dependency "reboot-executor" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 18:26:03 ERROR juju.worker.dependency "ssh-authkeys-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 18:26:03 ERROR juju.worker.dependency "state-converter" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 18:26:03 ERROR juju.worker.dependency "machiner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 18:26:03 ERROR juju.worker.dependency "proxy-config-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 18:26:03 ERROR juju.worker.dependency "api-address-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 18:26:03 ERROR juju.worker.dependency "valid-credential-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 18:26:03 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-0: 18:26:08 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [d330be] "machine-0" cannot open api: unable to connect to API: dial tcp 10.18.7.210:17070: connect: connection refused
+machine-0: 18:26:13 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [d330be] "machine-0" cannot open api: unable to connect to API: dial tcp 10.18.7.210:17070: connect: connection refused
+machine-0: 18:26:20 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [d330be] "machine-0" cannot open api: unable to connect to API: dial tcp 10.18.7.210:17070: connect: connection refused
+machine-0: 18:26:28 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [d330be] "machine-0" cannot open api: unable to connect to API: dial tcp 10.18.7.210:17070: connect: connection refused
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

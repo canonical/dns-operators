@@ -1,0 +1,112 @@
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:762 Adding model github-pr-415a4-lxd:test-multi-units-foiv on cloud localhost
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SecretsRevoker received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:bind-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [idle] active: active
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/any-charm-140
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  anyapp-t1/0 [allocating] waiting: waiting for machine
+[1m[31mERROR   [0m asyncio:base_events.py:1821 Task was destroyed but it is pending!
+task: <Task pending name='Task-1076' coro=<Connection._pinger.<locals>._do_ping() running at /home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py:517> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[create_task_with_handler.<locals>._task_result_exp_handler(task_name='tmp', logger=<Logger juju....ection (INFO)>)() at /home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/_jasyncio.py:32]>
+[1m[31mERROR   [0m asyncio:base_events.py:1821 Task was destroyed but it is pending!
+task: <Task pending name='Task-1078' coro=<Connection._pinger.<locals>._do_ping() running at /home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py:517> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[create_task_with_handler.<locals>._task_result_exp_handler(task_name='tmp', logger=<Logger juju....ection (INFO)>)() at /home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/_jasyncio.py:32]>
+[1m[31mERROR   [0m asyncio:base_events.py:1821 Task was destroyed but it is pending!
+task: <Task pending name='Task-1080' coro=<Connection.reconnect() running at /home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py:709> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+[1m[31mERROR   [0m asyncio:base_events.py:1821 Task was destroyed but it is pending!
+task: <Task pending name='Task-1081' coro=<Connection.reconnect() running at /home/runner/work/dns-operators/dns-operators/bind-operator/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py:709> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  anyapp-t1/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  anyapp-t1/0 [executing] maintenance: installing charm software
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [executing] active: active
+  anyapp-t1/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [idle] active: active
+  anyapp-t1/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [executing] active: active
+  anyapp-t1/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [idle] active: active
+  bind/1 [allocating] waiting: waiting for machine
+  anyapp-t1/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/1 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/1 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [idle] active: active
+  bind/1 [idle] active: 
+  anyapp-t1/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [idle] active: active
+  bind/1 [idle] active: 
+  anyapp-t1/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [idle] active: active
+  bind/1 [idle] active: 
+  anyapp-t1/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [executing] active: active
+  bind/1 [executing] active: 
+  anyapp-t1/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [idle] active: active
+  bind/1 [idle] active: 
+  anyapp-t1/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [idle] active: active
+  bind/1 [idle] active: 
+  anyapp-t1/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [idle] active: active
+  bind/1 [idle] active: 
+  anyapp-t1/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/0 [idle] active: active
+  bind/1 [executing] active: 
+  anyapp-t1/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/1 [idle] active: active
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  bind/1 [idle] active: active
+  anyapp-t1/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model                  Controller           Cloud/Region         Version  SLA          Timestamp
+test-multi-units-foiv  github-pr-415a4-lxd  localhost/localhost  3.6.21   unsupported  07:05:59Z
+
+App        Version  Status  Scale  Charm      Channel      Rev  Exposed  Message
+anyapp-t1           active      1  any-charm  latest/beta  140  no       
+bind                active      1  bind                      0  no       active
+
+Unit          Workload  Agent  Machine  Public address  Ports          Message
+anyapp-t1/0*  active    idle   1        10.164.50.19                   
+bind/1*       active    idle   2        10.164.50.200   53/tcp 53/udp  active
+
+Machine  State    Address        Inst id        Base          AZ             Message
+1        started  10.164.50.19   juju-ac2901-1  ubuntu@24.04  runnervm35a4x  Running
+2        started  10.164.50.200  juju-ac2901-2  ubuntu@22.04  runnervm35a4x  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+machine-0: 06:58:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 06:58:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 07:00:19 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 07:00:19 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 07:02:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 07:02:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

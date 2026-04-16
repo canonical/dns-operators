@@ -68,5 +68,5 @@ async def dns_policy_fixture(
     if use_existing:
         return
 
-    juju.deploy(dns_policy_charm_file, dns_policy_name, resources={})
+    juju.deploy(dns_policy_charm_file, dns_policy_name, resources={}, log=False)
     juju.wait(lambda status: jubilant.all_active(status, dns_policy_name))

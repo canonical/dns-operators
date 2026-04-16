@@ -60,5 +60,5 @@ async def bind_fixture(
     bind_name: str,
 ):
     """Deploy the charm."""
-    juju.deploy(bind_charm_file, bind_name, resources={})
+    juju.deploy(bind_charm_file, bind_name, resources={}, log=False)
     juju.wait(lambda status: jubilant.all_active(status, bind_name))

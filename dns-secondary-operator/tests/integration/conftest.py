@@ -69,7 +69,7 @@ def charm_file_fixture(metadata: dict[str, typing.Any], pytestconfig: pytest.Con
 @pytest.fixture(scope="module", name="app")
 def app_fixture(juju: jubilant.Juju, charm_file, app_name):
     """Deploy secondary charm."""
-    juju.deploy(charm=charm_file, app=app_name, resources={})
+    juju.deploy(charm=charm_file, app=app_name, resources={}, log=False)
     juju.wait(jubilant.all_agents_idle, timeout=600)
     juju.wait(jubilant.all_blocked)
     yield app_name  # run the test

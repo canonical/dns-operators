@@ -174,6 +174,7 @@ async def test_active(
         {
             "requests": integrator_config,
         },
+        log=False,
     )
 
     # Waiting for 2mn as this is the maximum time for bind's config to update and propagate

@@ -32,5 +32,11 @@ async def postgresql_fixture(
     if use_existing:
         return
 
-    juju.deploy("postgresql", postgresql_name, channel=postgresql_channel, resources={})
+    juju.deploy(
+        "postgresql",
+        postgresql_name,
+        channel=postgresql_channel,
+        resources={},
+        log=False,
+    )
     juju.wait(lambda status: jubilant.all_active(status, postgresql_name))

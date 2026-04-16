@@ -163,12 +163,7 @@ async def dns_resolver_fixture(
     if use_existing:
         return
 
-    juju.deploy(
-        dns_resolver_charm_file,
-        dns_resolver_name,
-        resources={},
-        num_units=1,
-    )
+    juju.deploy(dns_resolver_charm_file, dns_resolver_name, resources={}, num_units=1, log=False)
 
 
 @pytest_asyncio.fixture(scope="module", name="bind")
@@ -183,7 +178,7 @@ async def bind_fixture(
     if use_existing:
         return
 
-    juju.deploy(bind_charm_file, bind_name, resources={})
+    juju.deploy(bind_charm_file, bind_name, resources={}, log=False)
     juju.wait(lambda status: jubilant.all_active(status, bind_name))
 
 

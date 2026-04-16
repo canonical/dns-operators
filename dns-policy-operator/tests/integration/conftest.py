@@ -64,11 +64,12 @@ async def dns_policy_fixture(
             application_name=dns_policy_name,
             resources=resources,
             num_units=0,  # subordinate charm
+            log=False,
         )
     else:
         charm = await ops_test.build_charm(".")
         application = await model.deploy(
-            charm, application_name=dns_policy_name, resources=resources
+            charm, application_name=dns_policy_name, resources=resources, log=False
         )
 
     yield application
@@ -81,9 +82,7 @@ async def postgresql_fixture(
 ):
     """Deploy the postgresql charm."""
     postgres_app = await model.deploy(
-        "postgresql",
-        channel="14/stable",
-        config={"profile": "testing"},
+        "postgresql", channel="14/stable", config={"profile": "testing"}, log=False
     )
     async with ops_test.fast_forward():
         await model.wait_for_idle(apps=[postgres_app.name], status="active")
@@ -108,11 +107,13 @@ async def bind_fixture(
 
     if charm := pytestconfig.getoption("--bind-charm-file"):
         application = await model.deploy(
-            f"../bind-operator/{charm}", application_name=bind_name, resources=resources
+            f"../bind-operator/{charm}", application_name=bind_name, resources=resources, log=False
         )
     else:
         charm = await ops_test.build_charm("../bind-operator/")
-        application = await model.deploy(charm, application_name=bind_name, resources=resources)
+        application = await model.deploy(
+            charm, application_name=bind_name, resources=resources, log=False
+        )
 
     await model.wait_for_idle(apps=[application.name], status="active")
 

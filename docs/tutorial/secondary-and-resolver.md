@@ -126,7 +126,7 @@ dig @<IP> flying-saucer.local NS +short
 ns.flying-saucer.local.
 ```
 
-Notice that the nameserver for the zone points to the secondary, not to bind. This is the hidden primary architecture in action: bind is the source of truth for the zone data, but it is not advertised as the nameserver. Only the secondary is publicly visible. This means you can manage and update your zone on bind without exposing it directly to client traffic.
+Notice that the name server for the zone points to the secondary, not to bind. This is the hidden primary architecture in action: bind is the source of truth for the zone data, but it is not advertised as the name server. Only the secondary is publicly visible. This means you can manage and update your zone on bind without exposing it directly to client traffic.
 
 ## Deploy dns-resolver
 

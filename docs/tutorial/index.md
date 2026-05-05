@@ -11,9 +11,11 @@ myst:
 This section collects step-by-step tutorials for deploying and operating the DNS charms.
 
 - [Simple deployment](simple-deployment)
+- [Secondary DNS and resolver](secondary-and-resolver)
 
 ```{toctree}
 :hidden:
 
 simple-deployment
+secondary-and-resolver
 ```

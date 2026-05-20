@@ -1,19 +1,26 @@
+---
+myst:
+  html_meta:
+    "description lang=en": "Follow the advanced DNS charms tutorial involving a secondary DNS server and resolver."
+---
+(tutorial_secondary_and_resolver)=
+
 # Deploy a secondary DNS server and resolver
 
 ## Introduction
 
-In the [first tutorial](simple-deployment), we deployed a bind charm and served our first DNS record for `flying-saucer.local`. That setup works well for testing, but in production you would not expose the primary DNS server directly to clients. Instead, you would place a secondary DNS server in front of it and let a resolver handle the actual client queries.
+In the {ref}`first tutorial <tutorial_simple_deployment>`, we deployed a bind charm and served our first DNS record for `flying-saucer.local`. That setup works well for testing, but in production you would not expose the primary DNS server directly to clients. Instead, you would place a secondary DNS server in front of it and let a resolver handle the actual client queries.
 
 In this tutorial we will extend our deployment with two new charms:
 
-- **dns-secondary** -- a secondary DNS server that receives zone data from bind via zone transfers.
-- **dns-resolver** -- a caching resolver that knows how to reach the secondary for our zone.
+- [**dns-secondary**](https://charmhub.io/dns-secondary) -- a secondary DNS server that receives zone data from bind via zone transfers.
+- [**dns-resolver**](https://charmhub.io/dns-resolver) -- a caching resolver that knows how to reach the secondary for our zone.
 
 By the end, you will have a proper hidden primary architecture: bind holds the zone data, dns-secondary serves it to the outside world, and dns-resolver answers client queries. It will take us about 15 minutes.
 
 ### What you'll need
 
-- A working Juju environment with a LXD cloud, as set up in the [first tutorial](simple-deployment).
+- A working Juju environment with a LXD cloud, as set up in the {ref}`first tutorial <tutorial_simple_deployment>`.
 
 ### What you'll do
 
@@ -28,8 +35,8 @@ Should you get stuck or notice issues, please get in touch on [Matrix](https://m
 
 ## Set things up
 
-Follow the steps in [Your first DNS charm deployment](simple-deployment) up to and including the **Deploy dns-integrator** section. Once bind and dns-integrator are deployed, integrated, and active, come back here to continue.  
-You don't need to scale up bind for the rest of this tutorial. If you've scaled up bind to 3 units and want to have exactly the same status as we're going to show here, remove those units with the `juju remove-unit` command.
+Follow the steps in {ref}`Your first DNS charm deployment <tutorial_simple_deployment>` up to and including the **Deploy dns-integrator** section. Once bind and dns-integrator are deployed, integrated, and active, come back here to continue.  
+You don't need to scale up bind for the rest of this tutorial. If you've scaled up bind to three units and want to have exactly the same status as we're going to show here, remove those units with the `juju remove-unit` command.
 
 At this point, `juju status` should look similar to:
 
@@ -213,7 +220,7 @@ The resolver successfully resolved our TXT record. It did so by forwarding the q
 
 ## Conclusion
 
-You've reached the end of this tutorial. Building on the [first tutorial](simple-deployment), you have now:
+You've reached the end of this tutorial. Building on the {ref}`first tutorial <tutorial_simple_deployment>`, you have now:
 
 - deployed a secondary DNS server that receives zone data from bind
 - deployed a caching resolver that answers client queries

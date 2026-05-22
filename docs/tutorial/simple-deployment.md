@@ -1,3 +1,10 @@
+---
+myst:
+  html_meta:
+    "description lang=en": "Follow the basic DNS charms tutorial involving a primary DNS server and an integrator."
+---
+(tutorial_simple_deployment)=
+
 # Your first DNS charm deployment
 
 ## Introduction
@@ -289,6 +296,10 @@ You've reached the end of this tutorial. You have now:
 - deployed a functioning DNS server
 - instructed it to serve a list of records
 - scaled it up using a hidden primary architecture
+
+### Next steps
+
+To enhance your current setup, follow {ref}`tutorial_secondary_and_resolver` to deploy a secondary DNS server and let a resolver handle the actual client queries.
 
 ### Tear things down
 

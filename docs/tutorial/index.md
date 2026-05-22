@@ -10,10 +10,12 @@ myst:
 
 This section collects step-by-step tutorials for deploying and operating the DNS charms.
 
-- [Simple deployment](simple-deployment)
+- {ref}`Simple deployment <tutorial_simple_deployment>`
+- {ref}`Secondary DNS and resolver <tutorial_secondary_and_resolver>`
 
 ```{toctree}
 :hidden:
 
 simple-deployment
+secondary-and-resolver
 ```

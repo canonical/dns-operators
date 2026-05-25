@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6.0.1
+        uses: actions/checkout@v6.0.2
       - name: Run ShellCheck
         run: |
           cd charmed-bind
@@ -22,7 +22,7 @@ jobs:
 
   build-snap:
     name: Build snap
-    uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v40
+    uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v49
     with:
       path-to-snap-project-directory: ./charmed-bind
 
@@ -33,7 +33,7 @@ jobs:
       - build-snap
     steps:
       - name: Download snap package(s)
-        uses: actions/download-artifact@v7.0.0
+        uses: actions/download-artifact@v8.0.1
         with:
           pattern: ${{ needs.build-snap.outputs.artifact-prefix }}-*
           merge-multiple: true

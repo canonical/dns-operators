@@ -1,4 +1,4 @@
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # Licensed under the Apache2.0. See LICENSE file in charm source for details.
 
 r"""Library to manage the integration with a primary DNS charm.
@@ -475,7 +475,7 @@ class DNSRecordRequires(DNSRecordBase):
             data = list(itertools.islice(data, 6))
             if len(data) < 6:
                 raise CreateRecordRequestError(f"Incorrect input: {data}")
-            (host_label, domain, ttl, record_class, record_type, record_data) = data
+            host_label, domain, ttl, record_class, record_type, record_data = data
             return RecordRequest.model_validate(
                 {
                     "uuid": uuid_module.uuid5(

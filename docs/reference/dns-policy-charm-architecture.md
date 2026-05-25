@@ -1,9 +1,11 @@
+(reference_dns_policy_charm_architecture)=
+
 # DNS policy charm architecture
 
 The following diagram shows the different modules of this charm
 and how they interact with each other.
 
-```mermaid
+```{mermaid}
 C4Component
 title DNS policy charm Components
 
@@ -48,7 +50,9 @@ UpdateElementStyle(timer, $fontColor="black", $bgColor="lightblue", $borderColor
 
 The `src/charm.py` file is the default entry point for the DNS Policy charm and contains the `DnsPolicyCharm` Python class, which inherits from `CharmBase`. `CharmBase` is the base class from which all charms are formed, defined by the [Ops](https://juju.is/docs/sdk/ops) Python framework for developing charms.
 
-> See more in the Juju docs: [Charm](https://documentation.ubuntu.com/juju/3.6/user/reference/charm/)
+```{seealso}
+See more in the Juju docs: {ref}`Charm <juju:charm>`
+```
 
 In the `__init__` method of `DnsPolicyCharm`, the charm sets up observers for various events that are relevant to its operation. This ensures that the charm can respond appropriately to changes in its environment, such as configuration updates or relation changes.
 
@@ -59,6 +63,7 @@ juju config dns-policy allowed-hosts='example.com'
 ```
 
 Here, a config-changed event is emitted. The charm's `__init__` method has already set up an observer for this event, typically with a line like:
+
 ```
 self.framework.observe(self.on.config_changed, self._on_config_changed)
 ```

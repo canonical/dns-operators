@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Charm for dns-secondary."""
@@ -130,7 +130,9 @@ class DnsSecondaryCharm(ops.CharmBase):
             else:
                 logger.debug("Public ips not set, using units ip")
                 public_ips = t.units_ip
-            requirer_data = dns_transfer.DNSTransferRequirerData(addresses=public_ips)
+            requirer_data = dns_transfer.DNSTransferRequirerData(
+                addresses=public_ips, transfer_sources=t.units_ip
+            )
             self.dns_transfer.update_relation_data(relation, requirer_data)
 
             # Update dns_record authority's data

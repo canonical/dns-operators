@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Django's command-line utility for administrative tasks."""

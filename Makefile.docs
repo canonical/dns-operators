@@ -1,4 +1,4 @@
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 # Minimal makefile for documentation
@@ -7,7 +7,7 @@
 # Vale settings
 VALE_DIR ?= .vale
 PRAECEPTA_CONFIG 	?= .vale.ini
-DOCS_FILES 	?= ./**/*.md
+DOCS_FILES 	?= README.md CONTRIBUTING.md
 
 HAS_VALE			:= $(shell command -v vale;)
 HAS_LYCHEE			:= $(shell command -v lychee;)

@@ -39,4 +39,6 @@ header:
     - '**/zap_rules.tsv'
     - '**/lib/**'
     - 'charmed-dns-policy/app/ci/.test-env'
+    - '.readthedocs.yaml'
+    - 'docs/**'
   comment: on-failure

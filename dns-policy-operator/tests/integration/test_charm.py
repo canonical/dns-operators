@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.abort_on_fail
-def test_active(juju: jubilant.Juju, dns_policy_name: str, full_deployment):
+def test_active(  # pylint: disable=unused-argument
+    juju: jubilant.Juju, dns_policy_name: str, full_deployment
+):
     """
     arrange: build and deploy the charm.
     act: nothing.

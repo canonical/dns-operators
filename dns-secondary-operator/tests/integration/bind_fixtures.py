@@ -8,7 +8,6 @@ from pathlib import Path
 
 import jubilant
 import pytest
-import pytest_asyncio
 import yaml
 
 from .core_fixtures import create_charm_file
@@ -53,8 +52,8 @@ def bind_charm_file_fixture(
     yield create_charm_file(bind_metadata, bind_directory)
 
 
-@pytest_asyncio.fixture(scope="module", name="bind")
-async def bind_fixture(
+@pytest.fixture(scope="module", name="bind")
+def bind_fixture(
     juju: jubilant.Juju,
     bind_charm_file: str,
     bind_name: str,

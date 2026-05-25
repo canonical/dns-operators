@@ -12,6 +12,7 @@ import logging
 import time
 from dataclasses import dataclass
 
+import dns.exception
 import dns.resolver
 import jubilant
 import pytest
@@ -60,6 +61,29 @@ class DnsEntry:
     record_class: str
     record_type: str
     record_data: str
+
+
+def _resolve_expected_record(ip: str, entry: DnsEntry) -> None:
+    """Resolve a record and retry while changes propagate to all servers."""
+    fqdn = f"{entry.host_label}.{entry.domain}"
+    logger.info("%s", fqdn)
+    last_error: dns.exception.DNSException | None = None
+    for _ in range(24):
+        resolver = dns.resolver.Resolver()
+        resolver.nameservers = [ip]
+        try:
+            answers = resolver.resolve(fqdn, entry.record_type)
+            answer_texts = [answer.to_text() for answer in answers]
+        except dns.exception.DNSException as exc:
+            last_error = exc
+        else:
+            logger.info("%s", answer_texts)
+            if str(entry.record_data) in answer_texts:
+                return
+        time.sleep(5)
+    if last_error is not None:
+        raise last_error
+    pytest.fail(f"Could not resolve {fqdn} as {entry.record_type} from nameserver {ip}")
 
 
 @pytest.mark.parametrize(
@@ -188,16 +212,4 @@ async def test_active(
                 else:
                     entries_list = entries
                 for entry in entries_list:
-                    # Create a DNS resolver
-                    resolver = dns.resolver.Resolver()
-                    resolver.nameservers = [ip]
-
-                    # Perform the DNS query
-                    logger.info("%s", f"{entry.host_label}.{entry.domain}")
-                    answers = resolver.resolve(
-                        f"{entry.host_label}.{entry.domain}", entry.record_type
-                    )
-                    logger.info("%s", [answer.to_text() for answer in answers])
-                    assert str(entry.record_data) in [
-                        answer.to_text() for answer in answers
-                    ]
+                    _resolve_expected_record(ip, entry)

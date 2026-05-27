@@ -154,7 +154,6 @@ def dns_policy_fixture(
         dns_policy_charm_file,
         dns_policy_name,
         resources={},
-        num_units=0,  # subordinate charm
     )
 
     yield dns_policy_name

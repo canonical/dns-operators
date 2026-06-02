@@ -3,6 +3,9 @@
 
 r"""Library to manage the integration with a primary DNS charm.
 
+DEPRECATION WARNING: THIS LIBRARY IS DEPRECATED AND WILL BE REMOVED IN A FUTURE RELEASE. PLEASE
+MIGRATE TO THE NEW API IN charms.dns_integrator.v0.dns_record.
+
 This library contains the Requires and Provides classes for handling the integration
 between an application and a charm providing the `dns_record` integration.
 It is completely backwards compatible with the legacy bind.v0.dns_record library.

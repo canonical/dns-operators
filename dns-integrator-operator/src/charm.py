@@ -9,7 +9,7 @@ import logging
 import typing
 
 import ops
-from charms.dns_record.v0 import dns_record
+from charms.dns_integrator.v0 import dns_record
 
 logger = logging.getLogger(__name__)
 

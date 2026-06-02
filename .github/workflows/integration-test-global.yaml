@@ -25,6 +25,9 @@ jobs:
     name: Integration tests
     timeout-minutes: 60
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Disable snap autorefresh
         run: sudo snap refresh --hold=2h

@@ -10,13 +10,38 @@ jobs:
     secrets: inherit
     with:
       working-directory: ./bind-operator
+    permissions:
+      contents: write
+      pull-requests: write
   auto-update-libs-dns-integrator-operator:
     uses: canonical/operator-workflows/.github/workflows/auto_update_charm_libs.yaml@main
     secrets: inherit
     with:
       working-directory: ./dns-integrator-operator
+    permissions:
+      contents: write
+      pull-requests: write
   auto-update-libs-dns-policy-operator:
     uses: canonical/operator-workflows/.github/workflows/auto_update_charm_libs.yaml@main
     secrets: inherit
     with:
       working-directory: ./dns-policy-operator
+    permissions:
+      contents: write
+      pull-requests: write
+  auto-update-libs-dns-secondary-operator:
+    uses: canonical/operator-workflows/.github/workflows/auto_update_charm_libs.yaml@main
+    secrets: inherit
+    with:
+      working-directory: ./dns-secondary-operator
+    permissions:
+      contents: write
+      pull-requests: write
+  auto-update-libs-dns-resolver-operator:
+    uses: canonical/operator-workflows/.github/workflows/auto_update_charm_libs.yaml@main
+    secrets: inherit
+    with:
+      working-directory: ./dns-resolver-operator
+    permissions:
+      contents: write
+      pull-requests: write

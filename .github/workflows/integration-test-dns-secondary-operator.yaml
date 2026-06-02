@@ -25,3 +25,6 @@ jobs:
       juju-channel: 3.6/stable
       provider: lxd
       working-directory: ./dns-secondary-operator
+    permissions:
+      contents: write
+      pull-requests: write

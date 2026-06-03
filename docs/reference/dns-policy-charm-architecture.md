@@ -48,7 +48,7 @@ UpdateElementStyle(timer, $fontColor="black", $bgColor="lightblue", $borderColor
 
 ## Charm code overview
 
-The `src/charm.py` file is the default entry point for the DNS Policy charm and contains the `DnsPolicyCharm` Python class, which inherits from `CharmBase`. `CharmBase` is the base class from which all charms are formed, defined by the [Ops](https://juju.is/docs/sdk/ops) Python framework for developing charms.
+The `src/charm.py` file is the default entry point for the DNS Policy charm and contains the `DnsPolicyCharm` Python class, which inherits from `CharmBase`. `CharmBase` is the base class from which all charms are formed, defined by the [Ops](https://documentation.ubuntu.com/ops/latest/) Python framework for developing charms.
 
 ```{seealso}
 See more in the Juju docs: {ref}`Charm <juju:charm>`

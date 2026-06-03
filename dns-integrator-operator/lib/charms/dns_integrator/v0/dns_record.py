@@ -3,9 +3,6 @@
 
 r"""Library to manage the integration with a primary DNS charm.
 
-DEPRECATION WARNING: THIS LIBRARY IS DEPRECATED AND WILL BE REMOVED IN A FUTURE RELEASE. PLEASE
-MIGRATE TO THE NEW API IN charms.dns_integrator.v0.dns_record.
-
 This library contains the Requires and Provides classes for handling the integration
 between an application and a charm providing the `dns_record` integration.
 It is completely backwards compatible with the legacy bind.v0.dns_record library.
@@ -14,7 +11,7 @@ It is completely backwards compatible with the legacy bind.v0.dns_record library
 
 ```python
 
-from charms.dns_record.v0 import dns_record
+from charms.dns_integrator.v0 import dns_record
 
 class DNSRecordRequirerCharm(ops.CharmBase):
     def __init__(self, *args):
@@ -87,19 +84,15 @@ class DNSRecordProviderCharm(ops.CharmBase):
 ```
 """
 
-# This is a rewrite of bind.v0.dns_record
-# there will be duplicate code
-# pylint: disable=duplicate-code
-
 # The unique Charmhub library identifier, never change it
-LIBID = "74dd8fda03d94f4c2a113da921cf099c"
+LIBID = "35f1741937e6405389841e4dc8c29928"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 1
 
 PYDEPS = ["pydantic>=2"]
 

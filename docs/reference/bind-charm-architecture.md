@@ -69,7 +69,7 @@ All the `standby` units have Bind working as a secondary server, replicating the
 
 ## Charm code overview
 
-The `src/charm.py` is the default entry point for a charm and has the `BindCharm` Python class which inherits from `CharmBase`. `CharmBase` is the base class from which all charms are formed, defined by [Ops](https://juju.is/docs/sdk/ops) Python framework for developing charms.
+The `src/charm.py` is the default entry point for a charm and has the `BindCharm` Python class which inherits from `CharmBase`. `CharmBase` is the base class from which all charms are formed, defined by [Ops](https://documentation.ubuntu.com/ops/latest/) Python framework for developing charms.
 
 ```{seealso}
 See more in the Juju docs: {ref}`Charm <juju:charm>`

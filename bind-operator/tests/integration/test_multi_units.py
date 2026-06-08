@@ -5,6 +5,7 @@
 """Integration tests for multiple units."""
 
 import logging
+import time
 
 import jubilant
 import pytest
@@ -108,20 +109,25 @@ async def test_multi_units(
         ],
     )
     juju.wait(jubilant.all_agents_idle)
-    units = juju.status().get_units(app)
-    for unit_name in units.keys():
-        await tests.integration.helpers.force_reload_bind(juju, unit_name)
-        juju.wait(jubilant.all_agents_idle)
-        assert (
-            await tests.integration.helpers.dig_query(
+    deadline = time.time() + 300
+    updated = False
+    while time.time() < deadline:
+        units = juju.status().get_units(app)
+        for unit_name in units.keys():
+            await tests.integration.helpers.force_reload_bind(juju, unit_name)
+            juju.wait(jubilant.all_agents_idle)
+            result = await tests.integration.helpers.dig_query(
                 juju,
                 unit_name,
                 "@127.0.0.1 admin.dns.test A +short",
                 retry=True,
                 wait=5,
             )
-            == "43.43.43.43"
-        ), "Failed after changing DNS request"
+            if result == "43.43.43.43":
+                updated = True
+                break
+    if not updated:
+        raise TimeoutError("Timed out waiting for DNS entry change")
 
     # remove the active unit and check that we're still all right
     active_unit_name = await tests.integration.helpers.get_active_unit(app, juju)

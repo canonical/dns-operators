@@ -20,3 +20,5 @@ def pytest_addoption(parser: Parser):
         default=False,
         help="This will skip deployment of the charms. Useful for local testing.",
     )
+    parser.addoption("--model", action="store", default=None)
+    parser.addoption("--keep-models", action="store_true", default=False)

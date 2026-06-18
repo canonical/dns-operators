@@ -10,7 +10,6 @@ import typing
 import jubilant
 import pytest
 import yaml
-from pytest_operator.plugin import Model, OpsTest
 
 # Wildcard imports are used to make all the fixtures
 # available in test files
@@ -35,13 +34,6 @@ def fixture_metadata():
 def fixture_app_name(metadata):
     """Provide app name from the metadata."""
     yield metadata["name"]
-
-
-@pytest.fixture(scope="module", name="model")
-def model_fixture(ops_test: OpsTest) -> Model:
-    """Juju model API client."""
-    assert ops_test.model
-    return ops_test.model
 
 
 @pytest.fixture(scope="module", name="charm_file")

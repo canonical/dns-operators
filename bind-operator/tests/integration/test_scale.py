@@ -8,13 +8,11 @@
 # pylint: disable=too-many-arguments
 
 import asyncio
-import json
 import logging
 import time
 
-import juju.application
+import jubilant
 import pytest
-from pytest_operator.plugin import Model, OpsTest
 
 import models
 import tests.integration.helpers
@@ -24,9 +22,8 @@ logger = logging.getLogger(__name__)
 
 async def deploy_any_charm(
     *,
-    app: juju.application.Application,
-    ops_test: OpsTest,
-    model: Model,
+    app_name: str,
+    juju: jubilant.Juju,
     any_app_number: int,
     machines: list[str] | None,
     entries: list[models.DnsEntry],
@@ -34,9 +31,8 @@ async def deploy_any_charm(
     """Deploy any charm and integrate it to the bind-operator.
 
     Args:
-        app: Deployed bind-operator app
-        ops_test: The ops test framework instance
-        model: The ops model instance
+        app_name: Deployed bind-operator app name
+        juju: The jubilant Juju instance
         any_app_number: Number of the to be deployed any-charm
         machines: The machines to deploy the any-charm onto
         entries: List of DNS entries for any-charm
@@ -47,11 +43,12 @@ async def deploy_any_charm(
     else:
         machine = None
     logger.info("Deploying %s on %s", anyapp_name, machine)
-    if anyapp_name in model.applications:
+    apps = juju.status().apps
+    if anyapp_name in apps:
         return
     await tests.integration.helpers.generate_anycharm_relation(
-        app,
-        ops_test,
+        app_name,
+        juju,
         anyapp_name,
         entries,
         machine=machine,
@@ -62,9 +59,8 @@ async def deploy_any_charm(
 @pytest.mark.abort_on_fail
 @pytest.mark.skip(reason="Scaling test")
 async def test_lots_of_applications(
-    app: juju.application.Application,
-    ops_test: OpsTest,
-    model: Model,
+    app: str,
+    juju: jubilant.Juju,
 ):
     """
     arrange: build and deploy the charm.
@@ -73,25 +69,19 @@ async def test_lots_of_applications(
     """
     batch_number = 10
     machines_number = 20
-    status = await ops_test.juju("status", "--format", "json")
-    data = json.loads(status[1])
+    status = juju.status()
     machines_available = (
-        sum(
-            1
-            for machine in data["machines"].values()
-            if machine["machine-status"]["current"] == "running"
-        )
+        sum(1 for machine in status.machines.values() if machine.juju_status.current == "running")
         - 1
     )
     while machines_available < machines_number:
-        await ops_test.juju("add-machine")
-        status = await ops_test.juju("status", "--format", "json")
-        data = json.loads(status[1])
+        juju.cli("add-machine")
+        status = juju.status()
         machines_available = (
             sum(
                 1
-                for machine in data["machines"].values()
-                if machine["machine-status"]["current"] == "running"
+                for machine in status.machines.values()
+                if machine.juju_status.current == "running"
             )
             - 1
         )
@@ -100,19 +90,17 @@ async def test_lots_of_applications(
 
     for i in range(int(2000 / batch_number)):
 
-        status = await ops_test.juju("status", "--format", "json")
-        status_data = json.loads(status[1])
+        status = juju.status()
         # we collect the machines but leave out machine "0"
         # that should be in use by the bind-operator
-        machines = [x for x in status_data["machines"].keys() if x != "0"]
+        machines = [x for x in status.machines.keys() if x != "0"]
         print("Available machines:", machines)
 
         await asyncio.gather(
             *[
                 deploy_any_charm(
-                    app=app,
-                    ops_test=ops_test,
-                    model=model,
+                    app_name=app,
+                    juju=juju,
                     any_app_number=i * batch_number + x,
                     machines=machines,
                     entries=[
@@ -139,9 +127,8 @@ async def test_lots_of_applications(
 @pytest.mark.abort_on_fail
 @pytest.mark.skip(reason="Scaling test")
 async def test_lots_of_record_requests(
-    app: juju.application.Application,
-    ops_test: OpsTest,
-    model: Model,
+    app: str,
+    juju: jubilant.Juju,
 ):
     """
     arrange: build and deploy the charm.
@@ -168,9 +155,8 @@ async def test_lots_of_record_requests(
             )
 
         await deploy_any_charm(
-            app=app,
-            ops_test=ops_test,
-            model=model,
+            app_name=app,
+            juju=juju,
             any_app_number=any_app_number,
             machines=None,
             entries=entries,

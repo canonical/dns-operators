@@ -5,6 +5,8 @@ type: charm
 subordinate: true
 title: DNS policy charm
 summary: A very short one-line summary of the charm.
+links:
+  documentation: https://canonical.com/juju/docs/dns-charms
 
 description: |
 bases:

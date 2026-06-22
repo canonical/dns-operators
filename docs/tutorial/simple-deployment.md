@@ -35,7 +35,7 @@ Should you get stuck or notice issues, please get in touch on [Matrix](https://m
 
 ## Set things up
 
-We recommend starting from a clean Ubuntu installation. If you don't have one available, you can create one using [Multipass](https://multipass.run/docs/install-multipass).
+We recommend starting from a clean Ubuntu installation. If you don't have one available, you can create one using [Multipass](https://canonical.com/multipass).
 
 `````{tab-set}
 
@@ -63,13 +63,13 @@ sudo snap install multipass
 
 ````{tab-item} Windows
 
-See the [Multipass installation instructions](https://multipass.run/docs/install-multipass) and switch to **Windows** in the dropdown menu.
+See the [Multipass installation instructions](https://documentation.ubuntu.com/multipass/latest/how-to-guides/install-multipass/) and switch to **Windows** in the dropdown menu.
 
 ````
 
 ````{tab-item} macOS
 
-See the [Multipass installation instructions](https://multipass.run/docs/install-multipass) and switch to **macOS** in the dropdown menu.
+See the [Multipass installation instructions](https://documentation.ubuntu.com/multipass/latest/how-to-guides/install-multipass/) and switch to **macOS** in the dropdown menu.
 
 ````
 

@@ -19,7 +19,7 @@ description: |
   offerings but also on virtual machines or bare metal.
 links:
   contact: https://launchpad.net/~canonical-is-devops
-  documentation: https://github.com/canonical/dns-operators
+  documentation: https://canonical.com/juju/docs/dns-charms
   issues:
     - https://github.com/canonical/dns-operators/issues
   source:

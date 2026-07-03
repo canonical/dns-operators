@@ -3,6 +3,7 @@ name: Global integration tests
 on:
   pull_request:
     paths:
+      - 'tests/**'
       - 'bind-operator/src/**'
       - 'bind-operator/tests/**'
       - 'bind-operator/requirements.txt'
@@ -15,6 +16,10 @@ on:
       - 'dns-integrator-operator/tests/**'
       - 'dns-integrator-operator/requirements.txt'
       - 'dns-integrator-operator/charmcraft.yaml'
+      - 'dns-secondary-operator/src/**'
+      - 'dns-secondary-operator/tests/**'
+      - 'dns-secondary-operator/requirements.txt'
+      - 'dns-secondary-operator/charmcraft.yaml'
       - '.github/workflows/integration-test-global.yaml'
   push:
     branches:

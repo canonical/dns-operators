@@ -5,6 +5,8 @@ summary: DNS secondary charm
 description: |
   A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/)
   deploying and managing a DNS secondary charm on bare metal.
+links:
+  documentation: https://canonical.com/juju/docs/dns-charms
 assumes:
   - juju >= 3.6
 peers:

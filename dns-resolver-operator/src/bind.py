@@ -196,7 +196,7 @@ class BindService:
         """
         content: str = ""
         content += templates.NAMED_CONF_OPTIONS_TEMPLATE.format(
-            allow_query="0.0.0.0/0",
+            allow_query="any",
         )
         return content
 

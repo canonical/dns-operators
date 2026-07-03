@@ -55,7 +55,7 @@ class BindService:
         Args:
             enable_tls: enable TLS configuration. Defaults to False.
         """
-        allow_query = "0.0.0.0/0"
+        allow_query = "any"
         content: str = ""
         options = templates.NAMED_CONF_OPTIONS_TEMPLATE.format(allow_query=allow_query)
         if enable_tls:

@@ -200,8 +200,25 @@ async def test_active(
         },
     )
 
-    # Waiting for 2mn as this is the maximum time for bind's config to update and propagate
-    time.sleep(120)
+    juju.wait(
+        lambda status: (
+            jubilant.all_active(
+                status,
+                bind_name,
+                dns_resolver_name,
+                dns_secondary_name,
+            )
+            and jubilant.all_agents_idle(
+                status,
+                bind_name,
+                dns_resolver_name,
+                dns_secondary_name,
+                dns_integrator_name,
+            )
+        ),
+        error=jubilant.any_error,
+        successes=10,
+    )
 
     # Check that bind and dns-resolver respond correctly
     for ip in [bind_ip, dns_resolver_ip, dns_secondary_ip]:

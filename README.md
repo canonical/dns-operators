@@ -49,6 +49,18 @@ make vale
 make lint-md
 ```
 
+## Charmhub and Snapcraft
+
+| Name | Listing |
+|------|---------|
+| `bind` | https://charmhub.io/bind |
+| `dns-integrator` | https://charmhub.io/dns-integrator |
+| `dns-policy` | https://charmhub.io/dns-policy |
+| `dns-resolver` | https://charmhub.io/dns-resolver |
+| `dns-secondary` | https://charmhub.io/dns-secondary |
+| `charmed-bind` | https://snapcraft.io/charmed-bind |
+| `charmed-dns-policy` | https://snapcraft.io/charmed-dns-policy |
+
 ## Project and community
 
 The DNS operators project is a member of the Ubuntu family. It is an

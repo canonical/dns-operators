@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Each revision is versioned by the date of the revision.
 
+## 2026-08-26
+
+- feat: Add the optional `ddns-domain` (provider) and `ddns-addresses` (requirer) fields to the `dns_record` relation, so a provider can hand an automatically allocated domain to each of its requirers.
+
 ## 2026-06-18
 
 - docs: Migrate the RTD documentation URL under the Canonical domain.

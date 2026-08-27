@@ -103,10 +103,11 @@ and the requirer reads it with:
 domain = self.dns_record.get_ddns_domain()
 ```
 
-Juju's `ingress-address` is frequently a private address behind DNAT, which the provider
-can't turn into a usable record. A requirer that knows the addresses its allocated domain
-should point at declares them in its application databag through the optional
-`ddns-addresses` field:
+By default, the DNS provider should point the automatically allocated domain to the
+`ingress-address` of the requirer charm unit. But the `ingress-address` is sometimes a
+private address behind DNAT, which can't directly be used as the address of a record.
+In that case, a requirer that knows its publicly accessible addresses can optionally
+provide them to the provider through the `ddns-addresses` field in its application databag:
 
 ```python
 self.dns_record.set_ddns_addresses(["10.0.0.1"])

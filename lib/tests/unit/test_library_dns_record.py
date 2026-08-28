@@ -243,7 +243,7 @@ class TestCreateRecordRequest:
         assert request.description == "Awaiting manual approval"
 
 
-def test_handle_relation_data_success():
+def test_relation_data_success():
     """Test successful parsing of valid relation data."""
     relation_data = {
         "dns_entries": [
@@ -268,7 +268,7 @@ def test_handle_relation_data_success():
         ]
     }
 
-    requests = dns_record.DNSRecordBase._handle_relation_data(relation_data)
+    requests = dns_record.RequirerData.model_validate(relation_data).dns_entries
 
     assert len(requests) == 2
     assert all(isinstance(req, dns_record.RecordRequest) for req in requests)
@@ -279,7 +279,7 @@ def test_handle_relation_data_success():
     assert requests[1].record.record_data == "192.0.2.100"
 
 
-def test_handle_relation_data_merges_split_entries():
+def test_relation_data_merges_split_entries():
     """Test that data for the same UUID is merged correctly before validation."""
     uuid = "f9065256-4206-5c05-91c1-2bc145d38e35"
     relation_data = {
@@ -305,7 +305,7 @@ def test_handle_relation_data_merges_split_entries():
         ]
     }
 
-    requests = dns_record.DNSRecordBase._handle_relation_data(relation_data)
+    requests = dns_record.RequirerData.model_validate(relation_data).dns_entries
 
     assert len(requests) == 2
     merged_request = next((r for r in requests if str(r.uuid) == uuid), None)
@@ -317,7 +317,7 @@ def test_handle_relation_data_merges_split_entries():
     assert str(merged_request.record.record_data) == "203.0.113.1"
 
 
-def test_handle_relation_data_skips_invalid_pydantic_record():
+def test_relation_data_skips_invalid_pydantic_record():
     """Test that a record that is invalid after merging is skipped."""
     relation_data = {
         "dns_entries": [
@@ -356,7 +356,7 @@ def test_handle_relation_data_skips_invalid_pydantic_record():
         ]
     }
 
-    requests = dns_record.DNSRecordBase._handle_relation_data(relation_data)
+    requests = dns_record.RequirerData.model_validate(relation_data).dns_entries
 
     assert len(requests) == 2
     assert {str(r.uuid) for r in requests} == {
@@ -511,6 +511,7 @@ ENTRIES = [
         "ttl": "3600",
     }
 ]
+RESPONSES = [{"uuid": ENTRY_UUID, "status": "approved", "description": None}]
 
 
 class DNSRecordProviderCharm(ops.CharmBase):
@@ -590,7 +591,7 @@ def test_provider_publishes_ddns_domain():
     rel = relation(remote_app_name="requirer")
 
     with run_provider(rel) as manager:
-        manager.charm.dns_record.set_ddns_domain("1403f42c.example.com")
+        manager.charm.dns_record.update_ddns_domain("1403f42c.example.com")
         out = manager.run()
 
     assert out.get_relation(rel.id).local_app_data == {
@@ -609,7 +610,7 @@ def test_provider_publishes_a_different_domain_per_relation():
 
     with run_provider(*relations) as manager:
         for rel in manager.charm.dns_record.relations:
-            manager.charm.dns_record.set_ddns_domain(f"label-{rel.app.name}.example.com", rel)
+            manager.charm.dns_record.update_ddns_domain(f"label-{rel.app.name}.example.com", rel)
         out = manager.run()
 
     assert {
@@ -626,20 +627,25 @@ def test_provider_publishes_a_different_domain_per_relation():
 
 def test_provider_clears_ddns_domain():
     """
-    arrange: a provider that already published an allocated domain.
-    act: publish None.
-    assert: the field is removed from the provider application databag.
+    arrange: a provider that already published an allocated domain next to responses.
+    act: publish no domain.
+    assert: the field is removed from the databag and the responses are left untouched.
     """
     rel = relation(
         remote_app_name="requirer",
-        local_app_data={"ddns-domain": json.dumps("1403f42c.example.com")},
+        local_app_data={
+            "dns_entries": json.dumps(RESPONSES),
+            "ddns-domain": json.dumps("1403f42c.example.com"),
+        },
     )
 
     with run_provider(rel) as manager:
-        manager.charm.dns_record.set_ddns_domain(None)
+        manager.charm.dns_record.update_ddns_domain(None)
         out = manager.run()
 
-    assert "ddns-domain" not in out.get_relation(rel.id).local_app_data
+    local_app_data = out.get_relation(rel.id).local_app_data
+    assert "ddns-domain" not in local_app_data
+    assert json.loads(local_app_data["dns_entries"]) == RESPONSES
 
 
 @pytest.mark.parametrize(
@@ -651,7 +657,7 @@ def test_provider_rejects_an_invalid_ddns_domain(domain):
     """
     arrange: a provider integrated with a requirer.
     act: publish an invalid domain.
-    assert: an InvalidDdnsDomainError is raised and nothing is published.
+    assert: pydantic rejects it and nothing is published.
 
     Args:
         domain: the invalid domain to publish.
@@ -659,8 +665,8 @@ def test_provider_rejects_an_invalid_ddns_domain(domain):
     rel = relation(remote_app_name="requirer")
 
     with run_provider(rel) as manager:
-        with pytest.raises(dns_record.InvalidDdnsDomainError):
-            manager.charm.dns_record.set_ddns_domain(domain)
+        with pytest.raises(pydantic.ValidationError):
+            manager.charm.dns_record.update_ddns_domain(domain)
         out = manager.run()
 
     assert out.get_relation(rel.id).local_app_data == {}
@@ -669,7 +675,7 @@ def test_provider_rejects_an_invalid_ddns_domain(domain):
 def test_requirer_reads_the_ddns_domain():
     """
     arrange: a provider that published an allocated domain next to record responses.
-    act: read the domain from the requirer.
+    act: read the domain and the entries from the requirer.
     assert: the allocated domain is returned and the responses are still readable.
     """
     rel = relation(
@@ -682,9 +688,9 @@ def test_requirer_reads_the_ddns_domain():
 
     with run_requirer(rel) as manager:
         assert manager.charm.dns_record.get_ddns_domain() == "1403f42c.example.com"
-        requests = manager.charm.dns_record.get_relation_data()
-        assert requests is not None
-        assert [str(request.uuid) for request in requests] == [ENTRY_UUID]
+        entries = manager.charm.dns_record.get_dns_entries()
+        assert entries is not None
+        assert [str(entry.uuid) for entry in entries] == [ENTRY_UUID]
 
 
 def test_requirer_reads_no_ddns_domain_when_absent():
@@ -699,7 +705,7 @@ def test_requirer_reads_no_ddns_domain_when_absent():
 
     with run_requirer(rel) as manager:
         assert manager.charm.dns_record.get_ddns_domain() is None
-        assert manager.charm.dns_record.get_relation_data() != []
+        assert manager.charm.dns_record.get_dns_entries() != []
 
 
 @pytest.mark.parametrize(
@@ -731,7 +737,7 @@ def test_requirer_declares_its_addresses():
     rel = relation(remote_app_name="provider")
 
     with run_requirer(rel) as manager:
-        manager.charm.dns_record.set_ddns_addresses(["10.0.0.1", "2001:db8::1"])
+        manager.charm.dns_record.update_ddns_addresses(["10.0.0.1", "2001:db8::1"])
         out = manager.run()
 
     assert json.loads(out.get_relation(rel.id).local_app_data["ddns-addresses"]) == [
@@ -742,33 +748,38 @@ def test_requirer_declares_its_addresses():
 
 def test_requirer_clears_its_addresses():
     """
-    arrange: a requirer that already declared addresses.
+    arrange: a requirer that already declared addresses next to record requests.
     act: declare no address.
-    assert: the field is removed from the requirer application databag.
+    assert: the field is removed from the databag and the requests are left untouched.
     """
     rel = relation(
         remote_app_name="provider",
-        local_app_data={"ddns-addresses": json.dumps(["10.0.0.1"])},
+        local_app_data={
+            "dns_entries": json.dumps(ENTRIES),
+            "ddns-addresses": json.dumps(["10.0.0.1"]),
+        },
     )
 
     with run_requirer(rel) as manager:
-        manager.charm.dns_record.set_ddns_addresses(None)
+        manager.charm.dns_record.update_ddns_addresses(None)
         out = manager.run()
 
-    assert "ddns-addresses" not in out.get_relation(rel.id).local_app_data
+    local_app_data = out.get_relation(rel.id).local_app_data
+    assert "ddns-addresses" not in local_app_data
+    assert json.loads(local_app_data["dns_entries"]) == ENTRIES
 
 
 def test_requirer_rejects_invalid_addresses():
     """
     arrange: a requirer integrated with a provider.
     act: declare an address that is not an IP address.
-    assert: an InvalidDdnsAddressesError is raised and nothing is published.
+    assert: pydantic rejects it and nothing is published.
     """
     rel = relation(remote_app_name="provider")
 
     with run_requirer(rel) as manager:
-        with pytest.raises(dns_record.InvalidDdnsAddressesError):
-            manager.charm.dns_record.set_ddns_addresses(["10.0.0.1", "example.com"])
+        with pytest.raises(pydantic.ValidationError):
+            manager.charm.dns_record.update_ddns_addresses(["10.0.0.1", "example.com"])
         out = manager.run()
 
     assert out.get_relation(rel.id).local_app_data == {}
@@ -832,24 +843,22 @@ def test_provider_handles_each_relation_independently():
         assert len(provider.relations) == 2
         rel = next(r for r in provider.relations if r.app.name == "requirer-1")
         assert provider.get_ddns_addresses(rel) == ["10.0.0.1"]
-        requests = provider.get_relation_data(rel)
-        assert requests is not None
-        for request in requests:
-            request.status = dns_record.Status.APPROVED
-        provider.update_relation_data(requests, rel)
+        entries = provider.get_dns_entries(rel)
+        assert entries is not None
+        for entry in entries:
+            entry.status = dns_record.Status.APPROVED
+        provider.update_dns_entries(entries, rel)
         out = manager.run()
 
-    assert json.loads(out.get_relation(first.id).local_app_data["dns_entries"]) == [
-        {"uuid": ENTRY_UUID, "status": "approved", "description": None}
-    ]
+    assert json.loads(out.get_relation(first.id).local_app_data["dns_entries"]) == RESPONSES
     assert out.get_relation(second.id).local_app_data == {}
 
 
-def test_get_relation_data_without_dns_entries():
+def test_get_dns_entries_without_dns_entries_field():
     """
     arrange: a provider databag that only contains an allocated domain.
-    act: read the relation data from the requirer.
-    assert: an empty list of requests is returned instead of raising.
+    act: read the entries from the requirer.
+    assert: an empty list is returned instead of raising.
     """
     rel = relation(
         remote_app_name="provider",
@@ -857,4 +866,28 @@ def test_get_relation_data_without_dns_entries():
     )
 
     with run_requirer(rel) as manager:
-        assert manager.charm.dns_record.get_relation_data() == []
+        assert manager.charm.dns_record.get_dns_entries() == []
+
+
+def test_deprecated_relation_data_methods_still_work():
+    """
+    arrange: a provider integrated with a requirer that requested a record.
+    act: read and answer the request through the deprecated methods.
+    assert: they behave like their replacement and emit a DeprecationWarning.
+    """
+    rel = relation(
+        remote_app_name="requirer", remote_app_data={"dns_entries": json.dumps(ENTRIES)}
+    )
+
+    with run_provider(rel) as manager:
+        provider = manager.charm.dns_record
+        with pytest.deprecated_call():
+            entries = provider.get_relation_data()
+        assert entries is not None
+        for entry in entries:
+            entry.status = dns_record.Status.APPROVED
+        with pytest.deprecated_call():
+            provider.update_relation_data(entries)
+        out = manager.run()
+
+    assert json.loads(out.get_relation(rel.id).local_app_data["dns_entries"]) == RESPONSES

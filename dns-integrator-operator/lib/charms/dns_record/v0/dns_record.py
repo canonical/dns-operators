@@ -50,7 +50,7 @@ class DNSRecordRequirerCharm(ops.CharmBase):
 As shown above, the library does not expose any custom event and the user has to rely
 on the generic RelationJoined, RelationChanged events to check when DNS data has been changed.
 
-The DNSRecordRequires provides an `update_relation_data` method to update the relation data by
+The DNSRecordRequires provides an `update_dns_entries` method to update the relation data by
 passing a list of RecordRequest, requesting new DNS records.
 
 ### Provider Charm
@@ -68,7 +68,7 @@ class DNSRecordProviderCharm(ops.CharmBase):
 
 ```
 The DNSRecordProvides object wraps the list of relations into a `relations` property
-and provides an `update_relation_data` method to update the relation data by passing
+and provides an `update_dns_entries` method to update the relation data by passing
 a list of RecordRequest. It is expected that the provider updates the status of
 those requests before updating the relation data.
 
@@ -79,17 +79,28 @@ class DNSRecordProviderCharm(ops.CharmBase):
     def _handler(self, _: RelationChangedEvent) -> None:
 
         for relation in self.dns_record.relations:
-            requests = self.dns_record.get_relation_data(relation)
+            requests = self.dns_record.get_dns_entries(relation)
             for request in requests:
                 request.status = Status.APPROVED
-            self.dns_record.update_relation_data(requests, relation)
+            self.dns_record.update_dns_entries(requests, relation)
 
 ```
+
+`get_relation_data` and `update_relation_data` are deprecated aliases of
+`get_dns_entries` and `update_dns_entries`, kept for backwards compatibility.
 
 Every method taking a `relation` argument accepts `None`, in which case the single
 relation on the endpoint is used. A charm integrated with more than one application on
 the endpoint must pass the relation explicitly, otherwise `ops.TooManyRelatedAppsError`
 is raised. Use the `relations` property to iterate over them.
+
+### Relation data models
+
+Each side of the relation publishes a single application databag, modelled as a whole by
+`RequirerData` for the requirer and `ProviderData` for the provider. Those models own the
+JSON encoding of the databag fields and all the validation; the `get_*` and `update_*`
+methods are thin accessors on top of them. An `update_*` method only touches the field it
+names and leaves the rest of the databag alone.
 
 ### Automatically allocated domains
 
@@ -97,7 +108,7 @@ A provider may automatically allocate a domain for each of its requirers. It pub
 the allocated domain in its application databag through the optional `ddns-domain` field:
 
 ```python
-self.dns_record.set_ddns_domain("1403f42c.example.com", relation)
+self.dns_record.update_ddns_domain("1403f42c.example.com", relation)
 ```
 
 and the requirer reads it with:
@@ -113,7 +124,7 @@ In that case, a requirer that knows its publicly accessible addresses can option
 provide them to the provider through the `ddns-addresses` field in its application databag:
 
 ```python
-self.dns_record.set_ddns_addresses(["10.0.0.1"])
+self.dns_record.update_ddns_addresses(["10.0.0.1"])
 ```
 
 and the provider reads them with:
@@ -149,6 +160,7 @@ import logging
 import re
 import typing
 import uuid as uuid_module
+import warnings
 from enum import Enum
 
 import ops
@@ -181,58 +193,6 @@ class DnsRecordError(Exception):
 
 class CreateRecordRequestError(DnsRecordError):
     """Exception raised creating the record request fails."""
-
-
-class InvalidDdnsDomainError(DnsRecordError):
-    """Exception raised when an automatically allocated domain is not a valid domain name."""
-
-
-class InvalidDdnsAddressesError(DnsRecordError):
-    """Exception raised when the declared automatically allocated domain addresses are invalid."""
-
-
-def _validate_ddns_domain(domain: str) -> str:
-    """Validate an automatically allocated domain.
-
-    Args:
-        domain: the domain to validate.
-
-    Returns:
-        the validated domain.
-
-    Raises:
-        InvalidDdnsDomainError: when the domain is not a valid domain name.
-    """
-    if not isinstance(domain, str) or not domain or len(domain) > DDNS_DOMAIN_MAX_LENGTH:
-        raise InvalidDdnsDomainError(f"Invalid domain: {domain!r}")
-    labels = domain.rstrip(".").split(".")
-    if not all(_DDNS_LABEL_PATTERN.match(label) for label in labels):
-        raise InvalidDdnsDomainError(f"Invalid domain: {domain!r}")
-    return domain
-
-
-def _validate_ddns_addresses(addresses: typing.Iterable[typing.Any]) -> list[str]:
-    """Validate the addresses an automatically allocated domain should point at.
-
-    Args:
-        addresses: the addresses to validate.
-
-    Returns:
-        the validated addresses, as strings.
-
-    Raises:
-        InvalidDdnsAddressesError: when one of the addresses is not a valid IP address.
-    """
-    if isinstance(addresses, (str, bytes)) or not isinstance(addresses, typing.Iterable):
-        raise InvalidDdnsAddressesError(f"Invalid addresses: {addresses!r}")
-    validated: list[str] = []
-    for address in addresses:
-        try:
-            # mypy is confused by the fact that pydantic interfaces an external class
-            validated.append(str(pydantic.networks.IPvAnyAddress(str(address))))  # type: ignore
-        except ValueError as exc:
-            raise InvalidDdnsAddressesError(f"Invalid IP address: {address!r}") from exc
-    return validated
 
 
 class Status(str, Enum):
@@ -460,12 +420,216 @@ class RecordRequest(pydantic.BaseModel):
         return str(value)
 
 
+_RelationDataT = typing.TypeVar("_RelationDataT", bound="RelationData")
+
+
+class RelationData(pydantic.BaseModel):
+    """Base model for a dns_record application databag.
+
+    Each field of the databag is JSON encoded independently.
+
+    Attributes:
+        model_config: the pydantic model configuration.
+        dns_entries: the DNS record entries exchanged on the relation.
+    """
+
+    model_config = pydantic.ConfigDict(populate_by_name=True, validate_assignment=True)
+
+    dns_entries: list[RecordRequest] = pydantic.Field(
+        default_factory=list,
+        validation_alias=DNS_ENTRIES_FIELD,
+        serialization_alias=DNS_ENTRIES_FIELD,
+    )
+
+    @pydantic.field_validator("dns_entries", mode="before")
+    @classmethod
+    def group_dns_entries(cls, value: typing.Any) -> typing.Any:
+        """Regroup the flat databag entries by uuid and drop the invalid ones.
+
+        Args:
+            value: the raw dns_entries value.
+
+        Returns:
+            the value to validate as a list of RecordRequest.
+        """
+        if not isinstance(value, list) or all(isinstance(entry, RecordRequest) for entry in value):
+            return value
+
+        entries: dict[str, dict[str, typing.Any]] = collections.defaultdict(dict)
+        for entry in value:
+            if not isinstance(entry, dict) or "uuid" not in entry:
+                logger.warning("Ignoring a DNS entry without an uuid")
+                continue
+            entries[entry["uuid"]] |= entry
+
+        requests: list[RecordRequest] = []
+        for entry in entries.values():
+            try:
+                # This works based on the fact that pydantic will ignore extra fields
+                entry["record"] = Record.model_validate(entry)
+            except pydantic.ValidationError:
+                # An entry without a valid record is still a valid status update
+                pass
+            try:
+                requests.append(RecordRequest.model_validate(entry))
+            except pydantic.ValidationError:
+                logger.warning("Ignoring the invalid DNS entry %s", entry.get("uuid"))
+        return requests
+
+    @classmethod
+    def from_databag(
+        cls: type[_RelationDataT], databag: typing.Mapping[str, str]
+    ) -> _RelationDataT:
+        """Load the model from an application databag.
+
+        Fields that are not JSON encoded are ignored, so that a charm using a newer
+        version of this library can't break one using an older version.
+
+        Args:
+            databag: the application databag to load.
+
+        Returns:
+            the loaded model.
+        """
+        data: dict[str, typing.Any] = {}
+        for key, value in databag.items():
+            try:
+                data[key] = json.loads(value)
+            except json.JSONDecodeError:
+                logger.warning("Ignoring undecodable relation data field %s", key)
+        return cls.model_validate(data)
+
+    def to_databag(self) -> dict[str, str]:
+        """Dump the model as an application databag.
+
+        Returns:
+            the JSON encoded databag fields. A field holding no value is mapped to an
+            empty string, which removes it from the databag.
+        """
+        return {
+            key: "" if value is None else json.dumps(value)
+            for key, value in self.model_dump(by_alias=True).items()
+        }
+
+
+class RequirerData(RelationData):
+    """The dns_record application databag published by the requirer.
+
+    Attributes:
+        ddns_addresses: the addresses the automatically allocated domain should point at.
+    """
+
+    ddns_addresses: list[str] = pydantic.Field(
+        default_factory=list,
+        validation_alias=DDNS_ADDRESSES_FIELD,
+        serialization_alias=DDNS_ADDRESSES_FIELD,
+    )
+
+    @pydantic.field_validator("ddns_addresses")
+    @classmethod
+    def validate_ddns_addresses(cls, value: list[str]) -> list[str]:
+        """Validate the addresses the automatically allocated domain should point at.
+
+        Args:
+            value: the addresses to validate.
+
+        Returns:
+            the validated addresses, in their canonical form.
+
+        Raises:
+            ValueError: when one of the addresses is not a valid IP address.
+        """
+        addresses = []
+        for address in value:
+            try:
+                # mypy is confused by the fact that pydantic interfaces an external class
+                addresses.append(str(pydantic.networks.IPvAnyAddress(address)))  # type: ignore
+            except ValueError as exc:
+                raise ValueError(f"Invalid IP address: {address!r}") from exc
+        return addresses
+
+    @pydantic.field_serializer("dns_entries")
+    def serialize_dns_entries(self, dns_entries: list[RecordRequest]) -> list[dict[str, str]]:
+        """Serialize the DNS entries as requests.
+
+        Args:
+            dns_entries: the entries to serialize.
+
+        Returns:
+            the serialized entries.
+        """
+        return [record_request.serialize_as_request() for record_request in dns_entries]
+
+    @pydantic.field_serializer("ddns_addresses")
+    def serialize_ddns_addresses(self, ddns_addresses: list[str]) -> list[str] | None:
+        """Serialize the automatically allocated domain addresses.
+
+        Args:
+            ddns_addresses: the addresses to serialize.
+
+        Returns:
+            the serialized addresses, or None when there is none to publish.
+        """
+        return list(ddns_addresses) or None
+
+
+class ProviderData(RelationData):
+    """The dns_record application databag published by the provider.
+
+    Attributes:
+        ddns_domain: the domain automatically allocated for the requirer of the relation.
+    """
+
+    ddns_domain: str | None = pydantic.Field(
+        default=None,
+        validation_alias=DDNS_DOMAIN_FIELD,
+        serialization_alias=DDNS_DOMAIN_FIELD,
+    )
+
+    @pydantic.field_validator("ddns_domain")
+    @classmethod
+    def validate_ddns_domain(cls, value: str | None) -> str | None:
+        """Validate the automatically allocated domain.
+
+        Args:
+            value: the domain to validate.
+
+        Returns:
+            the validated domain.
+
+        Raises:
+            ValueError: when the domain is not a valid domain name.
+        """
+        if value is None:
+            return None
+        if not value or len(value) > DDNS_DOMAIN_MAX_LENGTH:
+            raise ValueError(f"Invalid domain: {value!r}")
+        if not all(_DDNS_LABEL_PATTERN.match(label) for label in value.rstrip(".").split(".")):
+            raise ValueError(f"Invalid domain: {value!r}")
+        return value
+
+    @pydantic.field_serializer("dns_entries")
+    def serialize_dns_entries(self, dns_entries: list[RecordRequest]) -> list[dict[str, str]]:
+        """Serialize the DNS entries as responses.
+
+        Args:
+            dns_entries: the entries to serialize.
+
+        Returns:
+            the serialized entries.
+        """
+        return [record_request.serialize_as_response() for record_request in dns_entries]
+
+
 class DNSRecordBase(ops.Object):
     """Base class for the DNS relation.
 
     Attributes:
         relations: all the relations on the endpoint handled by this object.
     """
+
+    _remote_data_type: typing.ClassVar[type[RelationData]] = RelationData
+    _local_data_type: typing.ClassVar[type[RelationData]] = RelationData
 
     def __init__(self, charm: ops.CharmBase, relation_name: str = DEFAULT_RELATION_NAME) -> None:
         """Construct.
@@ -490,10 +654,6 @@ class DNSRecordBase(ops.Object):
     def _get_relation(self, relation: ops.Relation | None = None) -> ops.Relation | None:
         """Resolve the relation to operate on.
 
-        When no relation is given, the single relation on the endpoint is used. Callers
-        integrated with more than one application must pass the relation explicitly, as
-        `ops.Model.get_relation` raises `ops.TooManyRelatedAppsError` in that case.
-
         Args:
             relation: the relation to operate on. When None, the single relation on the
                 endpoint is used.
@@ -505,131 +665,129 @@ class DNSRecordBase(ops.Object):
             return relation
         return self.model.get_relation(self.relation_name)
 
-    def _ensure_dns_entries(self, relation: ops.Relation) -> None:
-        """Make sure the local application databag always carries a dns_entries field.
-
-        Versions of this library that predate the ddns fields fail to parse a databag
-        without a dns_entries field, so it has to be there as soon as anything at all is
-        published on the relation.
+    def _get_remote_data(
+        self, model: type[_RelationDataT], relation: ops.Relation | None
+    ) -> _RelationDataT | None:
+        """Load the remote application databag of a relation into a model.
 
         Args:
-            relation: the relation to write the field to.
-        """
-        databag = relation.data[self.charm.model.app]
-        if DNS_ENTRIES_FIELD not in databag:
-            databag[DNS_ENTRIES_FIELD] = json.dumps([])
-
-    def _get_remote_field(self, relation: ops.Relation, field: str) -> typing.Any:
-        """Read a JSON encoded field from the remote application databag.
-
-        Args:
-            relation: the relation to read the field from.
-            field: the name of the field.
+            model: the model to load the databag into.
+            relation: the relation to read the data from. When None, the single relation
+                on the endpoint is used.
 
         Returns:
-            the decoded value, or None when the field is absent or can't be decoded.
+            the remote relation data, or None when there is no relation or the remote
+            application published invalid data.
         """
-        if relation.app is None:
-            return None
-        raw = relation.data[relation.app].get(field)
-        if not raw:
+        relation = self._get_relation(relation)
+        if relation is None or relation.app is None:
             return None
         try:
-            return json.loads(raw)
-        except json.JSONDecodeError:
-            logger.warning("Undecodable %s field in relation %s", field, relation.id)
+            return model.from_databag(relation.data[relation.app])
+        except pydantic.ValidationError as exc:
+            logger.warning("Invalid data in relation %s: %s", relation.id, exc)
             return None
 
-    def _set_local_field(self, relation: ops.Relation, field: str, value: typing.Any) -> None:
-        """Write a JSON encoded field to the local application databag.
+    def _update_local_data(self, relation: ops.Relation | None, **fields: typing.Any) -> None:
+        """Update fields of the local application databag of a relation.
 
         Args:
-            relation: the relation to write the field to.
-            field: the name of the field.
-            value: the value to write. None removes the field from the databag.
+            relation: the relation to update. When None, the single relation on the
+                endpoint is used.
+            fields: the model fields to set, by name.
         """
-        # Juju removes a field from the databag when it is set to an empty string.
-        relation.data[self.charm.model.app][field] = "" if value is None else json.dumps(value)
+        relation = self._get_relation(relation)
+        if relation is None:
+            return
+        databag = relation.data[self.charm.model.app]
+        try:
+            data = self._local_data_type.from_databag(databag)
+        except pydantic.ValidationError as exc:
+            logger.warning(
+                "Discarding the invalid local data of relation %s: %s", relation.id, exc
+            )
+            data = self._local_data_type()
+        for name, value in fields.items():
+            setattr(data, name, value)
+        databag.update(data.to_databag())
 
-    @staticmethod
-    def _load_relation_databag(databag: typing.Mapping[str, str]) -> dict[str, typing.Any]:
-        """Decode the JSON encoded fields of a relation databag.
-
-        Fields that are not JSON encoded are ignored, so that a charm using a newer
-        version of this library can't break one using an older version.
+    def get_dns_entries(self, relation: ops.Relation | None = None) -> list[RecordRequest] | None:
+        """Retrieve the DNS record entries published by the remote application.
 
         Args:
-            databag: the relation databag.
+            relation: the relation to read the entries from. When None, the single
+                relation on the endpoint is used.
 
         Returns:
-            the decoded relation databag.
+            the DNS record entries, or None when there is no relation or the remote
+            application published invalid data.
         """
-        data: dict[str, typing.Any] = {}
-        for key, value in databag.items():
-            try:
-                data[key] = json.loads(value)
-            except json.JSONDecodeError:
-                logger.warning("Ignoring undecodable relation data field %s", key)
-        return data
+        data = self._get_remote_data(self._remote_data_type, relation)
+        return data.dns_entries if data is not None else None
 
-    @staticmethod
-    def _handle_relation_data(data: dict[str, typing.Any]) -> list[RecordRequest]:
-        """Transform relation data into a list of RecordRequest.
+    def update_dns_entries(
+        self,
+        record_requests: list[RecordRequest],
+        relation: ops.Relation | None = None,
+    ) -> None:
+        """Publish DNS record entries in the local application databag.
 
         Args:
-            data: relation data
-
-        Returns:
-            list of RecordRequest
+            record_requests: the DNS record entries to publish.
+            relation: the relation to update. When None, the single relation on the
+                endpoint is used.
         """
-        # Regroup data for each entry based on the uuid
-        entries: dict[str, dict[str, typing.Any]] = collections.defaultdict(dict)
-        for entry in data.get(DNS_ENTRIES_FIELD) or []:
-            entries[entry["uuid"]] |= entry
-
-        # Create a record for each entry
-        for entry in entries.values():
-            try:
-                # This works based on the fact that pydantic will ignore extra fields in the input
-                entry["record"] = Record.model_validate(entry)
-            except pydantic.ValidationError:
-                # If we could not create a record, this is not an issue, let's just continue
-                continue
-
-        # Create a record request for each entry
-        rr_entries: list[RecordRequest] = []
-        for entry in entries.values():
-            try:
-                rr = RecordRequest.model_validate(entry)
-                rr_entries.append(rr)
-            except pydantic.ValidationError:
-                # If we could not create a record request,
-                # this is not an issue, let's just continue
-                continue
-
-        return rr_entries
+        self._update_local_data(relation, dns_entries=record_requests)
 
     def get_relation_data(
         self, relation: ops.Relation | None = None
     ) -> list[RecordRequest] | None:
-        """Retrieve the remote relation data.
+        """Retrieve the DNS record entries published by the remote application.
+
+        Deprecated: use `get_dns_entries` instead.
 
         Args:
             relation: the relation to read the data from. When None, the single relation
                 on the endpoint is used.
 
         Returns:
-            the relation data.
+            the DNS record entries, or None when there is no relation or the remote
+            application published invalid data.
         """
-        relation = self._get_relation(relation)
-        if not relation or relation.app is None:
-            return None
-        relation_data: ops.RelationDataContent = relation.data[relation.app]
-        return self._handle_relation_data(self._load_relation_databag(relation_data))
+        warnings.warn(
+            "get_relation_data is deprecated, use get_dns_entries instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_dns_entries(relation)
+
+    def update_relation_data(
+        self,
+        record_requests: list[RecordRequest],
+        relation: ops.Relation | None = None,
+    ) -> None:
+        """Publish DNS record entries in the local application databag.
+
+        Deprecated: use `update_dns_entries` instead.
+
+        Args:
+            record_requests: the DNS record entries to publish.
+            relation: the relation to update. When None, the single relation on the
+                endpoint is used.
+        """
+        warnings.warn(
+            "update_relation_data is deprecated, use update_dns_entries instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.update_dns_entries(record_requests, relation)
 
 
 class DNSRecordRequires(DNSRecordBase):
     """Requirer side of the DNS requires relation."""
+
+    _remote_data_type: typing.ClassVar[type[RelationData]] = ProviderData
+    _local_data_type: typing.ClassVar[type[RelationData]] = RequirerData
 
     def __init__(
         self,
@@ -738,25 +896,6 @@ class DNSRecordRequires(DNSRecordBase):
             description=description,
         )
 
-    def update_relation_data(
-        self,
-        record_requests: list[RecordRequest],
-        relation: ops.Relation | None = None,
-    ) -> None:
-        """Update the relation data.
-
-        Args:
-            record_requests: list of RecordRequests
-            relation: the relation to update. When None, the single relation on the
-                endpoint is used.
-        """
-        relation = self._get_relation(relation)
-        if not relation:
-            return
-        dns_entries: list[dict[str, str]] = [rr.serialize_as_request() for rr in record_requests]
-        relation_data: dict[str, str] = {DNS_ENTRIES_FIELD: json.dumps(dns_entries)}
-        relation.data[self.charm.model.app].update(relation_data)
-
     def get_ddns_domain(self, relation: ops.Relation | None = None) -> str | None:
         """Get the domain automatically allocated by the provider, if any.
 
@@ -766,69 +905,34 @@ class DNSRecordRequires(DNSRecordBase):
 
         Returns:
             the automatically allocated domain, or None when the provider didn't
-            allocate one or published an invalid one.
+            allocate one or published invalid data.
         """
-        relation = self._get_relation(relation)
-        if not relation:
-            return None
-        domain = self._get_remote_field(relation, DDNS_DOMAIN_FIELD)
-        if domain is None:
-            return None
-        try:
-            return _validate_ddns_domain(domain)
-        except InvalidDdnsDomainError as exc:
-            logger.warning(
-                "Invalid %s in relation %s: %s", DDNS_DOMAIN_FIELD, relation.id, exc.msg
-            )
-            return None
+        data = self._get_remote_data(ProviderData, relation)
+        return data.ddns_domain if data is not None else None
 
-    def set_ddns_addresses(
+    def update_ddns_addresses(
         self,
-        addresses: typing.Iterable[typing.Any] | None,
+        addresses: list[str] | None,
         relation: ops.Relation | None = None,
     ) -> None:
         """Declare the addresses the automatically allocated domain should point at.
 
-        This overrides the `ingress-address` Juju sets in the unit databag, which is
-        often a private address that isn't the one the domain should resolve to.
-
         Args:
-            addresses: the addresses to declare. None or an empty iterable removes the
+            addresses: the addresses to declare. None or an empty list removes the
                 declaration and lets the provider fall back to `ingress-address`.
             relation: the relation to update. When None, the single relation on the
                 endpoint is used.
         """
-        relation = self._get_relation(relation)
-        if not relation:
-            return
-        validated = _validate_ddns_addresses(addresses) if addresses is not None else []
-        self._ensure_dns_entries(relation)
-        self._set_local_field(relation, DDNS_ADDRESSES_FIELD, validated or None)
+        self._update_local_data(relation, ddns_addresses=addresses or [])
 
 
 class DNSRecordProvides(DNSRecordBase):
     """Provider side of the DNS record relation."""
 
-    def update_relation_data(
-        self,
-        record_requests: list[RecordRequest],
-        relation: ops.Relation | None = None,
-    ) -> None:
-        """Update the relation data.
+    _remote_data_type: typing.ClassVar[type[RelationData]] = RequirerData
+    _local_data_type: typing.ClassVar[type[RelationData]] = ProviderData
 
-        Args:
-            record_requests: list of RecordRequests
-            relation: the relation to update. When None, the single relation on the
-                endpoint is used.
-        """
-        relation = self._get_relation(relation)
-        if not relation:
-            return
-        dns_entries: list[dict[str, str]] = [rr.serialize_as_response() for rr in record_requests]
-        relation_data: dict[str, str] = {DNS_ENTRIES_FIELD: json.dumps(dns_entries)}
-        relation.data[self.charm.model.app].update(relation_data)
-
-    def set_ddns_domain(
+    def update_ddns_domain(
         self,
         domain: str | None,
         relation: ops.Relation | None = None,
@@ -840,12 +944,7 @@ class DNSRecordProvides(DNSRecordBase):
             relation: the relation to publish the domain to. When None, the single
                 relation on the endpoint is used.
         """
-        relation = self._get_relation(relation)
-        if not relation:
-            return
-        validated = _validate_ddns_domain(domain) if domain is not None else None
-        self._ensure_dns_entries(relation)
-        self._set_local_field(relation, DDNS_DOMAIN_FIELD, validated)
+        self._update_local_data(relation, ddns_domain=domain)
 
     def get_ddns_addresses(self, relation: ops.Relation | None = None) -> list[str]:
         """Get the addresses the requirer declared its allocated domain should point at.
@@ -856,18 +955,7 @@ class DNSRecordProvides(DNSRecordBase):
 
         Returns:
             the declared addresses, or an empty list when the requirer declared none or
-            declared invalid ones.
+            published invalid data.
         """
-        relation = self._get_relation(relation)
-        if not relation:
-            return []
-        addresses = self._get_remote_field(relation, DDNS_ADDRESSES_FIELD)
-        if not addresses:
-            return []
-        try:
-            return _validate_ddns_addresses(addresses)
-        except InvalidDdnsAddressesError as exc:
-            logger.warning(
-                "Invalid %s in relation %s: %s", DDNS_ADDRESSES_FIELD, relation.id, exc.msg
-            )
-            return []
+        data = self._get_remote_data(RequirerData, relation)
+        return data.ddns_addresses if data is not None else []

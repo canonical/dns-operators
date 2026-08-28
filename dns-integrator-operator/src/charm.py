@@ -74,7 +74,7 @@ class DnsIntegratorCharm(ops.CharmBase):
         try:
             dns_record_data = self._get_dns_record_data()
             for relation in self.dns_record.relations:
-                self.dns_record.update_relation_data(dns_record_data, relation)
+                self.dns_record.update_dns_entries(dns_record_data, relation)
         except ops.model.ModelError as e:
             logger.error("ERROR while updating relation data: %s", e)
             raise

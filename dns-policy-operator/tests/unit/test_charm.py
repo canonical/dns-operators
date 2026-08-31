@@ -15,6 +15,8 @@ import pytest
 from charms.dns_record.v0.dns_record import Record, RecordRequest
 from scenario.context import _Event  # needed for custom events for now
 
+import dns_policy
+
 logger = logging.getLogger(__name__)
 
 
@@ -456,3 +458,27 @@ def test_reconcile_without_the_peer_relation(
 
     allocate_ddns_labels.assert_not_called()
     assert "ddns-domain" not in _local_app_data(out, "dns-record-provider")
+
+
+@pytest.mark.parametrize(
+    "configured,expected",
+    [
+        pytest.param("policy.test", ["policy.test", "localhost"], id="added"),
+        pytest.param("localhost", ["localhost"], id="already-allowed"),
+        pytest.param("", ["localhost"], id="empty"),
+        pytest.param("a.test, b.test", ["a.test", "b.test", "localhost"], id="several"),
+    ],
+)
+def test_workload_config_always_allows_the_api_host(configured, expected):
+    """
+    arrange: prepare an allowed-hosts configuration
+    act: build the workload configuration from it
+    assert: the host the charm calls the workload API on is always allowed, otherwise
+        Django answers every call of the charm with a "400 Bad Request"
+    """
+    config = dns_policy.DnsPolicyConfig(
+        allowed_hosts=[host.strip() for host in configured.split(",")]
+    )
+
+    assert config.allowed_hosts == expected
+    assert json.loads(config.model_dump()["allowed-hosts"]) == expected

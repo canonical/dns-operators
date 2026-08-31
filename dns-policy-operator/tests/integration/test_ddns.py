@@ -125,6 +125,28 @@ def _resolve(nameserver: str, name: str) -> list[str]:
     return []
 
 
+def _workload_supports_ddns(juju: jubilant.Juju, dns_policy_unit: str) -> bool:
+    """Tell whether the deployed workload exposes the ddns allocation API.
+
+    The charm installs its workload from the snap store, so a charm change reaches the
+    integration tests before the workload change it relies on does.
+
+    Args:
+        juju: the juju client
+        dns_policy_unit: the dns-policy unit to probe
+
+    Returns:
+        whether the workload knows the ddns allocation endpoint
+    """
+    status_code = juju.ssh(
+        dns_policy_unit,
+        "curl --silent --output /dev/null --write-out '%{http_code}' "
+        "http://localhost:8080/api/ddns/allocations/",
+    ).strip()
+    logger.info("The ddns allocation endpoint answered with %s", status_code)
+    return status_code != "404"
+
+
 @pytest.fixture(scope="module", name="ddns_deployment")
 def ddns_deployment_fixture(
     juju: jubilant.Juju,
@@ -134,6 +156,8 @@ def ddns_deployment_fixture(
     dns_integrator,  # pylint: disable=unused-argument
 ):
     """Integrate a requirer with the dns-policy charm and enable the ddns feature."""
+    if not _workload_supports_ddns(juju, f"{dns_policy_name}/0"):
+        pytest.skip("The charmed-dns-policy snap has no ddns allocation API yet")
     juju.config(dns_integrator_name, {"requests": INTEGRATOR_REQUEST})
     juju.config(dns_policy_name, {"ddns-domain": DDNS_DOMAIN})
     juju.integrate(f"{dns_integrator_name}:dns-record", f"{dns_policy_name}:dns-record-provider")
@@ -159,7 +183,7 @@ def test_ddns_domain_is_allocated(
     domain = _wait_for_ddns_domain(juju, f"{dns_policy_name}/0", published=True)
 
     assert domain is not None
-    label, _, suffix = domain.partition(".")
+    _, _, suffix = domain.partition(".")
     assert suffix == DDNS_DOMAIN
 
 

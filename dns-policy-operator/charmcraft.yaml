@@ -29,6 +29,17 @@ config:
         can serve. This configuration will set the DJANGO_ALLOWED_HOSTS environment
         variable with its content being a JSON encoded list.
       default: "0.0.0.0"
+    ddns-domain:
+      type: string
+      description: >
+        The domain suffix of the automatically allocated domains. Setting this option
+        enables the automatically allocated domain feature: every requirer integrated on
+        the dns-record-provider endpoint is allocated a unique domain under this suffix,
+        which is published back to it through the relation. The charm requests an A or
+        AAAA record for that domain, and a wildcard record for its subdomains, from the
+        upstream DNS provider. While this option is set, any DNS record request for this
+        domain or one of its subdomains is rejected. Leave empty to disable the feature.
+      default: ""
 
 requires:
   database:
@@ -42,6 +53,10 @@ requires:
 provides:
   dns-record-provider:
     interface: dns_record
+
+peers:
+  dns-policy-peers:
+    interface: dns_policy_peers
 
 parts:
   charm:

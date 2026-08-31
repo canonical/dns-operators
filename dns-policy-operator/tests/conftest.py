@@ -12,6 +12,7 @@ def pytest_addoption(parser):
     """
     parser.addoption("--charm-file", action="store", default=None)
     parser.addoption("--bind-charm-file", action="store", default=None)
+    parser.addoption("--dns-integrator-charm-file", action="store", default=None)
     parser.addoption(
         "--use-existing",
         action="store_true",

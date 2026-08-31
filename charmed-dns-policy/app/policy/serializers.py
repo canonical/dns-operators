@@ -5,7 +5,7 @@
 
 from rest_framework import serializers
 
-from .models import RecordRequest
+from .models import DdnsAllocation, RecordRequest
 
 
 class RecordRequestSerializer(serializers.ModelSerializer):
@@ -16,3 +16,13 @@ class RecordRequestSerializer(serializers.ModelSerializer):
         """Define meta of the serializer."""
         model = RecordRequest
         fields = '__all__'
+
+
+class DdnsAllocationSerializer(serializers.ModelSerializer):
+    """Define the automatically allocated domain label serializer."""
+
+    class Meta:
+        """Define meta of the serializer."""
+        model = DdnsAllocation
+        fields = ['instance', 'relation_id', 'label', 'created_at']
+        read_only_fields = ['label', 'created_at']

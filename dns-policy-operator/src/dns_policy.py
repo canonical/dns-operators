@@ -95,6 +95,26 @@ class DnsPolicyConfig(pydantic.BaseModel):
     database_password: str = ""
     database_user: str = ""
 
+    @pydantic.field_validator("allowed_hosts")
+    @classmethod
+    def always_allow_the_api_host(cls, value: list[str]) -> list[str]:
+        """Make sure the workload always answers the charm.
+
+        The charm drives the workload through its API on localhost, so Django has to
+        accept that host name whatever the operator configured, otherwise every API
+        call is rejected with a "400 Bad Request".
+
+        Args:
+            value: the configured allowed hosts.
+
+        Returns:
+            the allowed hosts, with the API host added when it is missing.
+        """
+        hosts = [host for host in value if host]
+        if constants.DNS_POLICY_API_HOST not in hosts:
+            hosts.append(constants.DNS_POLICY_API_HOST)
+        return hosts
+
     @pydantic.model_serializer
     def ser_model(self) -> dict[str, str]:
         """Make sure to serialize to a dict[str, str].

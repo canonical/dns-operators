@@ -10,11 +10,15 @@ SNAP_PACKAGES = {
 }
 DNS_CONFIG_DIR = f"/var/snap/{DNS_SNAP_NAME}/common/app"
 
-PEER = "bind-peers"
+PEER_RELATION_NAME = "dns-policy-peers"
 DATABASE_RELATION_NAME = "database"
 DATABASE_NAME = "dnspolicy"
 SYSTEMD_SERVICES_PATH = "/etc/systemd/system/"
-DNS_POLICY_ENDPOINTS_BASE = "http://localhost:8080/api/requests"
+DNS_POLICY_API_BASE = "http://localhost:8080/api"
+DNS_POLICY_ENDPOINTS_BASE = f"{DNS_POLICY_API_BASE}/requests"
+DNS_POLICY_DDNS_ALLOCATIONS_ENDPOINT = f"{DNS_POLICY_API_BASE}/ddns/allocations"
+DDNS_RECORD_TTL = 600
+DDNS_INSTANCE_KEY = "ddns-instance"
 
 RECONCILE_TIMER_INTERVAL = 1  # in minutes
 RECONCILE_TIMER_TIMEOUT = "30s"

@@ -9,7 +9,7 @@ from django.db.models.query import QuerySet
 from django.http import HttpRequest
 from django.urls import reverse
 
-from .models import RecordRequest
+from .models import DdnsAllocation, RecordRequest
 
 
 @admin.action(description="Approve")
@@ -77,6 +77,31 @@ class RecordRequestAdmin(admin.ModelAdmin):
 
 
 admin.site.register(RecordRequest, RecordRequestAdmin)
+
+
+class DdnsAllocationAdmin(admin.ModelAdmin):
+    """Define DdnsAllocation configuration in admin website.
+
+    Allocations are read-only: a label must never be reassigned or reused.
+    """
+
+    list_display = ['label', 'instance', 'relation_id', 'created_at']
+    search_fields = ['label', 'instance', 'relation_id']
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        """Check add permission."""
+        return False
+
+    def has_change_permission(self, request: HttpRequest, obj=None) -> bool:
+        """Check change permission."""
+        return False
+
+    def has_delete_permission(self, request: HttpRequest, obj=None) -> bool:
+        """Check delete permission."""
+        return False
+
+
+admin.site.register(DdnsAllocation, DdnsAllocationAdmin)
 
 
 class ReadOnlyUserAdmin(admin.ModelAdmin):

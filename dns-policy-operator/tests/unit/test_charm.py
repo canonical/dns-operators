@@ -37,6 +37,18 @@ def _published_entries(state):
     return json.loads(_local_app_data(state, "dns-record-requirer").get("dns_entries", "[]"))
 
 
+def _publish_upstream(relations, entries):
+    """Seed the upstream DNS provider relation with already published DNS entries."""
+    return [
+        (
+            dataclasses.replace(relation, local_app_data={"dns_entries": json.dumps(entries)})
+            if relation.endpoint == "dns-record-requirer"
+            else relation
+        )
+        for relation in relations
+    ]
+
+
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
 def test_start(context, base_state):
@@ -296,6 +308,53 @@ def test_reconcile_withdraws_the_requests_under_the_ddns_domain(
 
     dns_policy_send_requests.assert_called_once()
     assert dns_policy_send_requests.call_args[0][1] == []
+
+
+@pytest.mark.usefixtures("context")
+@pytest.mark.usefixtures("base_state")
+@pytest.mark.usefixtures("database_relation")
+@pytest.mark.usefixtures("requirer_relation")
+@pytest.mark.usefixtures("record_request")
+# pylint: disable=too-many-positional-arguments
+def test_reconcile_withdraws_the_entries_upstream(
+    context, base_state, database_relation, requirer_relation, record_request
+):
+    """
+    arrange: prepare a provider that published entries upstream and approves none of them
+    act: run reconcile
+    assert: an empty list is published, withdrawing the entries from upstream
+    """
+    base_state["relations"] = _publish_upstream(base_state["relations"], [record_request])
+    base_state["relations"].extend([database_relation, requirer_relation])
+    state = ops.testing.State(**base_state)
+
+    with patch("dns_policy.DnsPolicyService.send_requests"):
+        out = context.run(_Event("reconcile"), state)
+
+    assert _published_entries(out) == []
+
+
+@pytest.mark.usefixtures("context")
+@pytest.mark.usefixtures("base_state")
+@pytest.mark.usefixtures("database_relation")
+@pytest.mark.usefixtures("record_request")
+def test_reconcile_withdraws_the_entries_without_a_requirer(
+    context, base_state, database_relation, record_request
+):
+    """
+    arrange: prepare a provider that published entries upstream and lost every requirer
+    act: run reconcile
+    assert: an empty list is published, withdrawing the entries from upstream
+    """
+    base_state["relations"] = _publish_upstream(base_state["relations"], [record_request])
+    base_state["relations"].append(database_relation)
+    state = ops.testing.State(**base_state)
+
+    with patch("dns_policy.DnsPolicyService.send_requests") as dns_policy_send_requests:
+        out = context.run(_Event("reconcile"), state)
+
+    assert _published_entries(out) == []
+    dns_policy_send_requests.assert_not_called()
 
 
 @pytest.mark.usefixtures("context")

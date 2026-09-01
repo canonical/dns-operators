@@ -161,7 +161,7 @@ class DnsPolicyCharm(ops.CharmBase):
 
         relations = self.dns_record_provider.relations
         if not relations:
-            logger.debug("Reconciliation: no requirer integrated")
+            self._publish_upstream([])
             return
 
         requests, complete = self._collect_record_requests(relations, ddns_domain)
@@ -183,9 +183,6 @@ class DnsPolicyCharm(ops.CharmBase):
         else:
             self._clear_ddns_domains(relations)
 
-        if not entries:
-            logger.debug("Reconciliation: no entry to publish upstream")
-            return
         self._publish_upstream(entries)
 
     def _collect_record_requests(

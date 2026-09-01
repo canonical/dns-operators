@@ -6,6 +6,7 @@
 # We need to access protected function to test them
 # pylint: disable=protected-access
 
+import ipaddress
 import json
 import logging
 import uuid as uuid_module
@@ -595,7 +596,7 @@ def test_provider_publishes_ddns_domain():
         out = manager.run()
 
     assert out.get_relation(rel.id).local_app_data == {
-        "ddns-domain": json.dumps("1403f42c.example.com"),
+        "ddns-domain": "1403f42c.example.com",
         "dns_entries": json.dumps([]),
     }
 
@@ -613,12 +614,12 @@ def test_provider_publishes_a_different_domain_per_relation():
             manager.charm.dns_record.update_ddns_domain(f"label-{rel.app.name}.example.com", rel)
         out = manager.run()
 
-    assert {
-        out.get_relation(rel.id).remote_app_name: json.loads(
-            out.get_relation(rel.id).local_app_data["ddns-domain"]
-        )
-        for rel in relations
-    } == {
+    published = {}
+    for rel in relations:
+        out_relation = out.get_relation(rel.id)
+        published[out_relation.remote_app_name] = out_relation.local_app_data["ddns-domain"]
+
+    assert published == {
         "requirer-0": "label-requirer-0.example.com",
         "requirer-1": "label-requirer-1.example.com",
         "requirer-2": "label-requirer-2.example.com",
@@ -635,7 +636,7 @@ def test_provider_clears_ddns_domain():
         remote_app_name="requirer",
         local_app_data={
             "dns_entries": json.dumps(RESPONSES),
-            "ddns-domain": json.dumps("1403f42c.example.com"),
+            "ddns-domain": "1403f42c.example.com",
         },
     )
 
@@ -682,7 +683,7 @@ def test_requirer_reads_the_ddns_domain():
         remote_app_name="provider",
         remote_app_data={
             "dns_entries": json.dumps(ENTRIES),
-            "ddns-domain": json.dumps("1403f42c.example.com"),
+            "ddns-domain": "1403f42c.example.com",
         },
     )
 
@@ -710,8 +711,8 @@ def test_requirer_reads_no_ddns_domain_when_absent():
 
 @pytest.mark.parametrize(
     "value",
-    (json.dumps("not a domain"), "{not json"),
-    ids=("invalid domain", "not JSON"),
+    ("not a domain", "a" * 64 + ".example.com"),
+    ids=("domain with a space", "label longer than 63 characters"),
 )
 def test_requirer_ignores_an_invalid_ddns_domain(value):
     """
@@ -740,10 +741,42 @@ def test_requirer_declares_its_addresses():
         manager.charm.dns_record.update_ddns_addresses(["10.0.0.1", "2001:db8::1"])
         out = manager.run()
 
-    assert json.loads(out.get_relation(rel.id).local_app_data["ddns-addresses"]) == [
-        "10.0.0.1",
-        "2001:db8::1",
-    ]
+    assert out.get_relation(rel.id).local_app_data["ddns-addresses"] == "10.0.0.1,2001:db8::1"
+
+
+@pytest.mark.parametrize(
+    "addresses",
+    (
+        ["10.0.0.2", "10.0.0.1", "2001:db8::1", "192.168.0.1"],
+        ["2001:db8::1", "192.168.0.1", "10.0.0.2", "10.0.0.1"],
+        [
+            ipaddress.IPv4Address("192.168.0.1"),
+            ipaddress.IPv6Address("2001:db8::1"),
+            ipaddress.IPv4Address("10.0.0.2"),
+            ipaddress.IPv4Address("10.0.0.1"),
+        ],
+    ),
+    ids=("sorted as strings", "unsorted", "address objects"),
+)
+def test_requirer_publishes_sorted_addresses(addresses):
+    """
+    arrange: a requirer integrated with a provider.
+    act: declare the same addresses in different orders and representations.
+    assert: equal sets of addresses always produce the same raw databag value.
+
+    Args:
+        addresses: the addresses to declare.
+    """
+    rel = relation(remote_app_name="provider")
+
+    with run_requirer(rel) as manager:
+        manager.charm.dns_record.update_ddns_addresses(addresses)
+        out = manager.run()
+
+    assert (
+        out.get_relation(rel.id).local_app_data["ddns-addresses"]
+        == "10.0.0.1,10.0.0.2,192.168.0.1,2001:db8::1"
+    )
 
 
 def test_requirer_clears_its_addresses():
@@ -756,7 +789,7 @@ def test_requirer_clears_its_addresses():
         remote_app_name="provider",
         local_app_data={
             "dns_entries": json.dumps(ENTRIES),
-            "ddns-addresses": json.dumps(["10.0.0.1"]),
+            "ddns-addresses": "10.0.0.1",
         },
     )
 
@@ -793,26 +826,34 @@ def test_provider_reads_the_declared_addresses():
     """
     rel = relation(
         remote_app_name="requirer",
-        remote_app_data={"ddns-addresses": json.dumps(["10.0.0.1", "2001:db8::1"])},
+        remote_app_data={"ddns-addresses": "10.0.0.1, 2001:db8::1"},
     )
 
     with run_provider(rel) as manager:
-        assert manager.charm.dns_record.get_ddns_addresses() == ["10.0.0.1", "2001:db8::1"]
+        assert manager.charm.dns_record.get_ddns_addresses() == {
+            ipaddress.IPv4Address("10.0.0.1"),
+            ipaddress.IPv6Address("2001:db8::1"),
+        }
 
 
 @pytest.mark.parametrize(
     "remote_app_data",
     (
         {"dns_entries": json.dumps(ENTRIES)},
-        {"ddns-addresses": json.dumps(["example.com"])},
+        {"ddns-addresses": "example.com"},
+        {"ddns-addresses": json.dumps(["10.0.0.1"])},
     ),
-    ids=("no address declared", "declared addresses are not IP addresses"),
+    ids=(
+        "no address declared",
+        "declared addresses are not IP addresses",
+        "declared addresses are JSON encoded",
+    ),
 )
 def test_provider_reads_no_address(remote_app_data):
     """
     arrange: a requirer that declared no or unusable addresses.
     act: read the addresses from the provider.
-    assert: an empty list is returned instead of raising.
+    assert: an empty set is returned instead of raising.
 
     Args:
         remote_app_data: the databag published by the requirer.
@@ -820,7 +861,7 @@ def test_provider_reads_no_address(remote_app_data):
     rel = relation(remote_app_name="requirer", remote_app_data=remote_app_data)
 
     with run_provider(rel) as manager:
-        assert manager.charm.dns_record.get_ddns_addresses() == []
+        assert manager.charm.dns_record.get_ddns_addresses() == set()
 
 
 def test_provider_handles_each_relation_independently():
@@ -833,7 +874,7 @@ def test_provider_handles_each_relation_independently():
         remote_app_name="requirer-1",
         remote_app_data={
             "dns_entries": json.dumps(ENTRIES),
-            "ddns-addresses": json.dumps(["10.0.0.1"]),
+            "ddns-addresses": "10.0.0.1",
         },
     )
     second = relation(remote_app_name="requirer-2")
@@ -842,7 +883,7 @@ def test_provider_handles_each_relation_independently():
         provider = manager.charm.dns_record
         assert len(provider.relations) == 2
         rel = next(r for r in provider.relations if r.app.name == "requirer-1")
-        assert provider.get_ddns_addresses(rel) == ["10.0.0.1"]
+        assert provider.get_ddns_addresses(rel) == {ipaddress.IPv4Address("10.0.0.1")}
         entries = provider.get_dns_entries(rel)
         assert entries is not None
         for entry in entries:
@@ -862,11 +903,76 @@ def test_get_dns_entries_without_dns_entries_field():
     """
     rel = relation(
         remote_app_name="provider",
-        remote_app_data={"ddns-domain": json.dumps("1403f42c.example.com")},
+        remote_app_data={"ddns-domain": "1403f42c.example.com"},
     )
 
     with run_requirer(rel) as manager:
         assert manager.charm.dns_record.get_dns_entries() == []
+
+
+def test_undecodable_dns_entries_are_not_read_as_no_entry():
+    """
+    arrange: a requirer whose dns_entries field is not JSON encoded.
+    act: read the entries from the provider.
+    assert: None is returned rather than an empty list, so that a corrupted databag is
+        not mistaken for a requirer withdrawing all of its requests.
+    """
+    rel = relation(remote_app_name="requirer", remote_app_data={"dns_entries": "{not json"})
+
+    with run_provider(rel) as manager:
+        assert manager.charm.dns_record.get_dns_entries() is None
+
+
+def test_invalid_ddns_addresses_are_rejected():
+    """
+    arrange: a requirer whose ddns-addresses field holds something else than IP addresses.
+    act: read the addresses and the entries from the provider.
+    assert: the databag is rejected as invalid instead of being read as a requirer
+        declaring no address.
+    """
+    rel = relation(
+        remote_app_name="requirer",
+        remote_app_data={"dns_entries": json.dumps(ENTRIES), "ddns-addresses": "10.0.0.1,nope"},
+    )
+
+    with run_provider(rel) as manager:
+        assert manager.charm.dns_record.get_ddns_addresses() == set()
+        assert manager.charm.dns_record.get_dns_entries() is None
+
+
+def test_undecodable_unknown_fields_are_ignored():
+    """
+    arrange: a requirer that published an unknown field that is not JSON encoded.
+    act: read the entries from the provider.
+    assert: the unknown field is ignored and the known ones are still readable.
+    """
+    rel = relation(
+        remote_app_name="requirer",
+        remote_app_data={"dns_entries": json.dumps(ENTRIES), "unknown": "not json"},
+    )
+
+    with run_provider(rel) as manager:
+        entries = manager.charm.dns_record.get_dns_entries()
+        assert entries is not None
+        assert [str(entry.uuid) for entry in entries] == [ENTRY_UUID]
+
+
+def test_undecodable_local_data_is_discarded():
+    """
+    arrange: a provider whose own databag holds an undecodable dns_entries field.
+    act: publish an allocated domain.
+    assert: the invalid local data is discarded rather than silently kept.
+    """
+    rel = relation(remote_app_name="requirer", local_app_data={"dns_entries": "{not json"})
+
+    with run_provider(rel) as manager:
+        manager.charm.dns_record.update_ddns_domain("1403f42c.example.com")
+        out = manager.run()
+
+    assert out.get_relation(rel.id).local_app_data == {
+        "ddns-domain": "1403f42c.example.com",
+        "dns_entries": json.dumps([]),
+    }
 
 
 def test_deprecated_relation_data_methods_still_work():

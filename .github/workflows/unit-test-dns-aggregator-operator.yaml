@@ -1,0 +1,26 @@
+name: Dns-aggregator-operator tests
+
+on:
+  pull_request:
+    paths:
+      - 'dns-aggregator-operator/charmcraft.yaml'
+      - 'dns-aggregator-operator/lib/**'
+      - 'dns-aggregator-operator/pyproject.toml'
+      - 'dns-aggregator-operator/requirements.txt'
+      - 'dns-aggregator-operator/src/**'
+      - 'dns-aggregator-operator/tests/**'
+      - 'dns-aggregator-operator/tox.ini'
+      - '.github/workflows/unit-test-dns-aggregator-operator.yaml'
+  push:
+    branches:
+      - main
+
+jobs:
+  unit-tests:
+    uses: canonical/operator-workflows/.github/workflows/test.yaml@main
+    secrets: inherit
+    with:
+      self-hosted-runner: false
+      self-hosted-runner-label: "edge"
+      working-directory: ./dns-aggregator-operator
+      require-check-lib: false

@@ -1,0 +1,48 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+type: charm
+name: dns-aggregator
+title: DNS aggregator
+summary: DNS aggregator forwarding DNS record requests to a single DNS provider
+description: |
+  A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/)
+  aggregating the DNS record requests of several requirers into a single integration
+  with a DNS provider.
+
+  The charm sits between the requirers of the `dns_record` interface and the provider
+  serving them. It combines the record requests of its downstream integrations, forwards
+  them upstream as a single request set, and dispatches the responses of the provider
+  back to the requirer they belong to.
+links:
+  contact: https://launchpad.net/~canonical-is-devops
+  documentation: https://canonical.com/juju/docs/dns-charms
+  issues:
+    - https://github.com/canonical/dns-operators/issues
+  source:
+    - https://github.com/canonical/dns-operators
+assumes:
+  - juju >= 3.6
+provides:
+  dns-record-provider:
+    interface: dns_record
+  dns-record-provider-mixin:
+    interface: dns_record
+requires:
+  dns-record-requirer:
+    interface: dns_record
+    limit: 1
+bases:
+  - build-on:
+    - name: ubuntu
+      channel: "22.04"
+    run-on:
+    - name: ubuntu
+      channel: "22.04"
+parts:
+  charm:
+    build-snaps:
+      - rustup
+    override-build: |
+      rustup default stable
+      craftctl default

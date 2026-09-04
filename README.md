@@ -14,6 +14,7 @@ This repository contains the code for the following DNS charms:
 3. `dns-integrator`: An integrator charm that allows the creation of record request through its configuration. See the [dns-integrator README](dns-integrator-operator/README.md) for more information.
 4. `dns-resolver`: A resolver charm that provides a single point of configuration for all the requirers using the same DNS server. See the [dns-resolver README](dns-resolver-operator/README.md) for more information.
 5. `dns-secondary`: A secondary charm that provides a hidden primary setup by serving the zones without leaking any IP address of the primary deployment. See the [dns-secondary README](dns-secondary-operator/README.md) for more information.
+6. `dns-aggregator`: An aggregator charm that combines the record requests of several requirers into a single integration with a DNS provider. See the [dns-aggregator README](dns-aggregator-operator/README.md) for more information.
 
 The repository also contains the snapped workload of some charms:
 1. `charmed-bind`: A snapped bind specifically made for the bind charm. See the [charmed-bind README](charmed-bind/README.md) for more information.
@@ -54,6 +55,7 @@ make lint-md
 | Name | Listing |
 |------|---------|
 | `bind` | https://charmhub.io/bind |
+| `dns-aggregator` | https://charmhub.io/dns-aggregator |
 | `dns-integrator` | https://charmhub.io/dns-integrator |
 | `dns-policy` | https://charmhub.io/dns-policy |
 | `dns-resolver` | https://charmhub.io/dns-resolver |

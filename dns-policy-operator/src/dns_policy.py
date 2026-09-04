@@ -11,7 +11,7 @@ import subprocess  # nosec
 import ops
 import pydantic
 import requests
-from charms.bind.v0.dns_record import RequirerEntry
+from charms.dns_record.v0.dns_record import Record, RecordRequest
 from charms.operator_libs_linux.v2 import snap
 
 import constants
@@ -67,6 +67,10 @@ class GetApprovedRecordRequestsError(DnsPolicyCharmError):
     """Exception raised when unable to get approved record requests."""
 
 
+class DdnsAllocationError(DnsPolicyCharmError):
+    """Exception raised when unable to allocate automatically allocated domain labels."""
+
+
 class DnsPolicyConfig(pydantic.BaseModel):
     """Configuration for the DnsPolicy workload.
 
@@ -90,6 +94,26 @@ class DnsPolicyConfig(pydantic.BaseModel):
     database_name: str = ""
     database_password: str = ""
     database_user: str = ""
+
+    @pydantic.field_validator("allowed_hosts")
+    @classmethod
+    def always_allow_the_api_host(cls, value: list[str]) -> list[str]:
+        """Make sure the workload always answers the charm.
+
+        The charm drives the workload through its API on localhost, so Django has to
+        accept that host name whatever the operator configured, otherwise every API
+        call is rejected with a "400 Bad Request".
+
+        Args:
+            value: the configured allowed hosts.
+
+        Returns:
+            the allowed hosts, with the API host added when it is missing.
+        """
+        hosts = [host for host in value if host]
+        if constants.DNS_POLICY_API_HOST not in hosts:
+            hosts.append(constants.DNS_POLICY_API_HOST)
+        return hosts
 
     @pydantic.model_serializer
     def ser_model(self) -> dict[str, str]:
@@ -275,7 +299,7 @@ class DnsPolicyService:
             raise RootTokenError("Invalid root token!")
         return tokens["access"]
 
-    def send_requests(self, token: str, record_requests: list[RequirerEntry]) -> None:
+    def send_requests(self, token: str, record_requests: list[RecordRequest]) -> None:
         """Send record requests.
 
         Args:
@@ -293,20 +317,62 @@ class DnsPolicyService:
                     "Authorization": f"Bearer {token}",
                 },
                 timeout=10,
-                data=json.dumps([x.model_dump() for x in record_requests]),
+                data=json.dumps([x.serialize_as_request() for x in record_requests]),
             )
             req.raise_for_status()
         except requests.RequestException as e:
             raise ApiError(str(e)) from e
 
-    def get_approved_requests(self, token: str) -> list[RequirerEntry]:
+    def allocate_ddns_labels(
+        self, token: str, instance: str, relation_ids: list[int]
+    ) -> dict[int, str]:
+        """Get the automatically allocated domain label of each of the given relations.
+
+        A relation that has no label yet is allocated a new one. The workload guarantees
+        that a label is unique and never reused.
+
+        Args:
+            token: root token for the API
+            instance: identifier of this charm installation, which scopes the relation
+                ids as those are only unique within a single charm installation
+            relation_ids: ids of the relations to get a label for
+
+        Returns:
+            The label allocated to each relation, by relation id.
+
+        Raises:
+            ApiError: if a request errors
+            DdnsAllocationError: if the workload answered with unusable data
+        """
+        labels = {}
+        for relation_id in relation_ids:
+            try:
+                req = requests.get(
+                    f"{constants.DNS_POLICY_DDNS_ALLOCATIONS_ENDPOINT}/{instance}/{relation_id}/",
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {token}",
+                    },
+                    timeout=10,
+                )
+                req.raise_for_status()
+            except requests.RequestException as e:
+                raise ApiError(str(e)) from e
+
+            try:
+                labels[relation_id] = str(req.json()["label"])
+            except (AttributeError, KeyError, TypeError, ValueError) as e:
+                raise DdnsAllocationError(f"Invalid ddns allocation: {e}") from e
+        return labels
+
+    def get_approved_requests(self, token: str) -> list[RecordRequest]:
         """Get approved record requests.
 
         Args:
             token: root token for the API
 
         Returns:
-            A list of RequirerEntry to update the relations
+            A list of RecordRequest to update the relations
 
         Raises:
             ApiError: if the request errors
@@ -334,8 +400,15 @@ class DnsPolicyService:
             for rr in data:
                 # The record_class is always "IN"
                 rr["record_class"] = "IN"
-                entry = RequirerEntry.model_validate(rr)
+                entry = RecordRequest.model_validate(
+                    {
+                        "uuid": rr["uuid"],
+                        "status": rr["status"],
+                        "description": rr.get("status_reason") or "",
+                        "record": Record.model_validate(rr),
+                    }
+                )
                 entries.append(entry)
-        except pydantic.ValidationError as e:
+        except (KeyError, TypeError, pydantic.ValidationError) as e:
             raise GetApprovedRecordRequestsError(str(e)) from e
         return entries

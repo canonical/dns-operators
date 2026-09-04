@@ -819,10 +819,23 @@ class DNSRecordRequires(DNSRecordBase):
         super().__init__(charm, relation_name)
         self.secret_label = secret_label
 
+        # An application owned secret can only be managed by the leader unit, so the
+        # namespace secret is created lazily, the first time a leader unit needs it.
+        if charm.unit.is_leader():
+            self._namespace_secret()
+
+    def _namespace_secret(self) -> ops.Secret:
+        """Get the secret holding the uuid namespace, creating it when it is missing.
+
+        Returns:
+            the secret holding the uuid namespace.
+        """
         try:
-            self.model.get_secret(label=secret_label)
+            return self.model.get_secret(label=self.secret_label)
         except ops.SecretNotFoundError:
-            charm.app.add_secret({"namespace": str(uuid_module.uuid4())}, label=secret_label)
+            return self.charm.app.add_secret(
+                {"namespace": str(uuid_module.uuid4())}, label=self.secret_label
+            )
 
     @staticmethod
     def _create_record_request(
@@ -899,9 +912,8 @@ class DNSRecordRequires(DNSRecordBase):
             CreateRecordRequestError: when failing to create the RecordRequest
         """
         try:
-            secret: ops.Secret = self.model.get_secret(label=self.secret_label)
-            secret_content: dict[str, str] = secret.get_content()
-        except ops.SecretNotFoundError as e:
+            secret_content: dict[str, str] = self._namespace_secret().get_content()
+        except ops.ModelError as e:
             raise CreateRecordRequestError("Namespace not found !") from e
         return self._create_record_request(
             uuid_module.UUID(secret_content["namespace"]),

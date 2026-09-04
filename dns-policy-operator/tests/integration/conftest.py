@@ -12,6 +12,36 @@ import pytest
 import yaml
 
 
+def _pack(directory: pathlib.Path, app_name: str) -> str:
+    """Pack the charm of a directory and return the path of the packed charm.
+
+    Args:
+        directory: directory of the charm to pack
+        app_name: name of the charm to pack
+
+    Returns:
+        the path of the packed charm
+
+    Raises:
+        OSError: if the charm could not be packed
+    """
+    try:
+        subprocess.run(
+            ["charmcraft", "pack"],
+            capture_output=True,
+            check=True,
+            cwd=directory,
+            text=True,
+        )  # nosec B603, B607
+    except subprocess.CalledProcessError as exc:
+        raise OSError(f"Error packing charm: {exc}; Stderr:\n{exc.stderr}") from None
+
+    charms = [p.absolute() for p in directory.glob(f"{app_name}_*.charm")]
+    assert charms, f"{app_name}.charm file not found"
+    assert len(charms) == 1, f"{app_name} has more than one .charm file, unsure which to use"
+    return str(charms[0])
+
+
 @pytest.fixture(scope="module", name="juju")
 def juju_fixture(
     request: pytest.FixtureRequest,
@@ -69,6 +99,20 @@ def fixture_dns_policy_name(dns_policy_metadata):
     yield dns_policy_metadata["name"]
 
 
+@pytest.fixture(scope="module", name="dns_integrator_metadata")
+def dns_integrator_metadata_fixture():
+    """Provide charm metadata."""
+    yield yaml.safe_load(
+        pathlib.Path("../dns-integrator-operator/charmcraft.yaml").read_text(encoding="UTF-8")
+    )
+
+
+@pytest.fixture(scope="module", name="dns_integrator_name")
+def fixture_dns_integrator_name(dns_integrator_metadata):
+    """Provide charm name from the metadata."""
+    yield dns_integrator_metadata["name"]
+
+
 @pytest.fixture(scope="module", name="bind_metadata")
 def bind_metadata_fixture():
     """Provide charm metadata."""
@@ -118,23 +162,20 @@ def bind_charm_file_fixture(
     if charm_file:
         yield f"../bind-operator/{charm_file}"
         return
-    bind_directory = pathlib.Path("../bind-operator")
-    try:
-        subprocess.run(
-            ["charmcraft", "pack"],
-            capture_output=True,
-            check=True,
-            cwd=bind_directory,
-            text=True,
-        )  # nosec B603, B607
-    except subprocess.CalledProcessError as exc:
-        raise OSError(f"Error packing charm: {exc}; Stderr:\n{exc.stderr}") from None
+    yield _pack(pathlib.Path("../bind-operator"), bind_metadata["name"])
 
-    app_name = bind_metadata["name"]
-    charms = [p.absolute() for p in bind_directory.glob(f"{app_name}_*.charm")]
-    assert charms, f"{app_name}.charm file not found"
-    assert len(charms) == 1, f"{app_name} has more than one .charm file, unsure which to use"
-    yield str(charms[0])
+
+@pytest.fixture(scope="module", name="dns_integrator_charm_file")
+def dns_integrator_charm_file_fixture(
+    dns_integrator_metadata: dict[str, typing.Any],
+    pytestconfig: pytest.Config,
+):
+    """Pytest fixture that packs the dns-integrator charm and returns the filename."""
+    charm_file = pytestconfig.getoption("--dns-integrator-charm-file", default=None)
+    if charm_file:
+        yield f"../dns-integrator-operator/{charm_file}"
+        return
+    yield _pack(pathlib.Path("../dns-integrator-operator"), dns_integrator_metadata["name"])
 
 
 @pytest.fixture(scope="module", name="dns_policy")
@@ -191,6 +232,24 @@ def bind_fixture(
     juju.wait(lambda status: jubilant.all_active(status, bind_name))
 
     yield bind_name
+
+
+@pytest.fixture(scope="module", name="dns_integrator")
+def dns_integrator_fixture(
+    juju: jubilant.Juju,
+    dns_integrator_charm_file: str,
+    dns_integrator_name: str,
+    pytestconfig: pytest.Config,
+):
+    """Build the dns-integrator charm and deploy it."""
+    use_existing = pytestconfig.getoption("--use-existing", default=False)
+    if use_existing:
+        yield dns_integrator_name
+        return
+
+    juju.deploy(dns_integrator_charm_file, dns_integrator_name, resources={})
+
+    yield dns_integrator_name
 
 
 @pytest.fixture(scope="module", name="full_deployment")

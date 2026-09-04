@@ -22,6 +22,7 @@ bind-operator/               # Juju charm: primary authoritative BIND DNS server
 charmed-bind/                # Snap workload used by the bind charm
 charmed-dns-policy/          # Snap workload used by the dns-policy charm
 
+dns-aggregator-operator/     # Juju charm: aggregates record requests of several requirers into one DNS provider integration
 dns-integrator-operator/     # Juju charm: creates DNS record requests from charm configuration
 dns-policy-operator/         # Juju subordinate charm: approval/policy layer for DNS record requests
 dns-resolver-operator/       # Juju charm: DNS resolver that consumes authority information
@@ -47,6 +48,7 @@ This repository contains the code for the following DNS charms:
 | `dns-integrator` | [`dns-integrator-operator/`](dns-integrator-operator/README.md) | An integrator charm that allows the creation of record request through its configuration. |  |
 | `dns-resolver` | [`dns-resolver-operator/`](dns-resolver-operator/README.md) | A resolver charm that provides a single point of configuration for all the requirers using the same DNS server. |  |
 | `dns-secondary` | [`dns-secondary-operator/`](dns-secondary-operator/README.md) | A secondary charm that provides a hidden primary setup by serving the zones without leaking any IP address of the primary deployment. |  |
+| `dns-aggregator` | [`dns-aggregator-operator/`](dns-aggregator-operator/README.md) | An aggregator charm that combines the record requests of several requirers into a single integration with a DNS provider. |  |
 
 The repository also contains the snapped workload of some charms:
 
@@ -60,6 +62,7 @@ The repository also contains the snapped workload of some charms:
 | Name | Listing |
 | --- | --- |
 | `bind` | https://charmhub.io/bind |
+| `dns-aggregator` | https://charmhub.io/dns-aggregator |
 | `dns-integrator` | https://charmhub.io/dns-integrator |
 | `dns-policy` | https://charmhub.io/dns-policy |
 | `dns-resolver` | https://charmhub.io/dns-resolver |

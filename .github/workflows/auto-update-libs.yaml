@@ -10,6 +10,11 @@ jobs:
     secrets: inherit
     with:
       working-directory: ./bind-operator
+  auto-update-libs-dns-aggregator-operator:
+    uses: canonical/operator-workflows/.github/workflows/auto_update_charm_libs.yaml@main
+    secrets: inherit
+    with:
+      working-directory: ./dns-aggregator-operator
   auto-update-libs-dns-integrator-operator:
     uses: canonical/operator-workflows/.github/workflows/auto_update_charm_libs.yaml@main
     secrets: inherit

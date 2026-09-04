@@ -7,8 +7,9 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import RecordRequest
-from .serializers import RecordRequestSerializer
+from . import ddns
+from .models import DdnsAllocation, RecordRequest
+from .serializers import DdnsAllocationSerializer, RecordRequestSerializer
 
 
 class ListAllRequestsView(APIView):
@@ -119,3 +120,33 @@ class RequestsView(generics.ListCreateAPIView):
                 rr.delete()
 
         return Response({}, status=status.HTTP_200_OK)
+
+
+class DdnsAllocationsView(APIView):
+    """List the labels of the automatically allocated domains."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """List every label ever allocated."""
+        allocations = DdnsAllocation.objects.all()
+        return Response(DdnsAllocationSerializer(allocations, many=True).data)
+
+
+class DdnsAllocationView(APIView):
+    """Allocate the label of the automatically allocated domain of a relation."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, instance, relation_id):
+        """Get the label allocated to a relation, allocating one if it has none yet.
+
+        This is idempotent: a relation always gets back the label it was first
+        allocated.
+
+        Relations are scoped to an instance, the identifier of the charm they belong to,
+        because relation ids are only unique within a single charm deployment.
+        """
+        try:
+            allocation = ddns.allocate(instance, relation_id)
+        except ddns.DdnsAllocationError as error:
+            return Response({"detail": str(error)}, status=status.HTTP_409_CONFLICT)
+        return Response(DdnsAllocationSerializer(allocation).data)

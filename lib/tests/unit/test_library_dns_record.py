@@ -5,6 +5,8 @@
 
 # We need to access protected function to test them
 # pylint: disable=protected-access
+# This module holds the tests of a whole charm library
+# pylint: disable=too-many-lines
 
 import ipaddress
 import json
@@ -514,6 +516,24 @@ ENTRIES = [
 ]
 RESPONSES = [{"uuid": ENTRY_UUID, "status": "approved", "description": None}]
 
+INVALID_DDNS_DOMAINS = {
+    "domain with a space": "not a domain",
+    "label longer than 63 characters": "a" * 64 + ".example.com",
+    "two trailing dots": "example.com..",
+    "leading dot": ".example.com",
+    "empty label": "example..com",
+    "root label only": ".",
+    "whitespace only": " \n",
+}
+
+DENORMALIZED_DDNS_DOMAINS = {
+    "trailing dot": "1403f42c.example.com.",
+    "trailing newline": "1403f42c.example.com\n",
+    "leading newline": "\n1403f42c.example.com",
+    "surrounding spaces": "  1403f42c.example.com  ",
+    "surrounding whitespace and trailing dot": "\t 1403f42c.example.com. \n",
+}
+
 
 class DNSRecordProviderCharm(ops.CharmBase):
     """Minimal charm exercising the provider side of the library."""
@@ -650,9 +670,7 @@ def test_provider_clears_ddns_domain():
 
 
 @pytest.mark.parametrize(
-    "domain",
-    ("not a domain", "a" * 64 + ".example.com"),
-    ids=("domain with a space", "label longer than 63 characters"),
+    "domain", tuple(INVALID_DDNS_DOMAINS.values()), ids=tuple(INVALID_DDNS_DOMAINS)
 )
 def test_provider_rejects_an_invalid_ddns_domain(domain):
     """
@@ -671,6 +689,27 @@ def test_provider_rejects_an_invalid_ddns_domain(domain):
         out = manager.run()
 
     assert out.get_relation(rel.id).local_app_data == {}
+
+
+@pytest.mark.parametrize(
+    "domain", tuple(DENORMALIZED_DDNS_DOMAINS.values()), ids=tuple(DENORMALIZED_DDNS_DOMAINS)
+)
+def test_provider_normalizes_the_ddns_domain(domain):
+    """
+    arrange: a provider integrated with a requirer.
+    act: publish a domain with surrounding whitespace or a trailing root dot.
+    assert: the normalized domain is published.
+
+    Args:
+        domain: the denormalized domain to publish.
+    """
+    rel = relation(remote_app_name="requirer")
+
+    with run_provider(rel) as manager:
+        manager.charm.dns_record.update_ddns_domain(domain)
+        out = manager.run()
+
+    assert out.get_relation(rel.id).local_app_data["ddns-domain"] == "1403f42c.example.com"
 
 
 def test_requirer_reads_the_ddns_domain():
@@ -706,13 +745,13 @@ def test_requirer_reads_no_ddns_domain_when_absent():
 
     with run_requirer(rel) as manager:
         assert manager.charm.dns_record.get_ddns_domain() is None
-        assert manager.charm.dns_record.get_dns_entries() != []
+        entries = manager.charm.dns_record.get_dns_entries()
+        assert entries is not None
+        assert [str(entry.uuid) for entry in entries] == [ENTRY_UUID]
 
 
 @pytest.mark.parametrize(
-    "value",
-    ("not a domain", "a" * 64 + ".example.com"),
-    ids=("domain with a space", "label longer than 63 characters"),
+    "value", tuple(INVALID_DDNS_DOMAINS.values()), ids=tuple(INVALID_DDNS_DOMAINS)
 )
 def test_requirer_ignores_an_invalid_ddns_domain(value):
     """
@@ -727,6 +766,24 @@ def test_requirer_ignores_an_invalid_ddns_domain(value):
 
     with run_requirer(rel) as manager:
         assert manager.charm.dns_record.get_ddns_domain() is None
+
+
+@pytest.mark.parametrize(
+    "value", tuple(DENORMALIZED_DDNS_DOMAINS.values()), ids=tuple(DENORMALIZED_DDNS_DOMAINS)
+)
+def test_requirer_normalizes_the_ddns_domain(value):
+    """
+    arrange: a provider that published a domain with whitespace or a trailing root dot.
+    act: read the domain from the requirer.
+    assert: the normalized domain is returned.
+
+    Args:
+        value: the denormalized raw value published by the provider.
+    """
+    rel = relation(remote_app_name="provider", remote_app_data={"ddns-domain": value})
+
+    with run_requirer(rel) as manager:
+        assert manager.charm.dns_record.get_ddns_domain() == "1403f42c.example.com"
 
 
 def test_requirer_declares_its_addresses():

@@ -171,7 +171,7 @@ DDNS_DOMAIN_FIELD = "ddns-domain"
 DDNS_ADDRESSES_FIELD = "ddns-addresses"
 
 DDNS_DOMAIN_MAX_LENGTH = 253
-_DDNS_LABEL_PATTERN = re.compile(r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)$")
+_DDNS_LABEL_PATTERN = re.compile(r"(?!-)[A-Za-z0-9-]{1,63}(?<!-)")
 
 
 class DnsRecordError(Exception):
@@ -510,24 +510,25 @@ def _encode_ddns_addresses(addresses: set[ipaddress.IPv4Address | ipaddress.IPv6
 
 
 def _validate_ddns_domain(domain: str | None) -> str | None:
-    """Validate the automatically allocated domain.
+    """Normalize and validate the automatically allocated domain.
 
     Args:
-        domain: the domain to validate.
+        domain: the domain to normalize and validate.
 
     Returns:
-        the validated domain.
+        the normalized domain.
 
     Raises:
         ValueError: when the domain is not a valid domain name.
     """
     if domain is None:
         return None
-    if not domain or len(domain) > DDNS_DOMAIN_MAX_LENGTH:
+    normalized = domain.strip().removesuffix(".")
+    if not normalized or len(normalized) > DDNS_DOMAIN_MAX_LENGTH:
         raise ValueError(f"Invalid domain: {domain!r}")
-    if not all(_DDNS_LABEL_PATTERN.match(label) for label in domain.rstrip(".").split(".")):
+    if not all(_DDNS_LABEL_PATTERN.fullmatch(label) for label in normalized.split(".")):
         raise ValueError(f"Invalid domain: {domain!r}")
-    return domain
+    return normalized
 
 
 def _encode_ddns_domain(domain: str | None) -> str:

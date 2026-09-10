@@ -47,3 +47,35 @@ class RecordRequest(models.Model):
     def __str__(self):
         """Record request model string representation."""
         return f"[{self.status}] {self.host_label} {self.domain} {self.ttl} {self.record_type} {self.record_data}"
+
+
+class DdnsAllocation(models.Model):
+    """Label of the domain automatically allocated to a dns_record relation.
+
+    An allocation is never removed and a label is never reused, so a domain that was
+    once allocated to a relation can never be handed to a different one.
+
+    A relation is identified by the pair (instance, relation_id). The instance is the
+    identifier of the charm the relation belongs to: relation ids are only unique
+    within a single charm deployment, and start over from scratch in a deployment
+    restored from a backup of this database. Keying the allocations on the instance too
+    keeps them from being handed to the unrelated relations of such a deployment.
+    """
+
+    instance = models.UUIDField()
+    relation_id = models.IntegerField()
+    label = models.CharField(max_length=63, unique=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        """Define meta of the model."""
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=['instance', 'relation_id'], name='unique_relation_allocation'
+            ),
+        ]
+
+    def __str__(self):
+        """Ddns allocation model string representation."""
+        return f"{self.label} (instance {self.instance}, relation {self.relation_id})"

@@ -106,3 +106,38 @@ def test_config_changed_with_config_and_integration(base_state):
             requests_data = json.loads(relation.local_app_data.get("dns_entries"))  # type: ignore
             for request in requests_data:
                 assert request["host_label"] == "foo"
+
+
+@pytest.mark.usefixtures("base_state")
+def test_config_changed_with_multiple_integrations(base_state):
+    """
+    arrange: prepare a state with three dns-record integrations
+    act: run config-changed
+    assert: the requests are published in the databag of every relation
+    """
+    relations = [
+        scenario.Relation(
+            endpoint="dns-record",
+            interface="dns_record",
+            remote_app_name=f"bind-{index}",
+            local_unit_data={},
+            remote_app_data={},
+        )
+        for index in range(3)
+    ]
+    base_state["relations"] = relations
+    base_state["config"] = {
+        "requests": "foo example.com 600 IN A 1.2.3.4",
+    }
+    base_state["leader"] = True
+    state = ops.testing.State(**base_state)
+
+    context = ops.testing.Context(charm_type=DnsIntegratorCharm)
+    out = context.run(context.on.config_changed(), state)
+    assert out.unit_status == ops.ActiveStatus()
+    for relation in relations:
+        # Mypy doesn't seem to fully understand `RawDataBagContents?`
+        requests_data = json.loads(
+            out.get_relation(relation.id).local_app_data.get("dns_entries")  # type: ignore
+        )
+        assert [request["host_label"] for request in requests_data] == ["foo"]

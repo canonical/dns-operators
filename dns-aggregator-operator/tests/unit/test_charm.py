@@ -186,6 +186,31 @@ def test_duplicated_requests_are_forwarded_once(context, base_state):
 
 
 @pytest.mark.usefixtures("context", "base_state")
+def test_published_entries_are_sorted_by_uuid(context, base_state):
+    """
+    arrange: a downstream and two mixin integrations, all of them answered upstream
+    act: run an event
+    assert: the entries published upstream and downstream are sorted by uuid
+    """
+    names = ["main", "mixin-1", "mixin-2"]
+    upstream = upstream_relation([make_response(name) for name in names])
+    downstream = downstream_relation([make_request(name) for name in names])
+
+    out = reconcile(context, base_state, [upstream, downstream])
+
+    forwarded = [
+        str(entry.uuid)
+        for entry in parse_requirer(out.get_relation(upstream.id).local_app_data).dns_entries
+    ]
+    dispatched = [
+        str(entry.uuid)
+        for entry in parse_provider(out.get_relation(downstream.id).local_app_data).dns_entries
+    ]
+    assert forwarded == sorted(str(make_uuid(name)) for name in names)
+    assert dispatched == sorted(str(make_uuid(name)) for name in names)
+
+
+@pytest.mark.usefixtures("context", "base_state")
 def test_requests_are_withdrawn_when_downstream_goes_away(context, base_state):
     """
     arrange: an upstream integration still holding requests, without any downstream
@@ -251,6 +276,32 @@ def test_responses_are_withdrawn_when_upstream_goes_away(context, base_state):
     )
 
     out = reconcile(context, base_state, [downstream])
+
+    published = parse_provider(out.get_relation(downstream.id).local_app_data)
+    assert published.dns_entries == []
+    assert published.ddns_domain is None
+
+
+@pytest.mark.usefixtures("context", "base_state")
+def test_responses_are_withdrawn_when_upstream_is_removed(context, base_state):
+    """
+    arrange: a downstream integration holding a response, and the upstream one being removed
+    act: run the broken event of the upstream integration
+    assert: the response and the domain are withdrawn from the downstream integration
+    """
+    upstream = upstream_relation([make_response("main")], ddns_domain="a.example.com")
+    downstream = ops.testing.Relation(
+        endpoint=DOWNSTREAM_RELATION_NAME,
+        interface=INTERFACE,
+        remote_app_name="requirer",
+        remote_app_data=requirer_databag([make_request("main")]),
+        remote_units_data={0: {}},
+        local_app_data=provider_databag([make_response("main")], ddns_domain="a.example.com"),
+    )
+    base_state["relations"] = [upstream, downstream]
+    state = ops.testing.State(**base_state)
+
+    out = context.run(context.on.relation_broken(upstream), state)
 
     published = parse_provider(out.get_relation(downstream.id).local_app_data)
     assert published.dns_entries == []
@@ -360,58 +411,6 @@ def test_ddns_domain_is_forwarded_downstream(context, base_state):
 
 
 @pytest.mark.usefixtures("context", "base_state")
-def test_several_downstream_integrations_are_rejected(context, base_state):
-    """
-    arrange: two integrations on the main downstream endpoint
-    act: run an event
-    assert: the charm is blocked and nothing is forwarded at all
-    """
-    upstream = upstream_relation([make_response("first")])
-    first = downstream_relation([make_request("first")])
-    second = ops.testing.Relation(
-        endpoint=DOWNSTREAM_RELATION_NAME,
-        interface=INTERFACE,
-        remote_app_name="other-requirer",
-        remote_app_data=requirer_databag([make_request("second")]),
-    )
-
-    out = reconcile(context, base_state, [upstream, first, second])
-
-    assert out.unit_status == ops.BlockedStatus(
-        f"Got 2 {DOWNSTREAM_RELATION_NAME} integrations, only one is supported"
-    )
-    assert out.get_relation(upstream.id).local_app_data == {}
-    assert out.get_relation(first.id).local_app_data == {}
-    assert out.get_relation(second.id).local_app_data == {}
-
-
-@pytest.mark.usefixtures("context", "base_state")
-def test_several_upstream_integrations_are_rejected(context, base_state):
-    """
-    arrange: two integrations on the upstream endpoint
-    act: run an event
-    assert: the charm is blocked and nothing is forwarded at all
-    """
-    first = upstream_relation()
-    second = ops.testing.Relation(
-        endpoint=UPSTREAM_RELATION_NAME,
-        interface=INTERFACE,
-        remote_app_name="other-provider",
-        remote_app_data=provider_databag([make_response("main")]),
-    )
-    downstream = downstream_relation([make_request("main")])
-
-    out = reconcile(context, base_state, [first, second, downstream])
-
-    assert out.unit_status == ops.BlockedStatus(
-        f"Waiting for a {UPSTREAM_RELATION_NAME} integration"
-    )
-    assert out.get_relation(first.id).local_app_data == {}
-    assert out.get_relation(second.id).local_app_data == {}
-    assert parse_provider(out.get_relation(downstream.id).local_app_data).dns_entries == []
-
-
-@pytest.mark.usefixtures("context", "base_state")
 def test_non_leader_does_not_publish(context, base_state):
     """
     arrange: a follower unit with both integrations
@@ -429,11 +428,11 @@ def test_non_leader_does_not_publish(context, base_state):
 
 
 @pytest.mark.usefixtures("context", "base_state")
-def test_unreadable_downstream_does_not_withdraw_requests(context, base_state):
+def test_unreadable_downstream_requests_are_withdrawn(context, base_state):
     """
     arrange: a mixin integration publishing invalid data, next to a valid downstream one
     act: run an event
-    assert: the requests already published upstream are left untouched
+    assert: the requests of the unreadable integration are withdrawn from upstream
     """
     published = requirer_databag([make_request("main"), make_request("mixin")])
     upstream = ops.testing.Relation(
@@ -453,19 +452,18 @@ def test_unreadable_downstream_does_not_withdraw_requests(context, base_state):
 
     out = reconcile(context, base_state, [upstream, downstream, mixin])
 
-    assert parse_requirer(out.get_relation(upstream.id).local_app_data).dns_entries != []
     assert entry_uuids(
         parse_requirer(out.get_relation(upstream.id).local_app_data).dns_entries
-    ) == uuids(["main", "mixin"])
+    ) == uuids(["main"])
     assert out.get_relation(mixin.id).local_app_data == {}
 
 
 @pytest.mark.usefixtures("context", "base_state")
-def test_unreadable_main_downstream_does_not_repoint_ddns_addresses(context, base_state):
+def test_unreadable_main_downstream_falls_back_to_ingress_addresses(context, base_state):
     """
     arrange: a main downstream integration whose relation data cannot be read
     act: run an event
-    assert: the ddns addresses already published upstream are left untouched
+    assert: the ingress addresses of its units are published upstream
     """
     upstream = ops.testing.Relation(
         endpoint=UPSTREAM_RELATION_NAME,
@@ -485,7 +483,7 @@ def test_unreadable_main_downstream_does_not_repoint_ddns_addresses(context, bas
     out = reconcile(context, base_state, [upstream, downstream])
 
     published = parse_requirer(out.get_relation(upstream.id).local_app_data)
-    assert {str(address) for address in published.ddns_addresses} == {"203.0.113.9"}
+    assert {str(address) for address in published.ddns_addresses} == {"192.0.2.1"}
 
 
 @pytest.mark.usefixtures("context", "base_state")

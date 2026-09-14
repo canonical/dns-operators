@@ -28,46 +28,6 @@ juju integrate dns-aggregator:dns-record-provider my-application
 juju integrate dns-aggregator:dns-record-provider-mixin another-application
 ```
 
-## Integrations
-
-| Endpoint | Interface | Role | Limit | Description |
-|----------|-----------|------|-------|-------------|
-| `dns-record-requirer` | `dns_record` | requires | 1 | The DNS provider every aggregated request is forwarded to. |
-| `dns-record-provider` | `dns_record` | provides | 1 | The main downstream requirer. Its record requests and its automatically allocated domain data are proxied. |
-| `dns-record-provider-mixin` | `dns_record` | provides | - | Additional downstream requirers. Only their record requests are proxied. |
-
-The `dns-record-provider` endpoint accepts a single integration. Juju is not able to
-enforce that limit on a `provides` endpoint, so the charm goes into a blocked state and
-stops forwarding anything while more than one application is integrated on it.
-
-### Record requests
-
-The record requests published by every downstream requirer, on `dns-record-provider` as
-well as on `dns-record-provider-mixin`, are combined and published to the DNS provider as
-a single set of requests. The responses of the provider are dispatched back to the
-downstream requirer that asked for them, matched on the uuid of the request.
-
-### Automatically allocated domains
-
-The automatically allocated domain data is only proxied between the main downstream
-requirer and the DNS provider. Mixin requirers neither declare addresses nor receive a
-domain.
-
-The `ddns-domain` allocated by the provider is republished to the main downstream
-requirer as it is. The `ddns-addresses` declared by the main downstream requirer are
-forwarded to the provider as they are. When it declares none, the charm forwards the
-`ingress-address` of its units instead, so that the allocated domain still resolves to
-the requirer.
-
-The charm never publishes an empty `ddns-addresses` field, as the provider would then
-resolve the allocated domain to the units of the aggregator rather than to the ones of
-the requirer. While no address can be derived, the last published ones are kept.
-
-### Basic operations
-
-No actions and no configuration options are available, as this charm is entirely operated
-through its integrations.
-
 ## Learn more
 * [Read more](https://charmhub.io/dns-aggregator/docs)
 * [`dns_record` interface](https://canonical.github.io/charm-relation-interfaces/interfaces/dns_record/v0/)

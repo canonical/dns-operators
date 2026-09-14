@@ -55,24 +55,44 @@ def test_is_within(name, domain, expected):
 
 
 @pytest.mark.parametrize(
-    "domain,expected",
+    "domain",
     [
-        ("example.com", True),
-        ("a-b.example.com", True),
-        ("", False),
-        ("not a domain", False),
-        ("-example.com", False),
-        ("example-.com", False),
-        (f"{'a' * 64}.com", False),
+        "example.com",
+        "a-b.example.com",
+        " Example.COM. ",
+        f"{'.'.join(['aaaaaaaaa'] * 19)}.com",
     ],
 )
-def test_is_valid_domain(domain, expected):
+def test_ddns_domain_error_accepts_valid_domains(domain):
     """
-    arrange: take a domain name
+    arrange: take a valid suffix of the automatically allocated domains
     act: validate it
-    assert: only valid domain names are accepted
+    assert: no error is reported
     """
-    assert ddns.is_valid_domain(domain) is expected
+    assert ddns.ddns_domain_error(domain) is None
+
+
+@pytest.mark.parametrize(
+    "domain,expected",
+    [
+        ("", "the domain is empty"),
+        (f"{'.'.join(['aaaaaaaaa'] * 20)}.com", "203 characters long"),
+        (f"{'a' * 64}.com", f"{'a' * 64!r} is 64 characters long"),
+        ("not a domain", "'not a domain' is not a valid domain label"),
+        ("-example.com", "'-example' is not a valid domain label"),
+        ("example-.com", "'example-' is not a valid domain label"),
+    ],
+)
+def test_ddns_domain_error_explains_invalid_domains(domain, expected):
+    """
+    arrange: take an invalid suffix of the automatically allocated domains
+    act: validate it
+    assert: the error tells why the domain was rejected
+    """
+    error = ddns.ddns_domain_error(domain)
+
+    assert error is not None
+    assert expected in error
 
 
 def test_record_type():

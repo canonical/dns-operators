@@ -30,6 +30,10 @@ Now that we understand that `bind-operator` is made to publish record requests f
 
 ![Approve/Denial process](/explanation/policy.jpg)
 
+## Aggregating requests from several requirers
+
+The `dns_record` interface pairs a single provider with a single requirer, which is not always enough: an application may be composed of several charms that each need to publish records, while the DNS provider should only see one requirer. The `dns-aggregator` charm fills that gap. It behaves as a provider for the requirers it fronts and as a requirer for the DNS provider, combining all the record requests it receives into a single set forwarded upstream, then dispatching the responses back to the requirer that asked for them based on the UUID of each request. Like `dns-policy`, it is transparent to both sides: neither the requirers nor the provider need to know that an aggregator sits between them.
+
 ## A charm for each DNS server
 
 With `bind-operator` and `dns-integrator`, we have the core functionality necessary for our DNS setup. But we still want to be able to mimic the classic “hidden primary” setup where the primary DNS server is not visible in the zones and these are served by a set of secondaries instead. This is where the `dns-secondary` charm comes into play. When `bind-operator` gets integrated to `dns-secondary`, it rewrites the configuration for the zone, removing references to its own units in favor of those of `dns-secondary` and then transfers its zones to `dns-secondary`. Now `dns-secondary` can serve the zones without leaking any IP address of the primary deployment.

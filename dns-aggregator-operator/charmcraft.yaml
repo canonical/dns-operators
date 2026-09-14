@@ -26,6 +26,7 @@ assumes:
 provides:
   dns-record-provider:
     interface: dns_record
+    limit: 1
   dns-record-provider-mixin:
     interface: dns_record
 requires:

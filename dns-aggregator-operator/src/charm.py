@@ -98,19 +98,12 @@ class DnsAggregatorCharm(ops.CharmBase):
 
     def _on_collect_unit_status(self, _: ops.CollectStatusEvent) -> None:
         """Handle the collect unit status event."""
-        downstream_relations = self.dns_record_provider.relations
-        if len(downstream_relations) > 1:
-            self.unit.status = ops.BlockedStatus(
-                f"Got {len(downstream_relations)} {DOWNSTREAM_RELATION_NAME} integrations, "
-                "only one is supported"
-            )
-            return
-        if self._upstream_relation() is None:
+        if not self.dns_record_requirer.relations:
             self.unit.status = ops.BlockedStatus(
                 f"Waiting for a {UPSTREAM_RELATION_NAME} integration"
             )
             return
-        if not downstream_relations:
+        if not self.dns_record_provider.relations:
             self.unit.status = ops.BlockedStatus(
                 f"Waiting for a {DOWNSTREAM_RELATION_NAME} integration"
             )
@@ -128,46 +121,20 @@ class DnsAggregatorCharm(ops.CharmBase):
             return
 
         downstream_relations = self.dns_record_provider.relations
-        if len(downstream_relations) > 1:
-            logger.error(
-                "Got %s %s integrations, only one is supported: skipping the reconciliation",
-                len(downstream_relations),
-                DOWNSTREAM_RELATION_NAME,
-            )
-            return
-        main_relation = downstream_relations[0] if downstream_relations else None
         main = (
-            self._read_downstream(self.dns_record_provider, main_relation)
-            if main_relation is not None
+            self._read_downstream(self.dns_record_provider, downstream_relations[0])
+            if downstream_relations
             else None
         )
         downstreams = ([main] if main is not None else []) + [
             self._read_downstream(self.dns_record_provider_mixin, relation)
-            # The mixin relations are ordered by relation id so that the aggregation is
-            # stable across reconciliations.
             for relation in sorted(self.dns_record_provider_mixin.relations, key=lambda r: r.id)
         ]
-        upstream = self._upstream_relation()
+        upstream_relations = self.dns_record_requirer.relations
+        upstream = upstream_relations[0] if upstream_relations else None
 
         self._publish_upstream(upstream, downstreams, main)
         self._publish_downstream(upstream, downstreams, main)
-
-    def _upstream_relation(self) -> ops.Relation | None:
-        """Get the relation with the upstream DNS provider.
-
-        Returns:
-            the upstream relation, or None when there is none. Juju caps the endpoint to
-            a single relation, so more than one is reported as an error and ignored.
-        """
-        relations = self.dns_record_requirer.relations
-        if len(relations) > 1:
-            logger.error(
-                "Got %s %s integrations, only one is supported",
-                len(relations),
-                UPSTREAM_RELATION_NAME,
-            )
-            return None
-        return relations[0] if relations else None
 
     @staticmethod
     def _read_downstream(
@@ -203,35 +170,20 @@ class DnsAggregatorCharm(ops.CharmBase):
         if upstream is None:
             return
 
-        if any(downstream.requests is None for downstream in downstreams):
-            # Publishing a partial list would withdraw the missing requests from the DNS
-            # provider, so the previously published ones are left untouched instead.
-            logger.warning(
-                "Some downstream relation data could not be read, "
-                "not publishing a partial list of record requests"
-            )
-        else:
-            requests: dict[uuid_module.UUID, dns_record.RecordRequest] = {}
-            for downstream in downstreams:
-                for request in downstream.requests or ():
-                    requests.setdefault(request.uuid, request)
-            self.dns_record_requirer.update_dns_entries(list(requests.values()), upstream)
-
-        if main is not None and main.requests is None:
-            # The relation data of the main downstream requirer could not be read, so
-            # the addresses it declares are unknown.
-            logger.warning(
-                "The relation data of the main downstream could not be read, "
-                "not publishing its ddns addresses"
-            )
-            return
+        requests: dict[uuid_module.UUID, dns_record.RecordRequest] = {}
+        for downstream in downstreams:
+            if downstream.requests is None:
+                continue
+            for request in downstream.requests:
+                requests.setdefault(request.uuid, request)
+        self.dns_record_requirer.update_dns_entries(
+            sorted(requests.values(), key=lambda request: str(request.uuid)), upstream
+        )
 
         addresses = self._ddns_addresses(main)
         if not addresses:
-            # An empty ddns-addresses field tells the DNS provider to fall back to the
-            # ingress addresses of its requirer, which is this charm rather than the
-            # downstream requirer the allocated domain belongs to. The previously
-            # published addresses are left untouched instead.
+            # here the ddns-addresses will be the address of dns-aggregator
+            # but I think that should be okay
             logger.warning("No ddns address to publish to the DNS provider")
             return
         self.dns_record_requirer.update_ddns_addresses(addresses, upstream)
@@ -249,35 +201,27 @@ class DnsAggregatorCharm(ops.CharmBase):
             downstreams: the downstream relations and their record requests.
             main: the main downstream relation, or None when there is none.
         """
-        responses = (
-            self.dns_record_requirer.get_dns_entries(upstream) if upstream is not None else []
-        )
-        if responses is None:
-            # Withdrawing every response would clear the status of the requests that the
-            # DNS provider already answered, so the previously published ones are left
-            # untouched instead.
-            logger.warning(
-                "The relation data of the DNS provider could not be read, "
-                "not dispatching its responses"
-            )
-            return
+        responses: list[dns_record.RecordRequest] | None
+        domain: str | None
+        if upstream is None or upstream.app is None:
+            responses, domain = [], None
+        else:
+            responses = self.dns_record_requirer.get_dns_entries(upstream) or []
+            domain = self.dns_record_requirer.get_ddns_domain(upstream)
 
         for downstream in downstreams:
             if downstream.requests is None:
-                # The requested uuids are unknown, so the responses can't be dispatched.
                 continue
             uuids = downstream.uuids
+            responses_for_downstream = [
+                response for response in responses if response.uuid in uuids
+            ]
             downstream.endpoint.update_dns_entries(
-                [response for response in responses if response.uuid in uuids],
+                sorted(responses_for_downstream, key=lambda response: str(response.uuid)),
                 downstream.relation,
             )
 
         if main is not None:
-            domain = (
-                self.dns_record_requirer.get_ddns_domain(upstream)
-                if upstream is not None
-                else None
-            )
             self.dns_record_provider.update_ddns_domain(domain, main.relation)
 
     def _ddns_addresses(self, main: Downstream | None) -> set[IPAddress]:

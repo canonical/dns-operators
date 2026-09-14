@@ -21,9 +21,6 @@ import pytest
 
 logger = logging.getLogger(__name__)
 
-DDNS_DOMAIN = "ddns.test"
-INTEGRATOR_REQUEST = "admin dns.test 600 IN A 42.42.42.42"
-
 
 def _relation_info(juju: jubilant.Juju, unit: str, endpoint: str) -> dict[str, typing.Any]:
     """Get the relation information of an endpoint of a unit.
@@ -125,54 +122,11 @@ def _resolve(nameserver: str, name: str) -> list[str]:
     return []
 
 
-def _workload_supports_ddns(juju: jubilant.Juju, dns_policy_unit: str) -> bool:
-    """Tell whether the deployed workload exposes the ddns allocation API.
-
-    The charm installs its workload from the snap store, so a charm change reaches the
-    integration tests before the workload change it relies on does.
-
-    Args:
-        juju: the juju client
-        dns_policy_unit: the dns-policy unit to probe
-
-    Returns:
-        whether the workload knows the ddns allocation endpoint
-    """
-    status_code = juju.ssh(
-        dns_policy_unit,
-        "curl --silent --output /dev/null --write-out '%{http_code}' "
-        "http://localhost:8080/api/ddns/allocations/",
-    ).strip()
-    logger.info("The ddns allocation endpoint answered with %s", status_code)
-    return status_code != "404"
-
-
-@pytest.fixture(scope="module", name="ddns_deployment")
-def ddns_deployment_fixture(
-    juju: jubilant.Juju,
-    dns_policy_name: str,
-    dns_integrator_name: str,
-    full_deployment,  # pylint: disable=unused-argument
-    dns_integrator,  # pylint: disable=unused-argument
-):
-    """Integrate a requirer with the dns-policy charm and enable the ddns feature."""
-    if not _workload_supports_ddns(juju, f"{dns_policy_name}/0"):
-        pytest.skip("The charmed-dns-policy snap has no ddns allocation API yet")
-    juju.config(dns_integrator_name, {"requests": INTEGRATOR_REQUEST})
-    juju.config(dns_policy_name, {"ddns-domain": DDNS_DOMAIN})
-    juju.integrate(f"{dns_integrator_name}:dns-record", f"{dns_policy_name}:dns-record-provider")
-    juju.wait(
-        lambda status: jubilant.all_active(status, dns_policy_name, dns_integrator_name),
-        error=jubilant.any_error,
-        timeout=600,
-    )
-    yield dns_integrator_name
-
-
 @pytest.mark.abort_on_fail
 def test_ddns_domain_is_allocated(
     juju: jubilant.Juju,
     dns_policy_name: str,
+    ddns_domain: str,
     ddns_deployment,  # pylint: disable=unused-argument
 ):
     """
@@ -184,7 +138,7 @@ def test_ddns_domain_is_allocated(
 
     assert domain is not None
     _, _, suffix = domain.partition(".")
-    assert suffix == DDNS_DOMAIN
+    assert suffix == ddns_domain
 
 
 @pytest.mark.abort_on_fail
@@ -233,10 +187,12 @@ def test_ddns_domain_is_stable(
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.parametrize("ddns_domain_config", ["not a domain"], indirect=True)
 def test_invalid_ddns_domain_blocks_the_charm(
     juju: jubilant.Juju,
     dns_policy_name: str,
-    ddns_deployment,  # pylint: disable=unused-argument
+    ddns_domain: str,
+    ddns_domain_config,  # pylint: disable=unused-argument
 ):
     """
     arrange: deploy the charms and let a requirer be allocated a domain.
@@ -244,8 +200,8 @@ def test_invalid_ddns_domain_blocks_the_charm(
     assert: the charm blocks and keeps the domain it already allocated.
     """
     domain = _published_ddns_domain(juju, f"{dns_policy_name}/0")
+    assert domain is not None and domain.endswith(f".{ddns_domain}")
 
-    juju.config(dns_policy_name, {"ddns-domain": "not a domain"})
     juju.wait(lambda status: jubilant.all_blocked(status, dns_policy_name))
     time.sleep(120)  # let the reconciliation timer tick a couple of times
 
@@ -253,17 +209,17 @@ def test_invalid_ddns_domain_blocks_the_charm(
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.parametrize("ddns_domain_config", [""], indirect=True)
 def test_ddns_domain_is_withdrawn(
     juju: jubilant.Juju,
     dns_policy_name: str,
-    ddns_deployment,  # pylint: disable=unused-argument
+    ddns_domain_config,  # pylint: disable=unused-argument
 ):
     """
     arrange: deploy the charms and let a requirer be allocated a domain.
     act: unset the ddns-domain configuration.
     assert: the allocated domain is withdrawn from the requirer.
     """
-    juju.config(dns_policy_name, {"ddns-domain": ""})
     juju.wait(
         lambda status: jubilant.all_active(status, dns_policy_name),
         error=jubilant.any_error,

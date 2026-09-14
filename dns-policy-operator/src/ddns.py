@@ -13,8 +13,12 @@ import constants
 # Host label of the wildcard record covering the subdomains of an allocated domain
 WILDCARD_HOST_LABEL = "*"
 
-# Maximum length of a domain name
-DOMAIN_MAX_LENGTH = 253
+# Maximum length of the suffix of the automatically allocated domains, kept below the
+# maximum length of a domain name to leave room for the allocated host labels
+DDNS_DOMAIN_MAX_LENGTH = 200
+
+# Maximum length of a domain label
+LABEL_MAX_LENGTH = 63
 
 _LABEL_PATTERN = re.compile(r"^(?!-)[a-z0-9-]{1,63}(?<!-)$")
 
@@ -62,19 +66,35 @@ def is_within(name: str, domain: str) -> bool:
     return name == domain or name.endswith(f".{domain}")
 
 
-def is_valid_domain(domain: str) -> bool:
-    """Check whether a domain name is a valid one.
+def ddns_domain_error(domain: str) -> str | None:
+    """Check whether a domain name is a valid suffix for the allocated domains.
 
     Args:
         domain: the domain name to check.
 
     Returns:
-        True when the domain name is a valid domain name.
+        the reason why the domain name is not a valid suffix, or None when it is one.
     """
     domain = normalize_domain(domain)
-    if not domain or len(domain) > DOMAIN_MAX_LENGTH:
-        return False
-    return all(_LABEL_PATTERN.match(label) for label in domain.split("."))
+    if not domain:
+        return "the domain is empty"
+    if len(domain) >= DDNS_DOMAIN_MAX_LENGTH:
+        return (
+            f"the domain is {len(domain)} characters long, it must be shorter than "
+            f"{DDNS_DOMAIN_MAX_LENGTH} characters"
+        )
+    for label in domain.split("."):
+        if len(label) > LABEL_MAX_LENGTH:
+            return (
+                f"the label {label!r} is {len(label)} characters long, it must be at "
+                f"most {LABEL_MAX_LENGTH} characters"
+            )
+        if not _LABEL_PATTERN.match(label):
+            return (
+                f"the label {label!r} is not a valid domain label, it must only hold "
+                "lowercase letters, digits and inner hyphens"
+            )
+    return None
 
 
 def record_type(address: str) -> RecordType:

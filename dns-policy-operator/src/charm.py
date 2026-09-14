@@ -104,9 +104,10 @@ class DnsPolicyCharm(ops.CharmBase):
             self.unit.status = ops.WaitingStatus("Waiting for a database integration.")
             return
         configured_ddns_domain = self._configured_ddns_domain()
-        if configured_ddns_domain and not ddns.is_valid_domain(configured_ddns_domain):
+        error = ddns.ddns_domain_error(configured_ddns_domain) if configured_ddns_domain else None
+        if error:
             self.unit.status = ops.BlockedStatus(
-                f"Invalid ddns-domain configuration: {configured_ddns_domain}"
+                f"Invalid ddns-domain configuration {configured_ddns_domain!r}: {error}"
             )
             return
 
@@ -155,8 +156,13 @@ class DnsPolicyCharm(ops.CharmBase):
             return
 
         ddns_domain = self._configured_ddns_domain()
-        if ddns_domain and not ddns.is_valid_domain(ddns_domain):
-            logger.error("Invalid ddns-domain configuration, skipping the reconciliation")
+        error = ddns.ddns_domain_error(ddns_domain) if ddns_domain else None
+        if error:
+            logger.error(
+                "Invalid ddns-domain configuration %r (%s), skipping the reconciliation",
+                ddns_domain,
+                error,
+            )
             return
 
         relations = self.dns_record_provider.relations

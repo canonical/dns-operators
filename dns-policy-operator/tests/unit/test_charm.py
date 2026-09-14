@@ -105,14 +105,39 @@ def test_start_with_invalid_ddns_domain(context, base_state, database_relation):
     """
     arrange: prepare some state with an invalid ddns-domain configuration
     act: run start
-    assert: status is blocked
+    assert: status is blocked and tells why the domain was rejected
     """
     base_state["relations"].append(database_relation)
     base_state["config"] = {"ddns-domain": "not a domain"}
     state = ops.testing.State(**base_state)
 
     out = context.run(context.on.start(), state)
-    assert out.unit_status == ops.BlockedStatus("Invalid ddns-domain configuration: not a domain")
+    assert out.unit_status == ops.BlockedStatus(
+        "Invalid ddns-domain configuration 'not a domain': "
+        "the label 'not a domain' is not a valid domain label, it must only hold "
+        "lowercase letters, digits and inner hyphens"
+    )
+
+
+@pytest.mark.usefixtures("context")
+@pytest.mark.usefixtures("base_state")
+@pytest.mark.usefixtures("database_relation")
+def test_start_with_too_long_ddns_domain(context, base_state, database_relation):
+    """
+    arrange: prepare some state with a ddns-domain configuration of 200 characters or more
+    act: run start
+    assert: status is blocked and tells the domain is too long
+    """
+    domain = f"{'.'.join(['aaaaaaaaa'] * 20)}.com"
+    base_state["relations"].append(database_relation)
+    base_state["config"] = {"ddns-domain": domain}
+    state = ops.testing.State(**base_state)
+
+    out = context.run(context.on.start(), state)
+    assert out.unit_status == ops.BlockedStatus(
+        f"Invalid ddns-domain configuration '{domain}': the domain is 203 characters "
+        "long, it must be shorter than 200 characters"
+    )
 
 
 @pytest.mark.usefixtures("context")

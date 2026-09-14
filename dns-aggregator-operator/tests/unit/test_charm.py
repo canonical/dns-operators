@@ -487,11 +487,11 @@ def test_unreadable_main_downstream_falls_back_to_ingress_addresses(context, bas
 
 
 @pytest.mark.usefixtures("context", "base_state")
-def test_unreadable_upstream_does_not_withdraw_responses(context, base_state):
+def test_unreadable_upstream_withdraws_responses(context, base_state):
     """
     arrange: an upstream integration publishing invalid data
     act: run an event
-    assert: the responses and the domain already published downstream are left untouched
+    assert: the responses and the domain are withdrawn from the downstream integration
     """
     upstream = ops.testing.Relation(
         endpoint=UPSTREAM_RELATION_NAME,
@@ -510,8 +510,8 @@ def test_unreadable_upstream_does_not_withdraw_responses(context, base_state):
     out = reconcile(context, base_state, [upstream, downstream])
 
     published = parse_provider(out.get_relation(downstream.id).local_app_data)
-    assert entry_uuids(published.dns_entries) == uuids(["main"])
-    assert published.ddns_domain == "a.example.com"
+    assert published.dns_entries == []
+    assert published.ddns_domain is None
 
 
 @pytest.mark.usefixtures("context", "base_state")

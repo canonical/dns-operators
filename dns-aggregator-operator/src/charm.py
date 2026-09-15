@@ -90,25 +90,10 @@ class DnsAggregatorCharm(ops.CharmBase):
                 endpoint.relation_broken,
             ):
                 self.framework.observe(relation_event, self._on_event)
-        self.framework.observe(self.on.collect_unit_status, self._on_collect_unit_status)
 
     def _on_event(self, _: ops.EventBase) -> None:
         """Handle any event by reconciling the whole state of the relations."""
         self.reconcile()
-
-    def _on_collect_unit_status(self, _: ops.CollectStatusEvent) -> None:
-        """Handle the collect unit status event."""
-        if not self.dns_record_requirer.relations:
-            self.unit.status = ops.BlockedStatus(
-                f"Waiting for a {UPSTREAM_RELATION_NAME} integration"
-            )
-            return
-        if not self.dns_record_provider.relations:
-            self.unit.status = ops.BlockedStatus(
-                f"Waiting for a {DOWNSTREAM_RELATION_NAME} integration"
-            )
-            return
-        self.unit.status = ops.ActiveStatus()
 
     def reconcile(self) -> None:
         """Forward the DNS record requests upstream and the responses downstream.
@@ -117,9 +102,6 @@ class DnsAggregatorCharm(ops.CharmBase):
         the outcome only depends on the current relation data and never on the event
         that triggered the reconciliation.
         """
-        if not self.unit.is_leader():
-            return
-
         downstream_relations = self.dns_record_provider.relations
         main = (
             self._read_downstream(self.dns_record_provider, downstream_relations[0])
@@ -133,8 +115,38 @@ class DnsAggregatorCharm(ops.CharmBase):
         upstream_relations = self.dns_record_requirer.relations
         upstream = upstream_relations[0] if upstream_relations else None
 
-        self._publish_upstream(upstream, downstreams, main)
-        self._publish_downstream(upstream, downstreams, main)
+        requests: dict[uuid_module.UUID, dns_record.RecordRequest] = {}
+        for downstream in downstreams:
+            for request in downstream.requests or ():
+                requests.setdefault(request.uuid, request)
+        aggregated = sorted(requests.values(), key=lambda request: str(request.uuid))
+
+        responses: list[dns_record.RecordRequest]
+        domain: str | None
+        if upstream is None or upstream.app is None:
+            responses, domain = [], None
+        else:
+            responses = self.dns_record_requirer.get_dns_entries(upstream) or []
+            domain = self.dns_record_requirer.get_ddns_domain(upstream)
+        dispatched = [response for response in responses if response.uuid in requests]
+
+        if self.unit.is_leader():
+            self._publish_upstream(upstream, aggregated, main)
+            self._publish_downstream(downstreams, responses, domain, main)
+
+        if upstream is None:
+            self.unit.status = ops.BlockedStatus(
+                f"Waiting for a {UPSTREAM_RELATION_NAME} integration"
+            )
+        elif not downstream_relations:
+            self.unit.status = ops.BlockedStatus(
+                f"Waiting for a {DOWNSTREAM_RELATION_NAME} integration"
+            )
+        else:
+            self.unit.status = ops.ActiveStatus(
+                f"Forwarding {len(aggregated)} request{'' if len(aggregated) == 1 else 's'} "
+                f"and {len(dispatched)} response{'' if len(dispatched) == 1 else 's'}"
+            )
 
     @staticmethod
     def _read_downstream(
@@ -157,28 +169,20 @@ class DnsAggregatorCharm(ops.CharmBase):
     def _publish_upstream(
         self,
         upstream: ops.Relation | None,
-        downstreams: list[Downstream],
+        requests: list[dns_record.RecordRequest],
         main: Downstream | None,
     ) -> None:
         """Publish the aggregated record requests and ddns data to the DNS provider.
 
         Args:
             upstream: the relation with the DNS provider, or None when there is none.
-            downstreams: the downstream relations and their record requests.
+            requests: the aggregated record requests to forward.
             main: the main downstream relation, or None when there is none.
         """
         if upstream is None:
             return
 
-        requests: dict[uuid_module.UUID, dns_record.RecordRequest] = {}
-        for downstream in downstreams:
-            if downstream.requests is None:
-                continue
-            for request in downstream.requests:
-                requests.setdefault(request.uuid, request)
-        self.dns_record_requirer.update_dns_entries(
-            sorted(requests.values(), key=lambda request: str(request.uuid)), upstream
-        )
+        self.dns_record_requirer.update_dns_entries(requests, upstream)
 
         addresses = self._ddns_addresses(main)
         if not addresses:
@@ -190,25 +194,19 @@ class DnsAggregatorCharm(ops.CharmBase):
 
     def _publish_downstream(
         self,
-        upstream: ops.Relation | None,
         downstreams: list[Downstream],
+        responses: list[dns_record.RecordRequest],
+        domain: str | None,
         main: Downstream | None,
     ) -> None:
         """Dispatch the responses of the DNS provider to the downstream relations.
 
         Args:
-            upstream: the relation with the DNS provider, or None when there is none.
             downstreams: the downstream relations and their record requests.
+            responses: the responses published by the DNS provider.
+            domain: the domain allocated by the DNS provider, or None when there is none.
             main: the main downstream relation, or None when there is none.
         """
-        responses: list[dns_record.RecordRequest] | None
-        domain: str | None
-        if upstream is None or upstream.app is None:
-            responses, domain = [], None
-        else:
-            responses = self.dns_record_requirer.get_dns_entries(upstream) or []
-            domain = self.dns_record_requirer.get_ddns_domain(upstream)
-
         for downstream in downstreams:
             if downstream.requests is None:
                 continue

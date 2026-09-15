@@ -134,13 +134,49 @@ def test_blocked_without_downstream_integration(context, base_state):
 @pytest.mark.usefixtures("context", "base_state")
 def test_active_with_both_integrations(context, base_state):
     """
-    arrange: the upstream and the downstream integrations
+    arrange: the upstream and the downstream integrations, without any request
     act: run an event
-    assert: the charm is active
+    assert: the charm is active and reports that it forwards nothing
     """
     out = reconcile(context, base_state, [upstream_relation(), downstream_relation()])
 
-    assert out.unit_status == ops.ActiveStatus()
+    assert out.unit_status == ops.ActiveStatus("Forwarding 0 requests and 0 responses")
+
+
+@pytest.mark.usefixtures("context", "base_state")
+def test_active_status_counts_requests_and_responses(context, base_state):
+    """
+    arrange: a downstream and two mixin integrations, one of them answered upstream
+    act: run an event
+    assert: the charm reports how many requests and responses it forwards
+    """
+    relations = [
+        upstream_relation([make_response("main")]),
+        downstream_relation([make_request("main")]),
+        mixin_relation([make_request("mixin-1")], remote_app_name="mixin-1"),
+        mixin_relation([make_request("mixin-2")], remote_app_name="mixin-2"),
+    ]
+
+    out = reconcile(context, base_state, relations)
+
+    assert out.unit_status == ops.ActiveStatus("Forwarding 3 requests and 1 response")
+
+
+@pytest.mark.usefixtures("context", "base_state")
+def test_active_status_ignores_unknown_responses(context, base_state):
+    """
+    arrange: an upstream integration answering a request no downstream made
+    act: run an event
+    assert: the unknown response is not counted
+    """
+    relations = [
+        upstream_relation([make_response("main"), make_response("unknown")]),
+        downstream_relation([make_request("main")]),
+    ]
+
+    out = reconcile(context, base_state, relations)
+
+    assert out.unit_status == ops.ActiveStatus("Forwarding 1 request and 1 response")
 
 
 @pytest.mark.usefixtures("context", "base_state")

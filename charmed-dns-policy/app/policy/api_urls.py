@@ -16,9 +16,4 @@ urlpatterns = [
     path('requests/<uuid:pk>/deny/', api_views.DenyRequestView.as_view(), name="api_request_deny"),
     path('requests/', api_views.RequestsView.as_view(), name='requests'),
     path('ddns/allocations/', api_views.DdnsAllocationsView.as_view(), name='ddns_allocations'),
-    path(
-        'ddns/allocations/<uuid:instance>/<int:relation_id>/',
-        api_views.DdnsAllocationView.as_view(),
-        name='ddns_allocation',
-    ),
 ]

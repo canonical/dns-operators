@@ -82,11 +82,11 @@ admin.site.register(RecordRequest, RecordRequestAdmin)
 class DdnsAllocationAdmin(admin.ModelAdmin):
     """Define DdnsAllocation configuration in admin website.
 
-    Allocations are read-only: a label must never be reassigned or reused.
+    Allocations are read-only: a domain must never be reassigned or reused.
     """
 
-    list_display = ['label', 'instance', 'relation_id', 'created_at']
-    search_fields = ['label', 'instance', 'relation_id']
+    list_display = ['domain', 'instance', 'relation_id', 'created_at']
+    search_fields = ['domain', 'instance', 'relation_id']
 
     def has_add_permission(self, request: HttpRequest) -> bool:
         """Check add permission."""

@@ -191,15 +191,16 @@ def test_reconcile_allocates_a_ddns_domain(
 
     with (
         patch("dns_policy.DnsPolicyService.send_requests"),
-        patch("dns_policy.DnsPolicyService.allocate_ddns_labels") as allocate_ddns_labels,
+        patch("dns_policy.DnsPolicyService.allocate_ddns_domains") as allocate_ddns_domains,
     ):
-        allocate_ddns_labels.return_value = {requirer_relation.id: ddns_label}
+        allocate_ddns_domains.return_value = {requirer_relation.id: f"{ddns_label}.{ddns_domain}"}
         out = context.run(_Event("reconcile"), state)
 
-    allocate_ddns_labels.assert_called_once()
+    allocate_ddns_domains.assert_called_once()
     instance = _local_app_data(out, "dns-policy-peers")["ddns-instance"]
-    assert allocate_ddns_labels.call_args[0][1] == instance
-    assert allocate_ddns_labels.call_args[0][2] == [requirer_relation.id]
+    assert allocate_ddns_domains.call_args[0][1] == instance
+    assert allocate_ddns_domains.call_args[0][2] == [requirer_relation.id]
+    assert allocate_ddns_domains.call_args[0][3] == ddns_domain
 
     provider_data = _local_app_data(out, "dns-record-provider")
     assert json.loads(provider_data["ddns-domain"]) == f"{ddns_label}.{ddns_domain}"
@@ -242,9 +243,9 @@ def test_reconcile_prefers_the_declared_ddns_addresses(
 
     with (
         patch("dns_policy.DnsPolicyService.send_requests"),
-        patch("dns_policy.DnsPolicyService.allocate_ddns_labels") as allocate_ddns_labels,
+        patch("dns_policy.DnsPolicyService.allocate_ddns_domains") as allocate_ddns_domains,
     ):
-        allocate_ddns_labels.return_value = {requirer_relation.id: ddns_label}
+        allocate_ddns_domains.return_value = {requirer_relation.id: f"{ddns_label}.{ddns_domain}"}
         out = context.run(_Event("reconcile"), state)
 
     published = _published_entries(out)
@@ -286,9 +287,9 @@ def test_reconcile_rejects_requests_under_the_ddns_domain(
 
     with (
         patch("dns_policy.DnsPolicyService.send_requests") as dns_policy_send_requests,
-        patch("dns_policy.DnsPolicyService.allocate_ddns_labels") as allocate_ddns_labels,
+        patch("dns_policy.DnsPolicyService.allocate_ddns_domains") as allocate_ddns_domains,
     ):
-        allocate_ddns_labels.return_value = {requirer_relation.id: ddns_label}
+        allocate_ddns_domains.return_value = {requirer_relation.id: f"{ddns_label}.{ddns_domain}"}
         context.run(_Event("reconcile"), state)
 
     assert dns_policy_send_requests.call_args[0][1] == [_record_request(record_request)]
@@ -326,9 +327,9 @@ def test_reconcile_withdraws_the_requests_under_the_ddns_domain(
 
     with (
         patch("dns_policy.DnsPolicyService.send_requests") as dns_policy_send_requests,
-        patch("dns_policy.DnsPolicyService.allocate_ddns_labels") as allocate_ddns_labels,
+        patch("dns_policy.DnsPolicyService.allocate_ddns_domains") as allocate_ddns_domains,
     ):
-        allocate_ddns_labels.return_value = {requirer_relation.id: ddns_label}
+        allocate_ddns_domains.return_value = {requirer_relation.id: f"{ddns_label}.{ddns_domain}"}
         context.run(_Event("reconcile"), state)
 
     dns_policy_send_requests.assert_called_once()
@@ -408,12 +409,12 @@ def test_reconcile_skips_an_invalid_ddns_domain(
 
     with (
         patch("dns_policy.DnsPolicyService.send_requests") as dns_policy_send_requests,
-        patch("dns_policy.DnsPolicyService.allocate_ddns_labels") as allocate_ddns_labels,
+        patch("dns_policy.DnsPolicyService.allocate_ddns_domains") as allocate_ddns_domains,
     ):
         out = context.run(_Event("reconcile"), state)
 
     dns_policy_send_requests.assert_not_called()
-    allocate_ddns_labels.assert_not_called()
+    allocate_ddns_domains.assert_not_called()
     assert json.loads(_local_app_data(out, "dns-record-provider")["ddns-domain"]) == allocated
 
 
@@ -441,11 +442,11 @@ def test_reconcile_withdraws_the_ddns_domain_when_disabled(
 
     with (
         patch("dns_policy.DnsPolicyService.send_requests"),
-        patch("dns_policy.DnsPolicyService.allocate_ddns_labels") as allocate_ddns_labels,
+        patch("dns_policy.DnsPolicyService.allocate_ddns_domains") as allocate_ddns_domains,
     ):
         out = context.run(_Event("reconcile"), state)
 
-    allocate_ddns_labels.assert_not_called()
+    allocate_ddns_domains.assert_not_called()
     assert _local_app_data(out, "dns-record-provider").get("ddns-domain", "") == ""
 
 
@@ -503,12 +504,12 @@ def test_reconcile_keeps_the_instance_identifier(
 
     with (
         patch("dns_policy.DnsPolicyService.send_requests"),
-        patch("dns_policy.DnsPolicyService.allocate_ddns_labels") as allocate_ddns_labels,
+        patch("dns_policy.DnsPolicyService.allocate_ddns_domains") as allocate_ddns_domains,
     ):
-        allocate_ddns_labels.return_value = {requirer_relation.id: ddns_label}
+        allocate_ddns_domains.return_value = {requirer_relation.id: f"{ddns_label}.{ddns_domain}"}
         out = context.run(_Event("reconcile"), state)
 
-    assert allocate_ddns_labels.call_args[0][1] == instance
+    assert allocate_ddns_domains.call_args[0][1] == instance
     assert _local_app_data(out, "dns-policy-peers")["ddns-instance"] == instance
 
 
@@ -536,29 +537,33 @@ def test_reconcile_without_the_peer_relation(
 
     with (
         patch("dns_policy.DnsPolicyService.send_requests"),
-        patch("dns_policy.DnsPolicyService.allocate_ddns_labels") as allocate_ddns_labels,
+        patch("dns_policy.DnsPolicyService.allocate_ddns_domains") as allocate_ddns_domains,
     ):
         out = context.run(_Event("reconcile"), state)
 
-    allocate_ddns_labels.assert_not_called()
+    allocate_ddns_domains.assert_not_called()
     assert "ddns-domain" not in _local_app_data(out, "dns-record-provider")
 
 
 @pytest.mark.parametrize(
     "configured,expected",
     [
-        pytest.param("policy.test", ["policy.test", "localhost"], id="added"),
-        pytest.param("localhost", ["localhost"], id="already-allowed"),
-        pytest.param("", ["localhost"], id="empty"),
-        pytest.param("a.test, b.test", ["a.test", "b.test", "localhost"], id="several"),
+        pytest.param("policy.test", ["policy.test", "localhost", "127.0.0.1"], id="added"),
+        pytest.param("localhost", ["localhost", "127.0.0.1"], id="localhost-allowed"),
+        pytest.param("127.0.0.1", ["127.0.0.1", "localhost"], id="loopback-allowed"),
+        pytest.param("127.0.0.1, localhost", ["127.0.0.1", "localhost"], id="already-allowed"),
+        pytest.param("", ["localhost", "127.0.0.1"], id="empty"),
+        pytest.param(
+            "a.test, b.test", ["a.test", "b.test", "localhost", "127.0.0.1"], id="several"
+        ),
     ],
 )
 def test_workload_config_always_allows_the_api_host(configured, expected):
     """
     arrange: prepare an allowed-hosts configuration
     act: build the workload configuration from it
-    assert: the host the charm calls the workload API on is always allowed, otherwise
-        Django answers every call of the charm with a "400 Bad Request"
+    assert: localhost and 127.0.0.1 are always allowed, otherwise Django answers every
+        call of the charm with a "400 Bad Request"
     """
     config = dns_policy.DnsPolicyConfig(
         allowed_hosts=[host.strip() for host in configured.split(",")]

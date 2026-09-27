@@ -50,9 +50,12 @@ class RecordRequest(models.Model):
 
 
 class DdnsAllocation(models.Model):
-    """Label of the domain automatically allocated to a dns_record relation.
+    """Domain automatically allocated to a dns_record relation.
 
-    An allocation is never removed and a label is never reused, so a domain that was
+    The domain is a random label under the parent domain requested for the relation.
+    A relation gets one allocation per parent domain it was requested under.
+
+    An allocation is never removed and a domain is never reused, so a domain that was
     once allocated to a relation can never be handed to a different one.
 
     A relation is identified by the pair (instance, relation_id). The instance is the
@@ -64,18 +67,14 @@ class DdnsAllocation(models.Model):
 
     instance = models.UUIDField()
     relation_id = models.IntegerField()
-    label = models.CharField(max_length=63, unique=True)
+    domain = models.CharField(max_length=253, unique=True)
     created_at = models.DateTimeField(default=timezone.now)
 
-    class Meta:
-        """Define meta of the model."""
-
-        constraints = [
-            models.UniqueConstraint(
-                fields=['instance', 'relation_id'], name='unique_relation_allocation'
-            ),
-        ]
+    @property
+    def parent(self):
+        """Parent domain the domain was allocated under."""
+        return self.domain.partition(".")[2]
 
     def __str__(self):
         """Ddns allocation model string representation."""
-        return f"{self.label} (instance {self.instance}, relation {self.relation_id})"
+        return f"{self.domain} (instance {self.instance}, relation {self.relation_id})"

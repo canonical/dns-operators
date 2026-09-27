@@ -23,14 +23,8 @@ class Migration(migrations.Migration):
                 ),
                 ("instance", models.UUIDField()),
                 ("relation_id", models.IntegerField()),
-                ("label", models.CharField(max_length=63, unique=True)),
+                ("domain", models.CharField(max_length=253, unique=True)),
                 ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
             ],
-        ),
-        migrations.AddConstraint(
-            model_name="ddnsallocation",
-            constraint=models.UniqueConstraint(
-                fields=("instance", "relation_id"), name="unique_relation_allocation"
-            ),
         ),
     ]

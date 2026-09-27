@@ -166,7 +166,7 @@ def test_reconcile(
         dns_policy_send_requests.assert_called()
         assert dns_policy_send_requests.call_args[0] == (
             api_root_token,
-            [_record_request(record_request)],
+            {requirer_relation.id: [_record_request(record_request)]},
         )
 
 
@@ -292,7 +292,9 @@ def test_reconcile_rejects_requests_under_the_ddns_domain(
         allocate_ddns_domains.return_value = {requirer_relation.id: f"{ddns_label}.{ddns_domain}"}
         context.run(_Event("reconcile"), state)
 
-    assert dns_policy_send_requests.call_args[0][1] == [_record_request(record_request)]
+    assert dns_policy_send_requests.call_args[0][1] == {
+        requirer_relation.id: [_record_request(record_request)]
+    }
 
 
 @pytest.mark.usefixtures("context")
@@ -333,7 +335,7 @@ def test_reconcile_withdraws_the_requests_under_the_ddns_domain(
         context.run(_Event("reconcile"), state)
 
     dns_policy_send_requests.assert_called_once()
-    assert dns_policy_send_requests.call_args[0][1] == []
+    assert dns_policy_send_requests.call_args[0][1] == {requirer_relation.id: []}
 
 
 @pytest.mark.usefixtures("context")

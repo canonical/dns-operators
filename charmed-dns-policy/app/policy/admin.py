@@ -85,8 +85,8 @@ class DdnsAllocationAdmin(admin.ModelAdmin):
     Allocations are read-only: a domain must never be reassigned or reused.
     """
 
-    list_display = ['domain', 'instance', 'relation_id', 'created_at']
-    search_fields = ['domain', 'instance', 'relation_id']
+    list_display = ['domain', 'instance', 'requirer_id', 'created_at']
+    search_fields = ['domain', 'instance', 'requirer_id']
 
     def has_add_permission(self, request: HttpRequest) -> bool:
         """Check add permission."""

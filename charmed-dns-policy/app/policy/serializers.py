@@ -25,14 +25,14 @@ class DdnsAllocationSerializer(serializers.ModelSerializer):
     class Meta:
         """Define meta of the serializer."""
         model = DdnsAllocation
-        fields = ['instance', 'relation_id', 'domain', 'created_at']
+        fields = ['instance', 'requirer_id', 'domain', 'created_at']
         read_only_fields = ['domain', 'created_at']
 
 
 class DdnsAllocationRequestSerializer(serializers.Serializer):
     """Define the automatically allocated domain request serializer."""
     instance = serializers.UUIDField()
-    relation_id = serializers.IntegerField(min_value=0)
+    requirer_id = serializers.CharField(max_length=255)
     parent = serializers.CharField()
 
     def validate_parent(self, value):

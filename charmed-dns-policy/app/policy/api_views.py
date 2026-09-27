@@ -113,8 +113,14 @@ class RequestsView(generics.ListCreateAPIView):
             serializer = RecordRequestSerializer(data=rr)
             if not serializer.is_valid(raise_exception=True):
                continue
-            if any(str(r.uuid) == rr["uuid"] for r in existing_rrs):
-               continue
+            existing_rr = next((r for r in existing_rrs if str(r.uuid) == rr["uuid"]), None)
+            if existing_rr is not None:
+                # Only the requirer can change, as the record is left to its review
+                requirer_id = serializer.validated_data.get("requirer_id")
+                if requirer_id is not None and existing_rr.requirer_id != requirer_id:
+                    existing_rr.requirer_id = requirer_id
+                    existing_rr.save(update_fields=["requirer_id"])
+                continue
             serializer.save()
 
 
@@ -138,7 +144,7 @@ class DdnsAllocationsView(APIView):
     def post(self, request):
         """Get the domain allocated to each relation, allocating one if it has none yet.
 
-        The body is a list of `{"instance", "relation_id", "parent"}` objects, and the
+        The body is a list of `{"instance", "requirer_id", "parent"}` objects, and the
         response is the list of the matching allocations, in the same order.
 
         This is idempotent: a relation always gets back the domain it was first

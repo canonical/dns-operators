@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("instance", models.UUIDField()),
-                ("relation_id", models.IntegerField()),
+                ("requirer_id", models.CharField(max_length=255)),
                 ("domain", models.CharField(max_length=253, unique=True)),
                 ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
             ],

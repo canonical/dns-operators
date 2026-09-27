@@ -22,25 +22,25 @@ class TestDeriveLabel(TestCase):
     def test_label_uses_the_open_location_code_alphabet(self):
         """Test that a derived label only uses the Open Location Code characters."""
         alphabet = set(ddns.OPEN_LOCATION_CODE_ALPHABET.lower())
-        for relation_id in range(100):
-            label = ddns.derive_label(uuid.uuid4(), relation_id)
+        for requirer_id in range(100):
+            label = ddns.derive_label(uuid.uuid4(), str(requirer_id))
             self.assertEqual(len(label), ddns.DDNS_LABEL_LENGTH)
             self.assertLessEqual(set(label), alphabet)
 
     def test_label_is_reproducible(self):
         """Test that a relation always derives the same label."""
         instance = uuid.uuid4()
-        self.assertEqual(ddns.derive_label(instance, 1), ddns.derive_label(instance, 1))
-        self.assertEqual(ddns.derive_label(instance, 1), ddns.derive_label(str(instance), 1))
+        self.assertEqual(ddns.derive_label(instance, "1"), ddns.derive_label(instance, "1"))
+        self.assertEqual(ddns.derive_label(instance, "1"), ddns.derive_label(str(instance), "1"))
 
     def test_label_depends_on_the_whole_identity(self):
         """Test that the instance, the relation id and the attempt all change the label."""
         instance = uuid.uuid4()
         labels = {
-            ddns.derive_label(instance, 1),
-            ddns.derive_label(instance, 2),
-            ddns.derive_label(uuid.uuid4(), 1),
-            ddns.derive_label(instance, 1, attempt=1),
+            ddns.derive_label(instance, "1"),
+            ddns.derive_label(instance, "2"),
+            ddns.derive_label(uuid.uuid4(), "1"),
+            ddns.derive_label(instance, "1", attempt=1),
         }
         self.assertEqual(len(labels), 4)
 
@@ -69,23 +69,23 @@ class TestAllocate(TestCase):
 
     def test_allocation_is_stable(self):
         """Test that a relation always gets back the same domain."""
-        allocation = ddns.allocate(self.instance, 42, self.parent)
-        self.assertEqual(ddns.allocate(self.instance, 42, self.parent).domain, allocation.domain)
+        allocation = ddns.allocate(self.instance, "42", self.parent)
+        self.assertEqual(ddns.allocate(self.instance, "42", self.parent).domain, allocation.domain)
         self.assertEqual(DdnsAllocation.objects.count(), 1)
 
     def test_allocation_is_under_the_parent(self):
         """Test that the allocated domain is a random label under the parent domain."""
-        allocation = ddns.allocate(self.instance, 42, "DDNS.example.com.")
+        allocation = ddns.allocate(self.instance, "42", "DDNS.example.com.")
         self.assertEqual(
-            allocation.domain, f"{ddns.derive_label(self.instance, 42)}.{self.parent}"
+            allocation.domain, f"{ddns.derive_label(self.instance, '42')}.{self.parent}"
         )
         self.assertEqual(allocation.parent, self.parent)
 
     def test_allocations_are_unique(self):
         """Test that two relations get two different domains."""
         domains = {
-            ddns.allocate(self.instance, relation_id, self.parent).domain
-            for relation_id in range(10)
+            ddns.allocate(self.instance, str(requirer_id), self.parent).domain
+            for requirer_id in range(10)
         }
         self.assertEqual(len(domains), 10)
 
@@ -95,23 +95,23 @@ class TestAllocate(TestCase):
         Relation ids start over from scratch in a deployment restored from a backup of
         the database, so an allocation must never be handed to another instance.
         """
-        allocation = ddns.allocate(self.instance, 1, self.parent)
-        other = ddns.allocate(uuid.uuid4(), 1, self.parent)
+        allocation = ddns.allocate(self.instance, "1", self.parent)
+        other = ddns.allocate(uuid.uuid4(), "1", self.parent)
         self.assertNotEqual(other.domain, allocation.domain)
         self.assertEqual(DdnsAllocation.objects.count(), 2)
 
     def test_allocations_are_scoped_to_the_parent(self):
         """Test that a relation gets one domain per parent domain."""
-        allocation = ddns.allocate(self.instance, 1, self.parent)
-        other = ddns.allocate(self.instance, 1, "example.org")
+        allocation = ddns.allocate(self.instance, "1", self.parent)
+        other = ddns.allocate(self.instance, "1", "example.org")
         self.assertEqual(other.parent, "example.org")
-        self.assertEqual(ddns.allocate(self.instance, 1, self.parent).domain, allocation.domain)
+        self.assertEqual(ddns.allocate(self.instance, "1", self.parent).domain, allocation.domain)
         self.assertEqual(DdnsAllocation.objects.count(), 2)
 
     def test_parent_suffix_is_not_mistaken_for_the_parent(self):
         """Test that a domain allocated under a subdomain doesn't match its parent."""
-        ddns.allocate(self.instance, 1, f"sub.{self.parent}")
-        allocation = ddns.allocate(self.instance, 1, self.parent)
+        ddns.allocate(self.instance, "1", f"sub.{self.parent}")
+        allocation = ddns.allocate(self.instance, "1", self.parent)
         self.assertEqual(allocation.parent, self.parent)
         self.assertEqual(DdnsAllocation.objects.count(), 2)
 
@@ -119,23 +119,23 @@ class TestAllocate(TestCase):
         """Test that a domain already taken is derived again instead of being reused."""
         DdnsAllocation.objects.create(
             instance=uuid.uuid4(),
-            relation_id=1,
-            domain=f"{ddns.derive_label(self.instance, 2)}.{self.parent}",
+            requirer_id="1",
+            domain=f"{ddns.derive_label(self.instance, '2')}.{self.parent}",
         )
-        allocation = ddns.allocate(self.instance, 2, self.parent)
+        allocation = ddns.allocate(self.instance, "2", self.parent)
         self.assertEqual(
             allocation.domain,
-            f"{ddns.derive_label(self.instance, 2, attempt=1)}.{self.parent}",
+            f"{ddns.derive_label(self.instance, '2', attempt=1)}.{self.parent}",
         )
 
     def test_allocation_gives_up_after_too_many_collisions(self):
         """Test that the allocation errors out when it can't find a free domain."""
         DdnsAllocation.objects.create(
-            instance=uuid.uuid4(), relation_id=1, domain=f"c3f9m2q4.{self.parent}"
+            instance=uuid.uuid4(), requirer_id="1", domain=f"c3f9m2q4.{self.parent}"
         )
         with patch.object(ddns, "derive_label", return_value="c3f9m2q4"):
             with self.assertRaises(ddns.DdnsAllocationError):
-                ddns.allocate(self.instance, 2, self.parent)
+                ddns.allocate(self.instance, "2", self.parent)
 
 
 class TestDdnsAllocationsView(APITestCase):
@@ -149,12 +149,12 @@ class TestDdnsAllocationsView(APITestCase):
         self.url = reverse('ddns_allocations')
 
     def allocate(self, *relations):
-        """Request the allocation of the (instance, relation_id, parent) relations."""
+        """Request the allocation of the (instance, requirer_id, parent) relations."""
         return self.client.post(
             self.url,
             [
-                {"instance": str(instance), "relation_id": relation_id, "parent": parent}
-                for instance, relation_id, parent in relations
+                {"instance": str(instance), "requirer_id": requirer_id, "parent": parent}
+                for instance, requirer_id, parent in relations
             ],
             format='json',
         )
@@ -163,29 +163,29 @@ class TestDdnsAllocationsView(APITestCase):
         """Test that posting relations allocates a domain for each of them."""
         self.client.login(username='testuser', password='password')
         response = self.allocate(
-            (self.instance, 1, self.parent), (self.instance, 2, "Example.org.")
+            (self.instance, "1", self.parent), (self.instance, "2", "Example.org.")
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         first, second = response.json()
         self.assertEqual(first["instance"], self.instance)
-        self.assertEqual(first["relation_id"], 1)
+        self.assertEqual(first["requirer_id"], "1")
         self.assertEqual(
-            first["domain"], f"{ddns.derive_label(self.instance, 1)}.{self.parent}"
+            first["domain"], f"{ddns.derive_label(self.instance, '1')}.{self.parent}"
         )
         self.assertIn("created_at", first)
-        self.assertEqual(second["relation_id"], 2)
+        self.assertEqual(second["requirer_id"], "2")
         self.assertEqual(
-            second["domain"], f"{ddns.derive_label(self.instance, 2)}.example.org"
+            second["domain"], f"{ddns.derive_label(self.instance, '2')}.example.org"
         )
 
     def test_allocation_is_stable(self):
         """Test that a relation always gets back the same domain."""
         self.client.login(username='testuser', password='password')
-        domain = self.allocate((self.instance, 1, self.parent)).json()[0]["domain"]
+        domain = self.allocate((self.instance, "1", self.parent)).json()[0]["domain"]
         response = self.allocate(
-            (self.instance, 1, self.parent),
-            (self.instance, 2, self.parent),
-            (uuid.uuid4(), 1, self.parent),
+            (self.instance, "1", self.parent),
+            (self.instance, "2", self.parent),
+            (uuid.uuid4(), "1", self.parent),
         ).json()
         self.assertEqual(response[0]["domain"], domain)
         self.assertNotEqual(response[1]["domain"], domain)
@@ -203,20 +203,21 @@ class TestDdnsAllocationsView(APITestCase):
         """Test that a relation that can't be allocated a domain is reported as a conflict."""
         self.client.login(username='testuser', password='password')
         DdnsAllocation.objects.create(
-            instance=uuid.uuid4(), relation_id=1, domain=f"c3f9m2q4.{self.parent}"
+            instance=uuid.uuid4(), requirer_id="1", domain=f"c3f9m2q4.{self.parent}"
         )
         with patch.object(ddns, "derive_label", return_value="c3f9m2q4"):
-            response = self.allocate((self.instance, 2, self.parent))
+            response = self.allocate((self.instance, "2", self.parent))
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
     def test_invalid_request(self):
         """Test that an invalid allocation request is rejected."""
         self.client.login(username='testuser', password='password')
         invalid_requests = [
-            {"instance": self.instance, "relation_id": 1},
-            {"instance": "not-a-uuid", "relation_id": 1, "parent": self.parent},
-            {"instance": self.instance, "relation_id": -1, "parent": self.parent},
-            {"instance": self.instance, "relation_id": 1, "parent": "not a domain"},
+            {"instance": self.instance, "requirer_id": "1"},
+            {"instance": self.instance, "parent": self.parent},
+            {"instance": "not-a-uuid", "requirer_id": "1", "parent": self.parent},
+            {"instance": self.instance, "requirer_id": "", "parent": self.parent},
+            {"instance": self.instance, "requirer_id": "1", "parent": "not a domain"},
         ]
         for invalid_request in invalid_requests:
             response = self.client.post(self.url, [invalid_request], format='json')
@@ -225,7 +226,7 @@ class TestDdnsAllocationsView(APITestCase):
             )
         response = self.client.post(
             self.url,
-            {"instance": self.instance, "relation_id": 1, "parent": self.parent},
+            {"instance": self.instance, "requirer_id": "1", "parent": self.parent},
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -234,7 +235,7 @@ class TestDdnsAllocationsView(APITestCase):
     def test_list(self):
         """Test that every allocation can be listed."""
         self.client.login(username='testuser', password='password')
-        allocation = ddns.allocate(self.instance, 1, self.parent)
+        allocation = ddns.allocate(self.instance, "1", self.parent)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 1)
@@ -244,6 +245,6 @@ class TestDdnsAllocationsView(APITestCase):
     def test_unauthenticated_access(self):
         """Test unauthenticated access."""
         self.client.logout()
-        response = self.allocate((self.instance, 1, self.parent))
+        response = self.allocate((self.instance, "1", self.parent))
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.client.get(self.url).status_code, status.HTTP_401_UNAUTHORIZED)

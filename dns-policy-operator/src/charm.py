@@ -284,16 +284,17 @@ class DnsPolicyCharm(ops.CharmBase):
             logger.error("No instance identifier available, skipping the domain allocation")
             return []
 
-        labels = self.dns_policy.allocate_ddns_labels(token, instance, [r.id for r in relations])
+        domains = self.dns_policy.allocate_ddns_domains(
+            token, instance, [r.id for r in relations], ddns_domain
+        )
 
         record_requests: list[dns_record.RecordRequest] = []
         for relation in relations:
-            label = labels.get(relation.id)
-            if label is None:
+            domain = domains.get(relation.id)
+            if domain is None:
                 logger.error("No domain allocated for the relation %s", relation.id)
                 continue
 
-            domain = f"{label}.{ddns_domain}"
             self.dns_record_provider.update_ddns_domain(domain, relation)
 
             addresses = self._ddns_addresses(relation)

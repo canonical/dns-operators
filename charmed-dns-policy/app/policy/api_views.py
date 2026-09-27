@@ -9,7 +9,11 @@ from rest_framework.views import APIView
 
 from . import ddns
 from .models import DdnsAllocation, RecordRequest
-from .serializers import DdnsAllocationSerializer, RecordRequestSerializer
+from .serializers import (
+    DdnsAllocationRequestSerializer,
+    DdnsAllocationSerializer,
+    RecordRequestSerializer,
+)
 
 
 class ListAllRequestsView(APIView):
@@ -123,30 +127,32 @@ class RequestsView(generics.ListCreateAPIView):
 
 
 class DdnsAllocationsView(APIView):
-    """List the labels of the automatically allocated domains."""
+    """List and allocate the automatically allocated domains."""
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        """List every label ever allocated."""
+        """List every domain ever allocated."""
         allocations = DdnsAllocation.objects.all()
         return Response(DdnsAllocationSerializer(allocations, many=True).data)
 
+    def post(self, request):
+        """Get the domain allocated to each relation, allocating one if it has none yet.
 
-class DdnsAllocationView(APIView):
-    """Allocate the label of the automatically allocated domain of a relation."""
-    permission_classes = [permissions.IsAuthenticated]
+        The body is a list of `{"instance", "relation_id", "parent"}` objects, and the
+        response is the list of the matching allocations, in the same order.
 
-    def get(self, request, instance, relation_id):
-        """Get the label allocated to a relation, allocating one if it has none yet.
-
-        This is idempotent: a relation always gets back the label it was first
-        allocated.
+        This is idempotent: a relation always gets back the domain it was first
+        allocated under the same parent domain.
 
         Relations are scoped to an instance, the identifier of the charm they belong to,
         because relation ids are only unique within a single charm deployment.
         """
-        try:
-            allocation = ddns.allocate(instance, relation_id)
-        except ddns.DdnsAllocationError as error:
-            return Response({"detail": str(error)}, status=status.HTTP_409_CONFLICT)
-        return Response(DdnsAllocationSerializer(allocation).data)
+        serializer = DdnsAllocationRequestSerializer(data=request.data, many=True)
+        serializer.is_valid(raise_exception=True)
+        allocations = []
+        for allocation_request in serializer.validated_data:
+            try:
+                allocations.append(ddns.allocate(**allocation_request))
+            except ddns.DdnsAllocationError as error:
+                return Response({"detail": str(error)}, status=status.HTTP_409_CONFLICT)
+        return Response(DdnsAllocationSerializer(allocations, many=True).data)

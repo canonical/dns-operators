@@ -1,9 +1,10 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Allocation of the labels of the automatically allocated domains."""
+"""Allocation of the automatically allocated domains."""
 
 import hashlib
+import re
 import uuid
 
 from django.db import IntegrityError, transaction
@@ -17,9 +18,34 @@ OPEN_LOCATION_CODE_ALPHABET = "23456789CFGHJMPQRVWX"
 DDNS_LABEL_LENGTH = 8
 ALLOCATION_ATTEMPTS = 50
 
+DOMAIN_MAX_LENGTH = 253
+# Maximum length of a parent domain, leaving room for the allocated label and its dot
+PARENT_MAX_LENGTH = DOMAIN_MAX_LENGTH - DDNS_LABEL_LENGTH - 1
+_DOMAIN_LABEL_PATTERN = re.compile(r"^(?!-)[a-z0-9-]{1,63}(?<!-)$")
+
 
 class DdnsAllocationError(Exception):
-    """Raised when no label could be allocated for a relation."""
+    """Raised when no domain could be allocated for a relation."""
+
+
+def normalize_parent(parent):
+    """Normalize and validate the parent domain of an allocated domain.
+
+    Raises:
+        ValueError: when the parent is not a valid domain name.
+    """
+    parent = str(parent).strip().rstrip(".").lower()
+    if not parent:
+        raise ValueError("The parent domain is empty")
+    if len(parent) > PARENT_MAX_LENGTH:
+        raise ValueError(
+            f"The parent domain is {len(parent)} characters long, "
+            f"it must be at most {PARENT_MAX_LENGTH} characters"
+        )
+    for label in parent.split("."):
+        if not _DOMAIN_LABEL_PATTERN.match(label):
+            raise ValueError(f"The parent domain label {label!r} is not a valid domain label")
+    return parent
 
 
 def derive_label(instance, relation_id, attempt=0):
@@ -45,16 +71,22 @@ def derive_label(instance, relation_id, attempt=0):
     return "".join(characters).lower()
 
 
-def allocate(instance, relation_id):
-    """Get the label allocated to a relation, allocating a new one if needed.
+def allocate(instance, relation_id, parent):
+    """Get the domain allocated to a relation under a parent, allocating one if needed.
 
-    Allocations are never deleted, so a label handed out once is never handed out
+    Allocations are never deleted, so a domain handed out once is never handed out
     again, even after the relation it was allocated to is gone.
 
     A relation is identified by the pair (instance, relation_id), as relation ids are
     only unique within a single charm deployment.
     """
-    allocation = DdnsAllocation.objects.filter(instance=instance, relation_id=relation_id).first()
+    parent = normalize_parent(parent)
+
+    def existing():
+        allocations = DdnsAllocation.objects.filter(instance=instance, relation_id=relation_id)
+        return next((a for a in allocations if a.parent == parent), None)
+
+    allocation = existing()
     if allocation is not None:
         return allocation
 
@@ -64,15 +96,14 @@ def allocate(instance, relation_id):
                 return DdnsAllocation.objects.create(
                     instance=instance,
                     relation_id=relation_id,
-                    label=derive_label(instance, relation_id, attempt),
+                    domain=f"{derive_label(instance, relation_id, attempt)}.{parent}",
                 )
         except IntegrityError:
-            allocation = DdnsAllocation.objects.filter(
-                instance=instance, relation_id=relation_id
-            ).first()
+            allocation = existing()
             if allocation is not None:
                 return allocation
 
     raise DdnsAllocationError(
-        f"Could not allocate a label for the relation {relation_id} of instance {instance}"
+        f"Could not allocate a domain under {parent} for the relation {relation_id} "
+        f"of instance {instance}"
     )

@@ -5,6 +5,7 @@
 
 from rest_framework import serializers
 
+from . import ddns
 from .models import DdnsAllocation, RecordRequest
 
 
@@ -19,10 +20,24 @@ class RecordRequestSerializer(serializers.ModelSerializer):
 
 
 class DdnsAllocationSerializer(serializers.ModelSerializer):
-    """Define the automatically allocated domain label serializer."""
+    """Define the automatically allocated domain serializer."""
 
     class Meta:
         """Define meta of the serializer."""
         model = DdnsAllocation
-        fields = ['instance', 'relation_id', 'label', 'created_at']
-        read_only_fields = ['label', 'created_at']
+        fields = ['instance', 'relation_id', 'domain', 'created_at']
+        read_only_fields = ['domain', 'created_at']
+
+
+class DdnsAllocationRequestSerializer(serializers.Serializer):
+    """Define the automatically allocated domain request serializer."""
+    instance = serializers.UUIDField()
+    relation_id = serializers.IntegerField(min_value=0)
+    parent = serializers.CharField()
+
+    def validate_parent(self, value):
+        """Validate and normalize the parent domain."""
+        try:
+            return ddns.normalize_parent(value)
+        except ValueError as error:
+            raise serializers.ValidationError(str(error)) from error

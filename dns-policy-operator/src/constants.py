@@ -15,6 +15,8 @@ DATABASE_RELATION_NAME = "database"
 DATABASE_NAME = "dnspolicy"
 SYSTEMD_SERVICES_PATH = "/etc/systemd/system/"
 DNS_POLICY_API_HOST = "127.0.0.1"
+# Hosts the workload always answers on, whatever the allowed-hosts configuration
+DNS_POLICY_DEFAULT_ALLOWED_HOSTS = ("localhost", DNS_POLICY_API_HOST)
 DNS_POLICY_API_BASE = f"http://{DNS_POLICY_API_HOST}:8080/api"
 DNS_POLICY_ENDPOINTS_BASE = f"{DNS_POLICY_API_BASE}/requests"
 DNS_POLICY_DDNS_ALLOCATIONS_ENDPOINT = f"{DNS_POLICY_API_BASE}/ddns/allocations"

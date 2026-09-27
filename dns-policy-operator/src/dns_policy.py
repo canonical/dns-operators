@@ -97,22 +97,23 @@ class DnsPolicyConfig(pydantic.BaseModel):
 
     @pydantic.field_validator("allowed_hosts")
     @classmethod
-    def always_allow_the_api_host(cls, value: list[str]) -> list[str]:
-        """Make sure the workload always answers the charm.
+    def always_allow_the_local_hosts(cls, value: list[str]) -> list[str]:
+        """Make sure the workload always answers on the local hosts.
 
-        The charm drives the workload through its API on localhost, so Django has to
-        accept that host name whatever the operator configured, otherwise every API
-        call is rejected with a "400 Bad Request".
+        The charm drives the workload through its API on the loopback interface, so
+        Django has to accept the local host names whatever the operator configured,
+        otherwise every API call is rejected with a "400 Bad Request".
 
         Args:
             value: the configured allowed hosts.
 
         Returns:
-            the allowed hosts, with the API host added when it is missing.
+            the allowed hosts, with the missing local hosts added.
         """
         hosts = [host for host in value if host]
-        if constants.DNS_POLICY_API_HOST not in hosts:
-            hosts.append(constants.DNS_POLICY_API_HOST)
+        for host in constants.DNS_POLICY_DEFAULT_ALLOWED_HOSTS:
+            if host not in hosts:
+                hosts.append(host)
         return hosts
 
     @pydantic.model_serializer
@@ -323,47 +324,65 @@ class DnsPolicyService:
         except requests.RequestException as e:
             raise ApiError(str(e)) from e
 
-    def allocate_ddns_labels(
-        self, token: str, instance: str, relation_ids: list[int]
+    def allocate_ddns_domains(
+        self, token: str, instance: str, relation_ids: list[int], parent: str
     ) -> dict[int, str]:
-        """Get the automatically allocated domain label of each of the given relations.
+        """Get the automatically allocated domain of each of the given relations.
 
-        A relation that has no label yet is allocated a new one. The workload guarantees
-        that a label is unique and never reused.
+        A relation that has no domain under the parent domain yet is allocated a new one.
+        The workload guarantees that a domain is unique and never reused.
 
         Args:
             token: root token for the API
             instance: identifier of this charm installation, which scopes the relation
                 ids as those are only unique within a single charm installation
-            relation_ids: ids of the relations to get a label for
+            relation_ids: ids of the relations to get a domain for
+            parent: parent domain the domains are allocated under
 
         Returns:
-            The label allocated to each relation, by relation id.
+            The domain allocated to each relation, by relation id.
 
         Raises:
-            ApiError: if a request errors
+            ApiError: if the request errors
             DdnsAllocationError: if the workload answered with unusable data
         """
-        labels = {}
-        for relation_id in relation_ids:
-            try:
-                req = requests.get(
-                    f"{constants.DNS_POLICY_DDNS_ALLOCATIONS_ENDPOINT}/{instance}/{relation_id}/",
-                    headers={
-                        "Content-Type": "application/json",
-                        "Authorization": f"Bearer {token}",
-                    },
-                    timeout=10,
-                )
-                req.raise_for_status()
-            except requests.RequestException as e:
-                raise ApiError(str(e)) from e
+        if not relation_ids:
+            return {}
+        try:
+            req = requests.post(
+                f"{constants.DNS_POLICY_DDNS_ALLOCATIONS_ENDPOINT}/",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {token}",
+                },
+                timeout=10,
+                data=json.dumps(
+                    [
+                        {"instance": instance, "relation_id": relation_id, "parent": parent}
+                        for relation_id in relation_ids
+                    ]
+                ),
+            )
+            req.raise_for_status()
+        except requests.RequestException as e:
+            raise ApiError(str(e)) from e
 
-            try:
-                labels[relation_id] = str(req.json()["label"])
-            except (AttributeError, KeyError, TypeError, ValueError) as e:
-                raise DdnsAllocationError(f"Invalid ddns allocation: {e}") from e
-        return labels
+        try:
+            domains = {
+                int(allocation["relation_id"]): str(allocation["domain"])
+                for allocation in req.json()
+                if str(allocation["instance"]) == instance
+            }
+        except (AttributeError, KeyError, TypeError, ValueError) as e:
+            raise DdnsAllocationError(f"Invalid ddns allocation: {e}") from e
+        for relation_id, domain in domains.items():
+            host_label, _, domain_parent = domain.partition(".")
+            if not host_label or domain_parent != parent:
+                raise DdnsAllocationError(
+                    f"Invalid ddns allocation {domain!r} for relation {relation_id}: "
+                    f"not a domain directly under {parent!r}"
+                )
+        return domains
 
     def get_approved_requests(self, token: str) -> list[RecordRequest]:
         """Get approved record requests.

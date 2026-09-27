@@ -300,12 +300,15 @@ class DnsPolicyService:
             raise RootTokenError("Invalid root token!")
         return tokens["access"]
 
-    def send_requests(self, token: str, record_requests: list[RecordRequest]) -> None:
+    def send_requests(self, token: str, record_requests: dict[int, list[RecordRequest]]) -> None:
         """Send record requests.
+
+        Each record request is sent along with the id of the relation it comes from, as
+        its requirer id.
 
         Args:
             token: root token for the API
-            record_requests: list of record requests from the relations
+            record_requests: record requests from the relations, by relation id
 
         Raises:
             ApiError: if the request errors
@@ -318,7 +321,13 @@ class DnsPolicyService:
                     "Authorization": f"Bearer {token}",
                 },
                 timeout=10,
-                data=json.dumps([x.serialize_as_request() for x in record_requests]),
+                data=json.dumps(
+                    [
+                        {**record_request.serialize_as_request(), "requirer_id": str(relation_id)}
+                        for relation_id, relation_requests in record_requests.items()
+                        for record_request in relation_requests
+                    ]
+                ),
             )
             req.raise_for_status()
         except requests.RequestException as e:
@@ -358,7 +367,7 @@ class DnsPolicyService:
                 timeout=10,
                 data=json.dumps(
                     [
-                        {"instance": instance, "relation_id": relation_id, "parent": parent}
+                        {"instance": instance, "requirer_id": str(relation_id), "parent": parent}
                         for relation_id in relation_ids
                     ]
                 ),
@@ -369,7 +378,7 @@ class DnsPolicyService:
 
         try:
             domains = {
-                int(allocation["relation_id"]): str(allocation["domain"])
+                int(allocation["requirer_id"]): str(allocation["domain"])
                 for allocation in req.json()
                 if str(allocation["instance"]) == instance
             }

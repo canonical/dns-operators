@@ -48,7 +48,7 @@ def normalize_parent(parent):
     return parent
 
 
-def derive_label(instance, relation_id, attempt=0):
+def derive_label(instance, requirer_id, attempt=0):
     """Derive the label of a relation from the identity of that relation.
 
     The `attempt` counter salts the digest, which gives a relation a different label on
@@ -60,7 +60,7 @@ def derive_label(instance, relation_id, attempt=0):
         pass
 
     digest = hashlib.blake2b(
-        f"{instance}:{relation_id}:{attempt}".encode(), digest_size=16
+        f"{instance}:{requirer_id}:{attempt}".encode(), digest_size=16
     ).digest()
 
     value = int.from_bytes(digest, "big")
@@ -71,19 +71,19 @@ def derive_label(instance, relation_id, attempt=0):
     return "".join(characters).lower()
 
 
-def allocate(instance, relation_id, parent):
+def allocate(instance, requirer_id, parent):
     """Get the domain allocated to a relation under a parent, allocating one if needed.
 
     Allocations are never deleted, so a domain handed out once is never handed out
     again, even after the relation it was allocated to is gone.
 
-    A relation is identified by the pair (instance, relation_id), as relation ids are
+    A relation is identified by the pair (instance, requirer_id), as relation ids are
     only unique within a single charm deployment.
     """
     parent = normalize_parent(parent)
 
     def existing():
-        allocations = DdnsAllocation.objects.filter(instance=instance, relation_id=relation_id)
+        allocations = DdnsAllocation.objects.filter(instance=instance, requirer_id=requirer_id)
         return next((a for a in allocations if a.parent == parent), None)
 
     allocation = existing()
@@ -95,8 +95,8 @@ def allocate(instance, relation_id, parent):
             with transaction.atomic():
                 return DdnsAllocation.objects.create(
                     instance=instance,
-                    relation_id=relation_id,
-                    domain=f"{derive_label(instance, relation_id, attempt)}.{parent}",
+                    requirer_id=requirer_id,
+                    domain=f"{derive_label(instance, requirer_id, attempt)}.{parent}",
                 )
         except IntegrityError:
             allocation = existing()
@@ -104,6 +104,6 @@ def allocate(instance, relation_id, parent):
                 return allocation
 
     raise DdnsAllocationError(
-        f"Could not allocate a domain under {parent} for the relation {relation_id} "
+        f"Could not allocate a domain under {parent} for the requirer {requirer_id} "
         f"of instance {instance}"
     )

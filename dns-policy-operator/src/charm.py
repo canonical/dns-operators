@@ -193,7 +193,7 @@ class DnsPolicyCharm(ops.CharmBase):
 
     def _collect_record_requests(
         self, relations: list[ops.Relation], ddns_domain: str
-    ) -> tuple[list[dns_record.RecordRequest], bool]:
+    ) -> tuple[dict[int, list[dns_record.RecordRequest]], bool]:
         """Collect the record requests of the relations that the policy lets through.
 
         Args:
@@ -202,18 +202,18 @@ class DnsPolicyCharm(ops.CharmBase):
                 the feature is disabled.
 
         Returns:
-            the record requests to submit to the workload, and whether every relation
-            could be read. An incomplete list must not be submitted, as the workload
-            withdraws every request missing from it.
+            the record requests to submit to the workload by relation id, and whether
+            every relation could be read. An incomplete list must not be submitted, as the
+            workload withdraws every request missing from it.
         """
-        requests: list[dns_record.RecordRequest] = []
+        requests: dict[int, list[dns_record.RecordRequest]] = {}
         complete = True
         for relation in relations:
             accepted = self._accepted_record_requests(relation, ddns_domain)
             if accepted is None:
                 complete = False
                 continue
-            requests.extend(accepted)
+            requests[relation.id] = accepted
         return requests, complete
 
     def _accepted_record_requests(

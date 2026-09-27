@@ -185,3 +185,56 @@ class TestDenyRequestView(APITestCase):
         url = reverse('api_request_deny', args=[self.some_uuid])
         response = self.client.patch(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class TestRequestsView(APITestCase):
+    """Test the view receiving the record requests of the relations."""
+
+    def setUp(self):
+        """Set up."""
+        self.user = User.objects.create_user('testuser', 'testuser@example.com', 'password')
+        self.uuid = '497dcba3-ecbf-4587-a2dd-5eb0665e6880'
+
+    def record_request(self, **kwargs):
+        """Build a record request as sent by the charm."""
+        return {
+            'uuid': self.uuid,
+            'domain': 'example.com',
+            'host_label': 'admin',
+            'ttl': 600,
+            'record_type': 'A',
+            'record_data': '10.0.0.1',
+            **kwargs,
+        }
+
+    def test_requirer_id_is_stored(self):
+        """Test that the requirer of a new record request is stored."""
+        self.client.login(username='testuser', password='password')
+        response = self.client.post(
+            reverse('requests'), [self.record_request(requirer_id='3')], format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        record_request = RecordRequest.objects.get(pk=self.uuid)
+        self.assertEqual(record_request.requirer_id, '3')
+        self.assertEqual(record_request.status, RecordRequest.Status.PENDING)
+
+    def test_requirer_id_is_updated(self):
+        """Test that the requirer of an existing record request is updated, not its review."""
+        self.client.login(username='testuser', password='password')
+        RecordRequest.objects.create(
+            **self.record_request(), status=RecordRequest.Status.APPROVED
+        )
+        response = self.client.post(
+            reverse('requests'), [self.record_request(requirer_id='3')], format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        record_request = RecordRequest.objects.get(pk=self.uuid)
+        self.assertEqual(record_request.requirer_id, '3')
+        self.assertEqual(record_request.status, RecordRequest.Status.APPROVED)
+
+    def test_requirer_id_is_optional(self):
+        """Test that a record request without a requirer is still accepted."""
+        self.client.login(username='testuser', password='password')
+        response = self.client.post(reverse('requests'), [self.record_request()], format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(RecordRequest.objects.get(pk=self.uuid).requirer_id)

@@ -328,7 +328,7 @@ def bind_fixture(
         yield bind_name
         return
 
-    juju.deploy(bind_charm_file, bind_name, resources={})
+    juju.deploy(bind_charm_file, bind_name, resources={}, constraints={"virt-type": "virtual-machine"})
     juju.wait(lambda status: jubilant.all_active(status, bind_name))
 
     yield bind_name

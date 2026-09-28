@@ -14,6 +14,7 @@ do
 done
 
 for project in \
+  "dns-aggregator-operator" \
   "dns-integrator-operator" \
   "dns-policy-operator"
 do

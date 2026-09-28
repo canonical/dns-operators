@@ -324,7 +324,12 @@ class DnsPolicyCharm(ops.CharmBase):
         """
         declared = self.dns_record_provider.get_ddns_addresses(relation)
         if declared:
-            return declared
+            return [
+                str(address)
+                for address in sorted(
+                    declared, key=lambda address: (address.version, address.packed)
+                )
+            ]
 
         addresses: list[str] = []
         for unit in sorted(relation.units, key=lambda unit: unit.name):

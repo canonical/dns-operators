@@ -40,19 +40,21 @@ def _relation_info(juju: jubilant.Juju, unit: str, endpoint: str) -> dict[str, t
     return {}
 
 
-def _published_ddns_domain(juju: jubilant.Juju, dns_policy_unit: str) -> str | None:
-    """Get the domain the dns-policy charm published to its requirer.
+def _published_ddns_domain(juju: jubilant.Juju, requirer_unit: str) -> str | None:
+    """Get the domain the dns-policy charm published to a requirer.
+
+    `juju show-unit` reports the application data of the remote side of each relation,
+    so the data dns-policy publishes is read from the requirer unit.
 
     Args:
         juju: the juju client
-        dns_policy_unit: the dns-policy unit to read the relation data of
+        requirer_unit: the requirer unit to read the relation data of
 
     Returns:
         the automatically allocated domain, or None when none was published
     """
-    relation_info = _relation_info(juju, dns_policy_unit, "dns-record-provider")
-    domain = relation_info.get("application-data", {}).get("ddns-domain")
-    return json.loads(domain) if domain else None
+    relation_info = _relation_info(juju, requirer_unit, "dns-record")
+    return relation_info.get("application-data", {}).get("ddns-domain") or None
 
 
 def _requirer_ingress_address(
@@ -73,28 +75,26 @@ def _requirer_ingress_address(
     return related_units[requirer_unit]["data"]["ingress-address"]
 
 
-def _wait_for_ddns_domain(
-    juju: jubilant.Juju, dns_policy_unit: str, published: bool
-) -> str | None:
+def _wait_for_ddns_domain(juju: jubilant.Juju, requirer_unit: str, published: bool) -> str | None:
     """Wait for the dns-policy charm to publish, or withdraw, an allocated domain.
 
     The charm allocates the domains on a timer, so this polls for a couple of ticks.
 
     Args:
         juju: the juju client
-        dns_policy_unit: the dns-policy unit to read the relation data of
+        requirer_unit: the requirer unit to read the relation data of
         published: whether to wait for a domain to appear or to disappear
 
     Returns:
         the automatically allocated domain, or None when none is published
     """
     for _ in range(30):
-        domain = _published_ddns_domain(juju, dns_policy_unit)
+        domain = _published_ddns_domain(juju, requirer_unit)
         if (domain is not None) == published:
             return domain
         time.sleep(10)
     state = "published" if published else "withdrawn"
-    pytest.fail(f"The allocated domain of {dns_policy_unit} was not {state}")
+    pytest.fail(f"The allocated domain of {requirer_unit} was not {state}")
     return None
 
 
@@ -125,7 +125,7 @@ def _resolve(nameserver: str, name: str) -> list[str]:
 @pytest.mark.abort_on_fail
 def test_ddns_domain_is_allocated(
     juju: jubilant.Juju,
-    dns_policy_name: str,
+    dns_integrator_name: str,
     ddns_domain: str,
     ddns_deployment,  # pylint: disable=unused-argument
 ):
@@ -134,7 +134,7 @@ def test_ddns_domain_is_allocated(
     act: integrate a requirer on the dns-record-provider endpoint.
     assert: the requirer is handed a domain under the configured suffix.
     """
-    domain = _wait_for_ddns_domain(juju, f"{dns_policy_name}/0", published=True)
+    domain = _wait_for_ddns_domain(juju, f"{dns_integrator_name}/0", published=True)
 
     assert domain is not None
     _, _, suffix = domain.partition(".")
@@ -154,7 +154,7 @@ def test_ddns_domain_is_resolvable(
     act: resolve that domain, and one of its subdomains, against the DNS provider.
     assert: both resolve to the address of the requirer.
     """
-    domain = _published_ddns_domain(juju, f"{dns_policy_name}/0")
+    domain = _published_ddns_domain(juju, f"{dns_integrator_name}/0")
     assert domain is not None
     address = _requirer_ingress_address(juju, f"{dns_policy_name}/0", f"{dns_integrator_name}/0")
     bind_address = juju.status().get_units(bind_name)[f"{bind_name}/0"].public_address
@@ -167,6 +167,7 @@ def test_ddns_domain_is_resolvable(
 def test_ddns_domain_is_stable(
     juju: jubilant.Juju,
     dns_policy_name: str,
+    dns_integrator_name: str,
     ddns_deployment,  # pylint: disable=unused-argument
 ):
     """
@@ -174,7 +175,7 @@ def test_ddns_domain_is_stable(
     act: reconfigure the charm.
     assert: the requirer keeps the domain it was allocated.
     """
-    domain = _published_ddns_domain(juju, f"{dns_policy_name}/0")
+    domain = _published_ddns_domain(juju, f"{dns_integrator_name}/0")
 
     juju.config(dns_policy_name, {"debug": True})
     juju.wait(
@@ -183,7 +184,7 @@ def test_ddns_domain_is_stable(
     )
     time.sleep(120)  # let the reconciliation timer tick a couple of times
 
-    assert _published_ddns_domain(juju, f"{dns_policy_name}/0") == domain
+    assert _published_ddns_domain(juju, f"{dns_integrator_name}/0") == domain
 
 
 @pytest.mark.abort_on_fail
@@ -191,6 +192,7 @@ def test_ddns_domain_is_stable(
 def test_invalid_ddns_domain_blocks_the_charm(
     juju: jubilant.Juju,
     dns_policy_name: str,
+    dns_integrator_name: str,
     ddns_domain: str,
     ddns_domain_config,  # pylint: disable=unused-argument
 ):
@@ -199,13 +201,13 @@ def test_invalid_ddns_domain_blocks_the_charm(
     act: set an invalid ddns-domain configuration.
     assert: the charm blocks and keeps the domain it already allocated.
     """
-    domain = _published_ddns_domain(juju, f"{dns_policy_name}/0")
+    domain = _published_ddns_domain(juju, f"{dns_integrator_name}/0")
     assert domain is not None and domain.endswith(f".{ddns_domain}")
 
     juju.wait(lambda status: jubilant.all_blocked(status, dns_policy_name))
     time.sleep(120)  # let the reconciliation timer tick a couple of times
 
-    assert _published_ddns_domain(juju, f"{dns_policy_name}/0") == domain
+    assert _published_ddns_domain(juju, f"{dns_integrator_name}/0") == domain
 
 
 @pytest.mark.abort_on_fail
@@ -213,6 +215,7 @@ def test_invalid_ddns_domain_blocks_the_charm(
 def test_ddns_domain_is_withdrawn(
     juju: jubilant.Juju,
     dns_policy_name: str,
+    dns_integrator_name: str,
     ddns_domain_config,  # pylint: disable=unused-argument
 ):
     """
@@ -225,4 +228,4 @@ def test_ddns_domain_is_withdrawn(
         error=jubilant.any_error,
     )
 
-    assert _wait_for_ddns_domain(juju, f"{dns_policy_name}/0", published=False) is None
+    assert _wait_for_ddns_domain(juju, f"{dns_integrator_name}/0", published=False) is None

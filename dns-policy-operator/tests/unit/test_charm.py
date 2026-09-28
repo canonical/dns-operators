@@ -203,7 +203,7 @@ def test_reconcile_allocates_a_ddns_domain(
     assert allocate_ddns_domains.call_args[0][3] == ddns_domain
 
     provider_data = _local_app_data(out, "dns-record-provider")
-    assert json.loads(provider_data["ddns-domain"]) == f"{ddns_label}.{ddns_domain}"
+    assert provider_data["ddns-domain"] == f"{ddns_label}.{ddns_domain}"
 
     published = _published_entries(out)
     assert {
@@ -234,7 +234,7 @@ def test_reconcile_prefers_the_declared_ddns_addresses(
         requirer_relation,
         remote_app_data={
             **requirer_relation.remote_app_data,
-            "ddns-addresses": json.dumps(["2001:db8::1"]),
+            "ddns-addresses": "2001:db8::1",
         },
     )
     base_state["relations"].extend([database_relation, requirer_relation])
@@ -403,7 +403,7 @@ def test_reconcile_skips_an_invalid_ddns_domain(
     allocated = f"{ddns_label}.{ddns_domain}"
     requirer_relation = dataclasses.replace(
         requirer_relation,
-        local_app_data={"ddns-domain": json.dumps(allocated)},
+        local_app_data={"ddns-domain": allocated},
     )
     base_state["relations"].extend([database_relation, requirer_relation])
     base_state["config"] = {"ddns-domain": "not a domain"}
@@ -417,7 +417,7 @@ def test_reconcile_skips_an_invalid_ddns_domain(
 
     dns_policy_send_requests.assert_not_called()
     allocate_ddns_domains.assert_not_called()
-    assert json.loads(_local_app_data(out, "dns-record-provider")["ddns-domain"]) == allocated
+    assert _local_app_data(out, "dns-record-provider")["ddns-domain"] == allocated
 
 
 @pytest.mark.usefixtures("context")

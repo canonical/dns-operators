@@ -38,7 +38,6 @@ parts:
     python-requirements:
       - requirements.txt
     stage-packages:
-      - gunicorn
       - nginx-core
       - util-linux  # contains the setpriv utility
       - python3

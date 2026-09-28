@@ -26,3 +26,4 @@ jobs:
       juju-channel: 3.6/stable
       provider: lxd
       working-directory: ./dns-policy-operator
+      pre-run-script: tests/integration/prepare.sh

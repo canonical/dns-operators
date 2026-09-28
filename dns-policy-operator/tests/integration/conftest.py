@@ -307,7 +307,7 @@ def postgresql_fixture(
     """Deploy the postgresql charm."""
     juju.deploy(
         "postgresql",
-        channel="14/stable",
+        channel="16/stable",
         config={"profile": "testing"},
     )
     juju.wait(lambda status: jubilant.all_active(status, "postgresql"), timeout=600)

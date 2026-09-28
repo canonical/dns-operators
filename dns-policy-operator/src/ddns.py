@@ -13,6 +13,9 @@ import constants
 # Host label of the wildcard record covering the subdomains of an allocated domain
 WILDCARD_HOST_LABEL = "*"
 
+# Host label of the TXT records holding the ACME DNS-01 challenges of a domain
+ACME_CHALLENGE_LABEL = "_acme-challenge"
+
 # Maximum length of the suffix of the automatically allocated domains, kept below the
 # maximum length of a domain name to leave room for the allocated host labels
 DDNS_DOMAIN_MAX_LENGTH = 200
@@ -64,6 +67,21 @@ def is_within(name: str, domain: str) -> bool:
     if not domain:
         return False
     return name == domain or name.endswith(f".{domain}")
+
+
+def is_acme_challenge(record: Record) -> bool:
+    """Check whether a record holds the ACME DNS-01 challenge of a domain.
+
+    Args:
+        record: the record to check.
+
+    Returns:
+        True when the record is a TXT record of an `_acme-challenge` host label.
+    """
+    if record.record_type != RecordType.TXT:
+        return False
+    label, _, domain = fqdn(record.host_label, record.domain).partition(".")
+    return label == ACME_CHALLENGE_LABEL and bool(domain)
 
 
 def ddns_domain_error(domain: str) -> str | None:

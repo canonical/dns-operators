@@ -305,6 +305,58 @@ def test_reconcile_rejects_requests_under_the_ddns_domain(
 @pytest.mark.usefixtures("ddns_label")
 @pytest.mark.usefixtures("ddns_record_request")
 # pylint: disable=too-many-positional-arguments
+def test_reconcile_lets_the_acme_challenges_under_the_ddns_domain_through(
+    context,
+    base_state,
+    database_relation,
+    requirer_relation,
+    ddns_domain,
+    ddns_label,
+    ddns_record_request,
+):
+    """
+    arrange: prepare a requirer requesting an ACME challenge TXT record and an A record
+        under the ddns domain
+    act: run reconcile
+    assert: only the ACME challenge reaches the workload
+    """
+    acme_challenge = {
+        "domain": ddns_domain,
+        "host_label": f"_acme-challenge.{ddns_label}",
+        "ttl": "600",
+        "record_class": "IN",
+        "record_type": "TXT",
+        "record_data": "challenge",
+        "uuid": "4c210a7c-55fe-52e1-a14b-2268bd8f4669",
+    }
+    requirer_relation = dataclasses.replace(
+        requirer_relation,
+        remote_app_data={"dns_entries": json.dumps([ddns_record_request, acme_challenge])},
+    )
+    base_state["relations"].extend([database_relation, requirer_relation])
+    base_state["config"] = {"ddns-domain": ddns_domain}
+    state = ops.testing.State(**base_state)
+
+    with (
+        patch("dns_policy.DnsPolicyService.send_requests") as dns_policy_send_requests,
+        patch("dns_policy.DnsPolicyService.allocate_ddns_domains") as allocate_ddns_domains,
+    ):
+        allocate_ddns_domains.return_value = {requirer_relation.id: f"{ddns_label}.{ddns_domain}"}
+        context.run(_Event("reconcile"), state)
+
+    assert dns_policy_send_requests.call_args[0][1] == {
+        requirer_relation.id: [_record_request(acme_challenge)]
+    }
+
+
+@pytest.mark.usefixtures("context")
+@pytest.mark.usefixtures("base_state")
+@pytest.mark.usefixtures("database_relation")
+@pytest.mark.usefixtures("requirer_relation")
+@pytest.mark.usefixtures("ddns_domain")
+@pytest.mark.usefixtures("ddns_label")
+@pytest.mark.usefixtures("ddns_record_request")
+# pylint: disable=too-many-positional-arguments
 def test_reconcile_withdraws_the_requests_under_the_ddns_domain(
     context,
     base_state,

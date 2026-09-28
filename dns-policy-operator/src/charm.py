@@ -315,7 +315,9 @@ class DnsPolicyCharm(ops.CharmBase):
         While the automatically allocated domain feature is enabled, the ddns domain is
         reserved: any A, AAAA or CNAME request for it or for one of its subdomains is
         rejected, so that an allocated domain can't be hijacked through a regular record
-        request. The requests of the other record types are left to the review.
+        request. The requests of the other record types are left to the review, which
+        lets the ACME challenge TXT records of an allocated domain through: the workload
+        only lets the requirer the domain is allocated to have them.
 
         Args:
             relation: the relation to read the record requests from.

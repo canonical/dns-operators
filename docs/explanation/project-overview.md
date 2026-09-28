@@ -30,6 +30,8 @@ Now that we understand that `bind-operator` is made to publish record requests f
 
 ![Approve/Denial process](/explanation/policy.jpg)
 
+To further reduce toil, operators can add rules from the admin website of the Django application to automatically approve or deny the pending record requests. No rule exists by default. Each rule applies to a domain and its subdomains. For example, the ACME challenge rule approves the `_acme-challenge` TXT record of a domain when the same requirer has an approved A or AAAA record for that domain, or when that domain was automatically allocated to it, so that the requirer can get certificates for its own domains. A rule only decides the record requests no reviewer has approved or denied, and the rules are evaluated again whenever a rule or a record request changes. The admin website shows which requests were decided automatically, and a reviewer can always override those decisions.
+
 ## Aggregating requests from several requirers
 
 The `dns_record` interface pairs a single provider with a single requirer, which is not always enough: an application may be composed of several charms that each need to publish records, while the DNS provider should only see one requirer. The `dns-aggregator` charm fills that gap. It behaves as a provider for the requirers it fronts and as a requirer for the DNS provider, combining all the record requests it receives into a single set forwarded upstream, then dispatching the responses back to the requirer that asked for them based on the UUID of each request. Like `dns-policy`, it is transparent to both sides: neither the requirers nor the provider need to know that an aggregator sits between them.

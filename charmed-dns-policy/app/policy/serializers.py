@@ -10,13 +10,23 @@ from .models import DdnsAllocation, RecordRequest
 
 
 class RecordRequestSerializer(serializers.ModelSerializer):
-    """Define record request serializer."""
+    """Define record request serializer.
+
+    The status of a pending record request decided by a rule is the status given by
+    that rule, the API doesn't tell automatic decisions apart from manual ones.
+    """
     uuid = serializers.UUIDField(required=True)
 
     class Meta:
         """Define meta of the serializer."""
         model = RecordRequest
-        fields = '__all__'
+        exclude = ['rule']
+
+    def to_representation(self, instance):
+        """Serialize a record request with its effective status."""
+        data = super().to_representation(instance)
+        data['status'] = instance.effective_status
+        return data
 
 
 class DdnsAllocationSerializer(serializers.ModelSerializer):

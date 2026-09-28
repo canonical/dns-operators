@@ -10,3 +10,7 @@ class PolicyConfig(AppConfig):
     """Define policy app configuration."""
     default_auto_field = "django.db.models.BigAutoField"
     name = "policy"
+
+    def ready(self):
+        """Connect the signal handlers."""
+        from . import signals  # noqa: F401

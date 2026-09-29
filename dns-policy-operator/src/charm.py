@@ -223,7 +223,10 @@ class DnsPolicyCharm(ops.CharmBase):
 
         While the automatically allocated domain feature is enabled, the ddns domain is
         reserved: any request for it or for one of its subdomains is rejected, so that
-        an allocated domain can't be hijacked through a regular record request.
+        an allocated domain can't be hijacked through a regular record request. The
+        ACME challenge TXT records are the exception, so that the requirer of an
+        allocated domain can get certificates for it. Those are left to the workload,
+        which only lets the requirer the domain is allocated to have them.
 
         Args:
             relation: the relation to read the record requests from.
@@ -244,7 +247,7 @@ class DnsPolicyCharm(ops.CharmBase):
         for record_request in record_requests:
             record = record_request.record
             name = ddns.fqdn(record.host_label, record.domain) if record is not None else ""
-            if name and ddns.is_within(name, ddns_domain):
+            if name and ddns.is_within(name, ddns_domain) and not ddns.is_acme_challenge(record):
                 logger.warning(
                     "Rejecting the request %s of relation %s: %s is reserved for the "
                     "automatically allocated domains",

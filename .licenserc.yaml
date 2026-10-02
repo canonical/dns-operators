@@ -1,0 +1,44 @@
+header:
+  license:
+    spdx-id: Apache-2.0
+    copyright-owner: Canonical Ltd.
+    content: |
+      Copyright [year] [owner]
+      See LICENSE file for licensing details.
+  paths:
+    - '**'
+  paths-ignore:
+    - '.github/**'
+    - '**/.gitkeep'
+    - '**/*.cfg'
+    - '**/*.conf'
+    - '**/*.html'
+    - '**/*.j2'
+    - '**/*.json'
+    - '**/*.md'
+    - '**/*.rule'
+    - '**/*.tmpl'
+    - '**/*.txt'
+    - '**/mime.types'
+    - 'CODEOWNERS'
+    - '.codespellignore'
+    - '.dockerignore'
+    - '.flake8'
+    - '.gitignore'
+    - 'icon.svg'
+    - '.jujuignore'
+    - 'LICENSE'
+    - '.licenserc.yaml'
+    - '.lycheeignore'
+    - '.trivyignore'
+    - '.wokeignore'
+    - '.woke.yaml'
+    - '.woke.yml'
+    - '**/trivy.yaml'
+    - '**/pyproject.toml'
+    - '**/zap_rules.tsv'
+    - '**/lib/**'
+    - 'charmed-dns-policy/app/ci/.test-env'
+    - '.readthedocs.yaml'
+    - 'docs/**'
+  comment: on-failure

@@ -1,0 +1,22 @@
+name: Auto-update charm libraries
+
+on:
+  schedule:
+    - cron: "0 1 * * *"
+
+jobs:
+  auto-update-libs-bind-operator:
+    uses: canonical/operator-workflows/.github/workflows/auto_update_charm_libs.yaml@main
+    secrets: inherit
+    with:
+      working-directory: ./bind-operator
+  auto-update-libs-dns-integrator-operator:
+    uses: canonical/operator-workflows/.github/workflows/auto_update_charm_libs.yaml@main
+    secrets: inherit
+    with:
+      working-directory: ./dns-integrator-operator
+  auto-update-libs-dns-policy-operator:
+    uses: canonical/operator-workflows/.github/workflows/auto_update_charm_libs.yaml@main
+    secrets: inherit
+    with:
+      working-directory: ./dns-policy-operator

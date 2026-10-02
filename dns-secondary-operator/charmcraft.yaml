@@ -1,0 +1,57 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: dns-secondary
+summary: DNS secondary charm
+description: |
+  A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/)
+  deploying and managing a DNS secondary charm on bare metal.
+links:
+  documentation: https://canonical.com/juju/docs/dns-charms
+assumes:
+  - juju >= 3.6
+peers:
+  dns-secondary-peers:
+    interface: dns-secondary-instance
+requires:
+  dns-transfer:
+    interface: dns_transfer
+    limit: 1
+  bind-certificates:
+    interface: tls-certificates
+    limit: 1
+provides:
+  dns-authority:
+    interface: dns_authority
+    limit: 1
+type: charm
+bases:
+  - build-on:
+    - name: ubuntu
+      channel: "22.04"
+    run-on:
+    - name: ubuntu
+      channel: "22.04"
+parts:
+  charm:
+    build-packages:
+      - libssl-dev  # for cryptography
+      - rust-all  # for cryptography
+      - pkg-config # for cryptography
+    build-snaps:
+      - rustup
+    override-build: |
+      rustup default stable
+      craftctl default
+config:
+  options:
+    public-ips:
+      description: |
+        List of ips that the primary DNS will allow transfer.
+      default: ""
+      type: string
+    remote-hostname:
+      description: |
+        Specifies the expected hostname in the TLS certificate of the remote server.
+        This is required if the charm is integrated via certificates interface.
+        Default: machine hostname.
+      type: string

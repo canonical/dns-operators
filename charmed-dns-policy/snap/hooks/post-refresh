@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+set -xe
+
+"$SNAP/bin/prepare"

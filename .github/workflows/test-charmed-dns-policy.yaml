@@ -1,0 +1,62 @@
+name: Charmed-dns-policy tests
+
+on:
+  pull_request:
+    paths:
+      - 'charmed-dns-policy/**'
+      - '.github/workflows/test-charmed-dns-policy.yaml'
+  push:
+    branches:
+      - main
+
+jobs:
+  django-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
+        env:
+          POSTGRES_PASSWORD: testpassword
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Maps tcp port 5432 on service container to the host
+          - 5432:5432
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          cd ./charmed-dns-policy/app
+          python3 -m pip install --upgrade pip
+          pip install --no-cache-dir -r requirements.txt
+          export $(xargs < ci/.test-env) && ./manage.py test
+
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.14'
+
+      - name: Install dependencies
+        run: |
+          pip install ruff
+
+      - name: Run Ruff
+        run: |
+          ruff check charmed-dns-policy/app/

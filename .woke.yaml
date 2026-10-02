@@ -1,0 +1,5 @@
+ignore_files:
+  # Ignore some files as they use non compliant terminology:
+  # masterfile-format
+  # masterfile-style
+  - src/constants.py

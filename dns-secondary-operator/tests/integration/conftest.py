@@ -1,0 +1,73 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+"""Integration tests fixtures."""
+
+import pathlib
+import subprocess  # nosec B404
+import typing
+
+import jubilant
+import pytest
+import yaml
+
+# Wildcard imports are used to make all the fixtures
+# available in test files
+# pylint: disable=wildcard-import
+# pylint: disable=unused-wildcard-import
+from .bind_fixtures import *  # noqa: F401, F403
+
+# Wildcard imports are used to make all the fixtures
+# available in test files
+# pylint: disable=wildcard-import
+# pylint: disable=unused-wildcard-import
+from .core_fixtures import *  # noqa: F401, F403
+
+
+@pytest.fixture(scope="module", name="metadata")
+def fixture_metadata():
+    """Provide charm metadata."""
+    yield yaml.safe_load(pathlib.Path("./charmcraft.yaml").read_text(encoding="UTF-8"))
+
+
+@pytest.fixture(scope="module", name="app_name")
+def fixture_app_name(metadata):
+    """Provide app name from the metadata."""
+    yield metadata["name"]
+
+
+@pytest.fixture(scope="module", name="charm_file")
+def charm_file_fixture(metadata: dict[str, typing.Any], pytestconfig: pytest.Config):
+    """Pytest fixture that packs the charm and returns the filename, or --charm-file if set."""
+    charm_file = pytestconfig.getoption("--charm-file")
+    if charm_file:
+        yield charm_file
+        return
+    try:
+        subprocess.run(
+            ["charmcraft", "pack"], check=True, capture_output=True, text=True
+        )  # nosec B603, B607
+    except subprocess.CalledProcessError as exc:
+        raise OSError(f"Error packing charm: {exc}; Stderr:\n{exc.stderr}") from None
+
+    app_name = metadata["name"]
+    charm_path = pathlib.Path()
+    charms = [p.absolute() for p in charm_path.glob(f"{app_name}_*.charm")]
+    assert charms, f"{app_name}.charm file not found"
+    assert len(charms) == 1, f"{app_name} has more than one .charm file, unsure which to use"
+    yield str(charms[0])
+
+
+@pytest.fixture(scope="module", name="app")
+def app_fixture(juju: jubilant.Juju, charm_file, app_name):
+    """Deploy secondary charm."""
+    juju.deploy(charm=charm_file, app=app_name, resources={})
+    juju.wait(jubilant.all_agents_idle, timeout=600)
+    juju.wait(jubilant.all_blocked)
+    yield app_name  # run the test
+
+
+@pytest.fixture(scope="module", name="primary")
+def primary_fixture(bind, bind_name: str):  # pylint: disable=unused-argument
+    """Deploy primary(bind) charm."""
+    yield bind_name  # run the test

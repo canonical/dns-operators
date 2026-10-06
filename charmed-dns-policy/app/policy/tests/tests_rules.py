@@ -19,9 +19,19 @@ from policy.rules import evaluate_rules
 
 Status = RecordRequest.Status
 
+INSTANCE = uuid.UUID('8ad9f1e2-0c2a-4f8e-9a2b-3b6d5f7c1e40')
+# Another charm installation, e.g. one restored from a backup of the database
+OTHER_INSTANCE = uuid.UUID('0c2a4f8e-9a2b-4b6d-8f7c-1e408ad9f1e2')
+
 
 def create_record_request(
-    host_label, domain, record_type, record_data, requirer_id='1', status=Status.PENDING
+    host_label,
+    domain,
+    record_type,
+    record_data,
+    requirer_id='1',
+    status=Status.PENDING,
+    instance=INSTANCE,
 ):
     """Create a record request."""
     return RecordRequest.objects.create(
@@ -31,13 +41,18 @@ def create_record_request(
         record_type=record_type,
         record_data=record_data,
         requirer_id=requirer_id,
+        instance=instance,
         status=status,
     )
 
 
-def acme_challenge(host_label='_acme-challenge.www', domain='example.com', requirer_id='1'):
+def acme_challenge(
+    host_label='_acme-challenge.www', domain='example.com', requirer_id='1', instance=INSTANCE
+):
     """Create a pending ACME challenge TXT record request."""
-    return create_record_request(host_label, domain, 'TXT', 'challenge', requirer_id)
+    return create_record_request(
+        host_label, domain, 'TXT', 'challenge', requirer_id, instance=instance
+    )
 
 
 def create_rule(name='ACME challenge', domain='example.com', **kwargs):
@@ -101,6 +116,25 @@ class TestAcmeChallengeRule(RulesTestCase):
         evaluate_rules()
         self.assert_decided(challenge, None)
 
+    def test_a_record_of_another_instance(self):
+        """Test that the A record of the same requirer id of another instance is not enough."""
+        create_record_request(
+            'www', 'example.com', 'A', '10.0.0.1', status=Status.APPROVED,
+            instance=OTHER_INSTANCE,
+        )
+        challenge = acme_challenge()
+        evaluate_rules()
+        self.assert_decided(challenge, None)
+
+    def test_challenge_without_instance(self):
+        """Test that a challenge without instance is never matched."""
+        create_record_request(
+            'www', 'example.com', 'A', '10.0.0.1', status=Status.APPROVED, instance=None
+        )
+        challenge = acme_challenge(instance=None)
+        evaluate_rules()
+        self.assert_decided(challenge, None)
+
     def test_challenge_without_requirer(self):
         """Test that a challenge without requirer is never matched."""
         create_record_request(
@@ -143,7 +177,7 @@ class TestAcmeChallengeRule(RulesTestCase):
 
     def test_ddns_domain_of_the_same_requirer(self):
         """Test that the challenges of an allocated domain and its subdomains are approved."""
-        allocation = ddns.allocate(uuid.uuid4(), '1', 'ddns.example.com')
+        allocation = ddns.allocate(INSTANCE, '1', 'ddns.example.com')
         label = allocation.domain.partition('.')[0]
         challenges = [
             acme_challenge(host_label=f'_acme-challenge.{label}', domain='ddns.example.com'),
@@ -155,26 +189,36 @@ class TestAcmeChallengeRule(RulesTestCase):
 
     def test_ddns_domain_of_another_requirer(self):
         """Test that the allocated domain of another requirer is not enough."""
-        allocation = ddns.allocate(uuid.uuid4(), '2', 'ddns.example.com')
+        allocation = ddns.allocate(INSTANCE, '2', 'ddns.example.com')
+        challenge = acme_challenge(host_label='_acme-challenge', domain=allocation.domain)
+        evaluate_rules()
+        self.assert_decided(challenge, None)
+
+    def test_ddns_domain_of_another_instance(self):
+        """Test that the allocated domain of the same requirer id of another instance is not enough.
+
+        Requirer ids start over from scratch in a deployment restored from a backup of the
+        database, so the requirer of an old allocation may share its id with a new one.
+        """
+        allocation = ddns.allocate(OTHER_INSTANCE, '1', 'ddns.example.com')
         challenge = acme_challenge(host_label='_acme-challenge', domain=allocation.domain)
         evaluate_rules()
         self.assert_decided(challenge, None)
 
     def test_ddns_parent_domain_is_not_matched(self):
         """Test that the parent of an allocated domain is not owned by its requirer."""
-        ddns.allocate(uuid.uuid4(), '1', 'ddns.example.com')
+        ddns.allocate(INSTANCE, '1', 'ddns.example.com')
         challenge = acme_challenge(host_label='_acme-challenge', domain='ddns.example.com')
         evaluate_rules()
         self.assert_decided(challenge, None)
 
     def test_ddns_allocation_triggers_the_evaluation(self):
         """Test that allocating a domain evaluates the rules again."""
-        instance = uuid.uuid4()
-        label = ddns.derive_label(instance, '1')
+        label = ddns.derive_label(INSTANCE, '1')
         challenge = acme_challenge(host_label=f'_acme-challenge.{label}', domain='ddns.example.com')
         evaluate_rules()
         self.assert_decided(challenge, None)
-        ddns.allocate(instance, '1', 'ddns.example.com')
+        ddns.allocate(INSTANCE, '1', 'ddns.example.com')
         self.assert_decided(challenge, self.rule)
 
 
@@ -337,11 +381,12 @@ class TestApi(APITestCase):
         a_record = {
             'uuid': str(uuid.uuid4()), 'host_label': 'www', 'domain': 'example.com',
             'ttl': 600, 'record_type': 'A', 'record_data': '10.0.0.1', 'requirer_id': '1',
+            'instance': str(INSTANCE),
         }
         challenge = {
             'uuid': str(uuid.uuid4()), 'host_label': '_acme-challenge.www',
             'domain': 'example.com', 'ttl': 600, 'record_type': 'TXT',
-            'record_data': 'challenge', 'requirer_id': '1',
+            'record_data': 'challenge', 'requirer_id': '1', 'instance': str(INSTANCE),
         }
         self.submit(a_record, challenge)
         self.assertEqual(set(self.listed('api_list_pending')), {a_record['uuid'], challenge['uuid']})

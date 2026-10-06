@@ -121,10 +121,14 @@ class RequestsView(generics.ListCreateAPIView):
             existing_rr = next((r for r in existing_rrs if str(r.uuid) == rr["uuid"]), None)
             if existing_rr is not None:
                 # Only the requirer can change, as the record is left to its review
-                requirer_id = serializer.validated_data.get("requirer_id")
-                if requirer_id is not None and existing_rr.requirer_id != requirer_id:
-                    existing_rr.requirer_id = requirer_id
-                    existing_rr.save(update_fields=["requirer_id"])
+                changed = []
+                for field in ("requirer_id", "instance"):
+                    value = serializer.validated_data.get(field)
+                    if value is not None and getattr(existing_rr, field) != value:
+                        setattr(existing_rr, field, value)
+                        changed.append(field)
+                if changed:
+                    existing_rr.save(update_fields=changed)
                 continue
             serializer.save()
 

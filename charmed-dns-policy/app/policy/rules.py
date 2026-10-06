@@ -20,6 +20,20 @@ APPROVED_STATUSES = (
 )
 
 
+def requirer(record_request):
+    """Get the identity of the requirer of a record request.
+
+    A requirer is identified by the pair (instance, requirer id), as requirer ids are
+    only unique within a single charm installation.
+
+    Returns:
+        the identity of the requirer, or None when the record request lacks one.
+    """
+    if record_request.instance is None or not record_request.requirer_id:
+        return None
+    return (record_request.instance, record_request.requirer_id)
+
+
 class EvaluationContext:
     """State of the record requests and allocations the rules are evaluated against."""
 
@@ -31,14 +45,15 @@ class EvaluationContext:
             decisions: id of the rule currently deciding each pending record request,
                 by record request uuid.
             rules_by_id: the enabled rules, by id.
-            allocations: (requirer id, domain) pairs of the automatically allocated
-                domains.
+            allocations: (instance, requirer id, domain) tuples of the automatically
+                allocated domains.
         """
         self.address_names = set()
         for record_request in record_requests:
             if record_request.record_type.upper() not in ADDRESS_RECORD_TYPES:
                 continue
-            if not record_request.requirer_id:
+            owner = requirer(record_request)
+            if owner is None:
                 continue
             status = record_request.status
             if status == RecordRequest.Status.PENDING:
@@ -46,42 +61,39 @@ class EvaluationContext:
                 status = rule.action if rule is not None else status
             if status in APPROVED_STATUSES:
                 self.address_names.add(
-                    (
-                        record_request.requirer_id,
-                        fqdn(record_request.host_label, record_request.domain),
-                    )
+                    (owner, fqdn(record_request.host_label, record_request.domain))
                 )
 
         self.ddns_domains = defaultdict(list)
-        for requirer_id, domain in allocations:
-            self.ddns_domains[requirer_id].append(normalize_domain(domain))
+        for instance, requirer_id, domain in allocations:
+            self.ddns_domains[(instance, requirer_id)].append(normalize_domain(domain))
 
-    def has_approved_address(self, requirer_id, name):
+    def has_approved_address(self, owner, name):
         """Check whether a requirer has an approved A or AAAA record for a domain."""
-        return (requirer_id, name) in self.address_names
+        return (owner, name) in self.address_names
 
-    def has_ddns_domain(self, requirer_id, name):
+    def has_ddns_domain(self, owner, name):
         """Check whether a domain resolves through a domain allocated to a requirer.
 
         An allocated domain comes with a wildcard record, so it covers its subdomains.
         """
-        return any(is_within(name, domain) for domain in self.ddns_domains.get(requirer_id, ()))
+        return any(is_within(name, domain) for domain in self.ddns_domains.get(owner, ()))
 
 
 def matches_acme_challenge(record_request, context):
     """Match the ACME challenge TXT records of a domain owned by the same requirer.
 
     The domain is owned by the requirer when it has an approved A or AAAA record for it,
-    or when it is, or is under, a domain automatically allocated to it.
+    or when it is, or is under, a domain automatically allocated to it. The requirer is
+    identified by both its instance and its requirer id.
     """
-    if record_request.record_type.upper() != "TXT" or not record_request.requirer_id:
+    owner = requirer(record_request)
+    if record_request.record_type.upper() != "TXT" or owner is None:
         return False
     label, _, name = fqdn(record_request.host_label, record_request.domain).partition(".")
     if label != ACME_CHALLENGE_LABEL or not name:
         return False
-    return context.has_approved_address(
-        record_request.requirer_id, name
-    ) or context.has_ddns_domain(record_request.requirer_id, name)
+    return context.has_approved_address(owner, name) or context.has_ddns_domain(owner, name)
 
 
 MATCHERS = {
@@ -123,7 +135,7 @@ def evaluate_rules():
         rules_by_id = {rule.id: rule for rule in rules}
         record_requests = list(RecordRequest.objects.all())
         pending = [r for r in record_requests if r.status == RecordRequest.Status.PENDING]
-        allocations = list(DdnsAllocation.objects.values_list("requirer_id", "domain"))
+        allocations = list(DdnsAllocation.objects.values_list("instance", "requirer_id", "domain"))
 
         decisions = {record_request.uuid: None for record_request in pending}
         if rules:

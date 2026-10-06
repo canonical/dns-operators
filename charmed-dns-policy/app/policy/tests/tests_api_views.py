@@ -232,9 +232,30 @@ class TestRequestsView(APITestCase):
         self.assertEqual(record_request.requirer_id, '3')
         self.assertEqual(record_request.status, RecordRequest.Status.APPROVED)
 
+    def test_instance_is_stored_and_updated(self):
+        """Test that the instance of a record request is stored, then updated."""
+        self.client.login(username='testuser', password='password')
+        instance = '8ad9f1e2-0c2a-4f8e-9a2b-3b6d5f7c1e40'
+        other_instance = '0c2a4f8e-9a2b-4b6d-8f7c-1e408ad9f1e2'
+        response = self.client.post(
+            reverse('requests'),
+            [self.record_request(requirer_id='3', instance=instance)],
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(str(RecordRequest.objects.get(pk=self.uuid).instance), instance)
+        response = self.client.post(
+            reverse('requests'),
+            [self.record_request(requirer_id='3', instance=other_instance)],
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(str(RecordRequest.objects.get(pk=self.uuid).instance), other_instance)
+
     def test_requirer_id_is_optional(self):
         """Test that a record request without a requirer is still accepted."""
         self.client.login(username='testuser', password='password')
         response = self.client.post(reverse('requests'), [self.record_request()], format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNone(RecordRequest.objects.get(pk=self.uuid).requirer_id)
+        self.assertIsNone(RecordRequest.objects.get(pk=self.uuid).instance)

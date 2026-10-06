@@ -210,7 +210,7 @@ class DnsPolicyCharm(ops.CharmBase):
         if complete:
             # This also withdraws from the workload the requests that are gone from the
             # relations, including the ones rejected by the ddns domain reservation.
-            self.dns_policy.send_requests(token, requests)
+            self.dns_policy.send_requests(token, requests, self._ddns_instance())
         else:
             logger.warning(
                 "Reconciliation: some relation data could not be read, "

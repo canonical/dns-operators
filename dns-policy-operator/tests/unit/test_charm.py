@@ -164,9 +164,11 @@ def test_reconcile(
         out = context.run(reconcile_event, state)
         assert out.unit_status == ops.ActiveStatus("")
         dns_policy_send_requests.assert_called()
+        instance = _local_app_data(out, "dns-policy-peers")["ddns-instance"]
         assert dns_policy_send_requests.call_args[0] == (
             api_root_token,
             {requirer_relation.id: [_record_request(record_request)]},
+            instance,
         )
 
 

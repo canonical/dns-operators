@@ -164,9 +164,11 @@ def test_reconcile(
         out = context.run(reconcile_event, state)
         assert out.unit_status == ops.ActiveStatus("")
         dns_policy_send_requests.assert_called()
+        instance = _local_app_data(out, "dns-policy-peers")["ddns-instance"]
         assert dns_policy_send_requests.call_args[0] == (
             api_root_token,
             {requirer_relation.id: [_record_request(record_request)]},
+            instance,
         )
 
 
@@ -200,12 +202,14 @@ def test_reconcile_withdraws_the_requests_of_an_unreadable_relation(
         out = context.run(_Event("reconcile"), state)
 
     dns_policy_send_requests.assert_called_once()
+    instance = _local_app_data(out, "dns-policy-peers")["ddns-instance"]
     assert dns_policy_send_requests.call_args[0] == (
         api_root_token,
         {
             requirer_relation.id: [_record_request(record_request)],
             invalid_relation.id: [],
         },
+        instance,
     )
     invalid_out = out.get_relation(invalid_relation.id)
     assert json.loads(invalid_out.local_app_data.get("dns_entries", "[]")) == []

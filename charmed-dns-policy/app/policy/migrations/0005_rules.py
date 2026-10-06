@@ -71,5 +71,10 @@ class Migration(migrations.Migration):
             name='rule',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='record_requests', to='policy.rule'),
         ),
+        migrations.AddField(
+            model_name='recordrequest',
+            name='instance',
+            field=models.UUIDField(blank=True, null=True),
+        ),
         migrations.RunPython(grant_rule_permissions, revoke_rule_permissions),
     ]

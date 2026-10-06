@@ -210,7 +210,7 @@ class DnsPolicyCharm(ops.CharmBase):
         # This also withdraws from the workload the requests that are gone from the
         # relations, including the ones rejected by the ddns domain reservation and the
         # ones of the relations whose data can't be read.
-        self.dns_policy.send_requests(token, requests)
+        self.dns_policy.send_requests(token, requests, self._ddns_instance())
         entries: list[dns_record.RecordRequest] = self.dns_policy.get_approved_requests(token)
 
         if ddns_domain:

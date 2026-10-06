@@ -121,6 +121,7 @@ class RecordRequest(models.Model):
     record_data = models.CharField(max_length=255)
     active = models.BooleanField(default=False)
     requirer_id = models.CharField(max_length=255, null=True)
+    instance = models.UUIDField(null=True, blank=True)
     status = models.CharField(max_length=50, choices=Status.choices)
     status_reason = models.CharField(max_length=255, null=True)
     reviewer = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)

@@ -71,7 +71,7 @@ The repository also contains the snapped workload of some charms:
 
 For a new DNS deployment, start with the in-repository tutorial index at [`docs/tutorial/index.md`](docs/tutorial/index.md). It links to:
 
-- [`docs/tutorial/simple-deployment.md`](docs/tutorial/simple-deployment.md), which deploys `bind`, deploys `dns-integrator`, integrates them, creates a test DNS record, and scales `bind`.
+- [`docs/tutorial/simple-deployment.md`](docs/tutorial/simple-deployment.md), which deploys `bind` and `dns-integrator`, integrates them, creates a test DNS record, and scales `bind`.
 - [`docs/tutorial/secondary-and-resolver.md`](docs/tutorial/secondary-and-resolver.md), which extends the deployment with `dns-secondary` and `dns-resolver`.
 
 For Terraform-based deployments, see [`terraform/README.md`](terraform/README.md).

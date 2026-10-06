@@ -9,7 +9,10 @@ a simple integration for your existing charmed applications,
 enabling them to request resource records and automate DNS processes.
 For hosted user tutorials, operations, and reference documentation, see https://canonical.com/juju/docs/dns-charms.
 
-The charms are designed for machine models and can be combined into a hidden-primary topology: applications or `dns-integrator` request records, `bind` stores and serves authoritative zones, optional `dns-policy` is a subordinate charm related to `bind` to add an approval layer in front of the DNS provider, `dns-secondary` receives zones from `bind`, and `dns-resolver` resolves client queries through the authoritative chain.
+The charms are designed for machine models and can be combined into a hidden-primary topology:
+applications or `dns-integrator` request records, `bind` stores and serves authoritative zones,
+optional `dns-policy` is a subordinate charm related to `bind` that adds an approval layer in front of
+the DNS provider, `dns-secondary` receives zones from `bind`, and `dns-resolver` resolves client queries through the authoritative chain.
 
 ## Repository layout
 
@@ -69,7 +72,7 @@ The repository also contains the snapped workload of some charms:
 For a new DNS deployment, start with the in-repository tutorial index at [`docs/tutorial/index.md`](docs/tutorial/index.md). It links to:
 
 - [`docs/tutorial/simple-deployment.md`](docs/tutorial/simple-deployment.md), which deploys `bind`, deploys `dns-integrator`, integrates them, creates a test DNS record, and scales `bind`.
-- [`docs/tutorial/secondary-and-resolver.md`](docs/tutorial/secondary-and-resolver.md), which extends the deployment with `dns-secondary` and `dns-resolver` and verifies the hidden-primary resolution chain.
+- [`docs/tutorial/secondary-and-resolver.md`](docs/tutorial/secondary-and-resolver.md), which extends the deployment with `dns-secondary` and `dns-resolver`.
 
 For Terraform-based deployments, see [`terraform/README.md`](terraform/README.md).
 

@@ -205,7 +205,7 @@ def test_approved_request_is_reported(  # pylint: disable=too-many-arguments,too
 
 
 @pytest.mark.abort_on_fail
-def test_request_under_the_ddns_domain_is_denied(
+def test_address_request_under_the_ddns_domain_is_denied(
     juju: jubilant.Juju,
     dns_integrator_name: str,
     integrator_request: str,
@@ -214,17 +214,22 @@ def test_request_under_the_ddns_domain_is_denied(
 ):
     """
     arrange: deploy the charms with the ddns feature enabled.
-    act: request a record under the ddns domain along with an approved one.
-    assert: the request under the ddns domain is denied, the other one stays approved.
+    act: request an A and a TXT record under the ddns domain along with an approved one.
+    assert: only the A record under the ddns domain is denied, the TXT record is left to
+        the review and the other one stays approved.
     """
     requirer_unit = f"{dns_integrator_name}/0"
-
     reserved_request = f"admin {ddns_domain} 600 IN A 42.42.42.43"
+    txt_request = f"_acme-challenge.admin {ddns_domain} 600 IN TXT challenge"
 
-    juju.config(dns_integrator_name, {"requests": f"{integrator_request}\n{reserved_request}"})
+    juju.config(
+        dns_integrator_name,
+        {"requests": "\n".join((integrator_request, reserved_request, txt_request))},
+    )
 
-    responses = _wait_for_responses(juju, requirer_unit, lambda r: len(r) == 2)
+    responses = _wait_for_responses(juju, requirer_unit, lambda r: len(r) == 3)
     assert _statuses(responses) == [
         ("approved", ""),
+        ("pending", "Waiting for review"),
         ("permission_denied", "Reserved for the automatically allocated domains"),
     ]

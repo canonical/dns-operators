@@ -13,6 +13,10 @@ import constants
 # Host label of the wildcard record covering the subdomains of an allocated domain
 WILDCARD_HOST_LABEL = "*"
 
+# Record types reserved under the ddns domain, as they would resolve or alias the names
+# of the automatically allocated domains. The other record types are left to the review.
+RESERVED_RECORD_TYPES = frozenset((RecordType.A, RecordType.AAAA, RecordType.CNAME))
+
 # Maximum length of the suffix of the automatically allocated domains, kept below the
 # maximum length of a domain name to leave room for the allocated host labels
 DDNS_DOMAIN_MAX_LENGTH = 200
@@ -64,6 +68,22 @@ def is_within(name: str, domain: str) -> bool:
     if not domain:
         return False
     return name == domain or name.endswith(f".{domain}")
+
+
+def is_reserved(record: Record, ddns_domain: str) -> bool:
+    """Check whether a record is reserved for the automatically allocated domains.
+
+    Args:
+        record: the record to check.
+        ddns_domain: the suffix of the automatically allocated domains.
+
+    Returns:
+        True when the record is an A, AAAA or CNAME record for the ddns domain or one of
+        its subdomains.
+    """
+    if record.record_type not in RESERVED_RECORD_TYPES:
+        return False
+    return is_within(fqdn(record.host_label, record.domain), ddns_domain)
 
 
 def ddns_domain_error(domain: str) -> str | None:

@@ -338,6 +338,65 @@ def test_reconcile_withdraws_the_requests_under_the_ddns_domain(
     assert dns_policy_send_requests.call_args[0][1] == {requirer_relation.id: []}
 
 
+@pytest.mark.parametrize(
+    "record_type, record_data",
+    [
+        pytest.param("TXT", "challenge", id="txt"),
+        pytest.param("MX", "10 mail.example.org", id="mx"),
+    ],
+)
+# pylint: disable=too-many-positional-arguments
+def test_reconcile_lets_the_other_record_types_under_the_ddns_domain_through(
+    context,
+    base_state,
+    database_relation,
+    requirer_relation,
+    ddns_domain,
+    ddns_label,
+    ddns_record_request,
+    record_type,
+    record_data,
+):
+    """
+    arrange: prepare a requirer requesting an A record and another record type under
+        the ddns domain
+    act: run reconcile
+    assert: only the A record is rejected, the other one reaches the workload
+    """
+    other_request = {
+        **ddns_record_request,
+        "host_label": f"_acme-challenge.{ddns_label}",
+        "record_type": record_type,
+        "record_data": record_data,
+        "uuid": "4c210a7c-55fe-52e1-a14b-2268bd8f4669",
+    }
+    requirer_relation = dataclasses.replace(
+        requirer_relation,
+        remote_app_data={"dns_entries": json.dumps([ddns_record_request, other_request])},
+    )
+    base_state["relations"].extend([database_relation, requirer_relation])
+    base_state["config"] = {"ddns-domain": ddns_domain}
+    state = ops.testing.State(**base_state)
+
+    with (
+        patch("dns_policy.DnsPolicyService.send_requests") as dns_policy_send_requests,
+        patch("dns_policy.DnsPolicyService.allocate_ddns_domains") as allocate_ddns_domains,
+    ):
+        allocate_ddns_domains.return_value = {requirer_relation.id: f"{ddns_label}.{ddns_domain}"}
+        out = context.run(_Event("reconcile"), state)
+
+    assert dns_policy_send_requests.call_args[0][1] == {
+        requirer_relation.id: [_record_request(other_request)]
+    }
+    assert _downstream_responses(out) == {
+        ddns_record_request["uuid"]: (
+            "permission_denied",
+            "Reserved for the automatically allocated domains",
+        ),
+        other_request["uuid"]: ("pending", "Waiting for review"),
+    }
+
+
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
 @pytest.mark.usefixtures("database_relation")

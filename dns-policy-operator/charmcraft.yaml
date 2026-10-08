@@ -37,8 +37,9 @@ config:
         the dns-record-provider endpoint is allocated a unique domain under this suffix,
         which is published back to it through the relation. The charm requests an A or
         AAAA record for that domain, and a wildcard record for its subdomains, from the
-        upstream DNS provider. While this option is set, any DNS record request for this
-        domain or one of its subdomains is rejected. Leave empty to disable the feature.
+        upstream DNS provider. While this option is set, any A, AAAA or CNAME record
+        request for this domain or one of its subdomains is rejected, the other record
+        types are left to the review. Leave empty to disable the feature.
       default: ""
 
 requires:

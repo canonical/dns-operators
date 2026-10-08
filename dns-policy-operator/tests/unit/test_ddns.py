@@ -4,7 +4,7 @@
 """Unit tests for the ddns module."""
 
 import pytest
-from charms.dns_record.v0.dns_record import RecordType
+from charms.dns_record.v0.dns_record import Record, RecordClass, RecordType
 
 import ddns
 
@@ -130,3 +130,41 @@ def test_records_without_a_parent_domain():
     """
     with pytest.raises(ValueError):
         ddns.records("example", ["10.0.0.1"])
+
+
+@pytest.mark.parametrize(
+    "host_label,domain,record_type,expected",
+    [
+        ("admin", "example.com", RecordType.A, True),
+        ("admin", "example.com", RecordType.AAAA, True),
+        ("admin", "example.com", RecordType.CNAME, True),
+        ("@", "example.com", RecordType.A, True),
+        ("admin", "example.com", RecordType.TXT, False),
+        ("_acme-challenge.admin", "example.com", RecordType.TXT, False),
+        ("admin", "example.com", RecordType.MX, False),
+        ("admin", "example.org", RecordType.A, False),
+    ],
+)
+def test_is_reserved(host_label, domain, record_type, expected):
+    """
+    arrange: take a record
+    act: check whether it is reserved under the example.com ddns domain
+    assert: only the A, AAAA and CNAME records under the ddns domain are reserved
+    """
+    record_data = {
+        RecordType.A: "10.0.0.1",
+        RecordType.AAAA: "2001:db8::1",
+        RecordType.CNAME: "target.example.org",
+        RecordType.MX: "10 mail.example.org",
+        RecordType.TXT: "challenge",
+    }[record_type]
+    record = Record(
+        domain=domain,
+        host_label=host_label,
+        ttl=600,
+        record_class=RecordClass.IN,
+        record_type=record_type,
+        record_data=record_data,
+    )
+
+    assert ddns.is_reserved(record, "example.com") is expected

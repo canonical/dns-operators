@@ -313,8 +313,9 @@ class DnsPolicyCharm(ops.CharmBase):
         """Get the record requests of a relation that the policy lets through.
 
         While the automatically allocated domain feature is enabled, the ddns domain is
-        reserved: any request for it or for one of its subdomains is rejected, so that
-        an allocated domain can't be hijacked through a regular record request.
+        reserved: any A, AAAA or CNAME request for it or for one of its subdomains is
+        rejected, so that an allocated domain can't be hijacked through a regular record
+        request. The requests of the other record types are left to the review.
 
         Args:
             relation: the relation to read the record requests from.
@@ -334,14 +335,14 @@ class DnsPolicyCharm(ops.CharmBase):
         accepted = []
         for record_request in record_requests:
             record = record_request.record
-            name = ddns.fqdn(record.host_label, record.domain) if record is not None else ""
-            if name and ddns.is_within(name, ddns_domain):
+            if record is not None and ddns.is_reserved(record, ddns_domain):
                 logger.warning(
-                    "Rejecting the request %s of relation %s: %s is reserved for the "
-                    "automatically allocated domains",
+                    "Rejecting the request %s of relation %s: %s records of %s are "
+                    "reserved for the automatically allocated domains",
                     record_request.uuid,
                     relation.id,
-                    name,
+                    record.record_type.value,
+                    ddns.fqdn(record.host_label, record.domain),
                 )
                 continue
             accepted.append(record_request)

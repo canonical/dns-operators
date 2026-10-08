@@ -7,6 +7,7 @@ import itertools
 import json
 import logging
 import subprocess  # nosec
+import uuid
 
 import ops
 import pydantic
@@ -65,6 +66,10 @@ class RootTokenError(DnsPolicyCharmError):
 
 class GetApprovedRecordRequestsError(DnsPolicyCharmError):
     """Exception raised when unable to get approved record requests."""
+
+
+class GetRequestStatusesError(DnsPolicyCharmError):
+    """Exception raised when unable to get the status of the record requests."""
 
 
 class DdnsAllocationError(DnsPolicyCharmError):
@@ -392,6 +397,40 @@ class DnsPolicyService:
                     f"not a domain directly under {parent!r}"
                 )
         return domains
+
+    def get_request_statuses(self, token: str) -> dict[uuid.UUID, tuple[str, str]]:
+        """Get the status of every record request known to the workload.
+
+        Args:
+            token: root token for the API
+
+        Returns:
+            The workload status and status reason of each record request, by uuid.
+
+        Raises:
+            ApiError: if the request errors
+            GetRequestStatusesError: if the workload answered with unusable data
+        """
+        try:
+            req = requests.get(
+                f"{constants.DNS_POLICY_ENDPOINTS_BASE}/all/",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {token}",
+                },
+                timeout=10,
+            )
+            req.raise_for_status()
+        except requests.RequestException as e:
+            raise ApiError(str(e)) from e
+
+        try:
+            return {
+                uuid.UUID(str(rr["uuid"])): (str(rr["status"]), rr.get("status_reason") or "")
+                for rr in req.json()
+            }
+        except (AttributeError, KeyError, TypeError, ValueError) as e:
+            raise GetRequestStatusesError(str(e)) from e
 
     def get_approved_requests(self, token: str) -> list[RecordRequest]:
         """Get approved record requests.

@@ -46,11 +46,13 @@ def context_fixture(api_root_token):
         patch("dns_policy.DnsPolicyService.status") as dns_policy_status,
         patch("dns_policy.DnsPolicyService.configure"),
         patch("dns_policy.DnsPolicyService.get_approved_requests") as get_approved_requests,
+        patch("dns_policy.DnsPolicyService.get_request_statuses") as get_request_statuses,
         patch("dns_policy.DnsPolicyService.get_api_root_token") as dns_policy_get_api_root_token,
     ):
         dns_policy_status.return_value = True
         dns_policy_get_api_root_token.return_value = api_root_token
         get_approved_requests.return_value = []
+        get_request_statuses.return_value = {}
         yield ops.testing.Context(
             charm_type=DnsPolicyCharm,
         )

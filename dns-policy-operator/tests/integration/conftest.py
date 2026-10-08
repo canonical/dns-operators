@@ -376,6 +376,18 @@ def full_deployment_fixture(
     }
 
 
+@pytest.fixture(scope="module", name="integrator_request")
+def integrator_request_fixture():
+    """Provide the record request the dns-integrator charm is configured with."""
+    yield INTEGRATOR_REQUEST
+
+
+@pytest.fixture(scope="module", name="dns_policy_snap_name")
+def dns_policy_snap_name_fixture():
+    """Provide the name of the workload snap."""
+    yield SNAP_NAME
+
+
 @pytest.fixture(scope="module", name="ddns_domain")
 def ddns_domain_fixture():
     """Provide the suffix the automatically allocated domains are tested with."""

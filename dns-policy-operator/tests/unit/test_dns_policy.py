@@ -150,3 +150,46 @@ def test_send_requests_with_the_requirer_id():
         (str(second.uuid), "2"),
     ]
     assert sent[0]["host_label"] == "admin"
+
+
+def test_get_request_statuses():
+    """
+    arrange: mock the workload API listing the record requests
+    act: get the status of the record requests
+    assert: the status and reason of each record request are returned by uuid
+    """
+    first = "497dcba3-ecbf-4587-a2dd-5eb0665e6880"
+    second = "0c2a4f8e-9a2b-4b6d-8f7c-1e408ad9f1e2"
+    response = _response(
+        [
+            {"uuid": first, "status": "approved", "status_reason": None},
+            {"uuid": second, "status": "denied", "status_reason": "Not allowed"},
+        ]
+    )
+    with patch("requests.get", return_value=response) as get:
+        statuses = dns_policy.DnsPolicyService().get_request_statuses("token")
+
+    assert get.call_args[0][0] == f"{constants.DNS_POLICY_ENDPOINTS_BASE}/all/"
+    assert statuses == {
+        uuid.UUID(first): ("approved", ""),
+        uuid.UUID(second): ("denied", "Not allowed"),
+    }
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        pytest.param({"code": "token_not_valid"}, id="not-a-list"),
+        pytest.param([{"status": "approved"}], id="missing-uuid"),
+        pytest.param([{"uuid": "not-a-uuid", "status": "approved"}], id="invalid-uuid"),
+    ],
+)
+def test_get_request_statuses_invalid_answer(payload):
+    """
+    arrange: mock the workload API answering with unusable data
+    act: get the status of the record requests
+    assert: a GetRequestStatusesError is raised
+    """
+    with patch("requests.get", return_value=_response(payload)):
+        with pytest.raises(dns_policy.GetRequestStatusesError):
+            dns_policy.DnsPolicyService().get_request_statuses("token")

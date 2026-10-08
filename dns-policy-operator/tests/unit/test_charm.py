@@ -385,6 +385,133 @@ def test_reconcile_withdraws_the_entries_without_a_requirer(
     dns_policy_send_requests.assert_not_called()
 
 
+def _downstream_responses(state):
+    """Get the responses published to the requirer, by uuid."""
+    entries = json.loads(_local_app_data(state, "dns-record-provider").get("dns_entries", "[]"))
+    return {entry["uuid"]: (entry["status"], entry["description"]) for entry in entries}
+
+
+@pytest.mark.parametrize(
+    "workload_status, upstream_status, expected",
+    [
+        pytest.param(None, None, ("pending", "Waiting for review"), id="unknown-to-workload"),
+        pytest.param(("pending", ""), None, ("pending", "Waiting for review"), id="pending"),
+        pytest.param(
+            ("denied", "Not allowed"), None, ("permission_denied", "Not allowed"), id="denied"
+        ),
+        pytest.param(("invalid", "Bad"), None, ("invalid_data", "Bad"), id="invalid"),
+        pytest.param(
+            ("approved", ""),
+            None,
+            ("pending", "Approved, waiting for the upstream DNS provider"),
+            id="approved-not-yet-upstream",
+        ),
+        pytest.param(("approved", ""), ("approved", ""), ("approved", ""), id="approved-upstream"),
+        pytest.param(
+            ("published", ""),
+            ("conflict", "Conflict"),
+            ("conflict", "Conflict"),
+            id="conflict-upstream",
+        ),
+    ],
+)
+# pylint: disable=too-many-positional-arguments
+def test_reconcile_responds_to_the_requirer(
+    context,
+    base_state,
+    database_relation,
+    requirer_relation,
+    record_request,
+    workload_status,
+    upstream_status,
+    expected,
+):
+    """
+    arrange: prepare a request with a given workload and upstream status
+    act: run reconcile
+    assert: the matching status is published back to the requirer
+    """
+    if upstream_status is not None:
+        upstream = [
+            {
+                "uuid": record_request["uuid"],
+                "status": upstream_status[0],
+                "description": upstream_status[1],
+            }
+        ]
+        base_state["relations"] = [
+            (
+                dataclasses.replace(
+                    relation, remote_app_data={"dns_entries": json.dumps(upstream)}
+                )
+                if relation.endpoint == "dns-record-requirer"
+                else relation
+            )
+            for relation in base_state["relations"]
+        ]
+    base_state["relations"].extend([database_relation, requirer_relation])
+    state = ops.testing.State(**base_state)
+
+    statuses = (
+        {} if workload_status is None else {uuid.UUID(record_request["uuid"]): workload_status}
+    )
+    with (
+        patch("dns_policy.DnsPolicyService.send_requests"),
+        patch("dns_policy.DnsPolicyService.get_request_statuses", return_value=statuses),
+    ):
+        out = context.run(_Event("reconcile"), state)
+
+    assert _downstream_responses(out) == {record_request["uuid"]: expected}
+
+
+@pytest.mark.usefixtures("context")
+@pytest.mark.usefixtures("base_state")
+@pytest.mark.usefixtures("database_relation")
+@pytest.mark.usefixtures("requirer_relation")
+@pytest.mark.usefixtures("ddns_domain")
+@pytest.mark.usefixtures("ddns_label")
+@pytest.mark.usefixtures("record_request")
+@pytest.mark.usefixtures("ddns_record_request")
+# pylint: disable=too-many-positional-arguments
+def test_reconcile_denies_the_requests_under_the_ddns_domain(
+    context,
+    base_state,
+    database_relation,
+    requirer_relation,
+    ddns_domain,
+    ddns_label,
+    record_request,
+    ddns_record_request,
+):
+    """
+    arrange: prepare a requirer requesting a record under the ddns domain
+    act: run reconcile
+    assert: the request under the ddns domain is denied to the requirer
+    """
+    requirer_relation = dataclasses.replace(
+        requirer_relation,
+        remote_app_data={"dns_entries": json.dumps([record_request, ddns_record_request])},
+    )
+    base_state["relations"].extend([database_relation, requirer_relation])
+    base_state["config"] = {"ddns-domain": ddns_domain}
+    state = ops.testing.State(**base_state)
+
+    with (
+        patch("dns_policy.DnsPolicyService.send_requests"),
+        patch("dns_policy.DnsPolicyService.allocate_ddns_domains") as allocate_ddns_domains,
+    ):
+        allocate_ddns_domains.return_value = {requirer_relation.id: f"{ddns_label}.{ddns_domain}"}
+        out = context.run(_Event("reconcile"), state)
+
+    assert _downstream_responses(out) == {
+        record_request["uuid"]: ("pending", "Waiting for review"),
+        ddns_record_request["uuid"]: (
+            "permission_denied",
+            "Reserved for the automatically allocated domains",
+        ),
+    }
+
+
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
 @pytest.mark.usefixtures("database_relation")

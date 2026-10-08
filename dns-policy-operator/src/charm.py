@@ -32,6 +32,13 @@ logger = logging.getLogger(__name__)
 # itself.
 DDNS_UUID_NAMESPACE = uuid_module.uuid5(uuid_module.NAMESPACE_DNS, "ddns.dns-policy.charm")
 
+# Review statuses of the record requests in the workload
+WORKLOAD_PENDING = "pending"
+WORKLOAD_DENIED = "denied"
+WORKLOAD_INVALID = "invalid"
+# Statuses of the approved record requests, which are handed to the upstream DNS provider
+WORKLOAD_APPROVED = ("approved", "published", "failed")
+
 
 class ReconcileEvent(ops.charm.EventBase):
     """Event representing a periodic reload of the charmed-bind service."""
@@ -62,6 +69,33 @@ def _ddns_record_request(record: dns_record.Record) -> dns_record.RecordRequest:
         description="Automatically allocated domain",
         record=record,
     )
+
+
+def _downstream_status(
+    workload_status: tuple[str, str] | None,
+    upstream_response: dns_record.RecordRequest | None,
+) -> tuple[dns_record.Status, str]:
+    """Get the status to report to the requirer of a record request.
+
+    Args:
+        workload_status: the review status and reason of the request in the workload,
+            None when the workload doesn't know the request yet.
+        upstream_response: the response of the upstream DNS provider to the request,
+            None when it hasn't answered yet.
+
+    Returns:
+        the status and the description of the status to report.
+    """
+    status, reason = workload_status or (WORKLOAD_PENDING, "")
+    if status in WORKLOAD_APPROVED:
+        if upstream_response is None or upstream_response.status is None:
+            return dns_record.Status.PENDING, "Approved, waiting for the upstream DNS provider"
+        return upstream_response.status, upstream_response.description or ""
+    if status == WORKLOAD_DENIED:
+        return dns_record.Status.PERMISSION_DENIED, reason or "Denied by the DNS policy"
+    if status == WORKLOAD_INVALID:
+        return dns_record.Status.INVALID_DATA, reason or "Invalid record request"
+    return dns_record.Status.PENDING, reason or "Waiting for review"
 
 
 class DnsPolicyCharm(ops.CharmBase):
@@ -190,6 +224,63 @@ class DnsPolicyCharm(ops.CharmBase):
             self._clear_ddns_domains(relations)
 
         self._publish_upstream(entries)
+        self._respond_downstream(token, relations, requests)
+
+    def _respond_downstream(
+        self,
+        token: str,
+        relations: list[ops.Relation],
+        accepted: dict[int, list[dns_record.RecordRequest]],
+    ) -> None:
+        """Publish the status of the record requests back to the requirers.
+
+        A request rejected by the policy is denied. Otherwise, its status is the review
+        status of the workload, until it is approved: from then on, the status reported
+        by the upstream DNS provider is relayed.
+
+        Args:
+            token: root token for the workload API.
+            relations: the relations to respond to.
+            accepted: the record requests let through by the policy, by relation id. A
+                relation missing from it could not be read and is left untouched.
+        """
+        workload_statuses = self.dns_policy.get_request_statuses(token)
+        upstream_statuses = {
+            entry.uuid: entry for entry in self._upstream_responses() if entry.status is not None
+        }
+
+        for relation in relations:
+            if relation.id not in accepted:
+                continue
+            accepted_uuids = {request.uuid for request in accepted[relation.id]}
+            responses = []
+            for request in self.dns_record_provider.get_dns_entries(relation) or []:
+                if request.uuid not in accepted_uuids:
+                    status = dns_record.Status.PERMISSION_DENIED
+                    description = "Reserved for the automatically allocated domains"
+                else:
+                    status, description = _downstream_status(
+                        workload_statuses.get(request.uuid),
+                        upstream_statuses.get(request.uuid),
+                    )
+                responses.append(
+                    dns_record.RecordRequest(
+                        uuid=request.uuid, status=status, description=description
+                    )
+                )
+            self.dns_record_provider.update_dns_entries(responses, relation)
+
+    def _upstream_responses(self) -> list[dns_record.RecordRequest]:
+        """Get the responses of the upstream DNS provider.
+
+        Returns:
+            the responses of the upstream DNS provider, empty when there are none.
+        """
+        try:
+            return self.dns_record_requirer.get_dns_entries() or []
+        except ops.TooManyRelatedAppsError:
+            logger.error("Got multiple %s integrations !", self.dns_record_requirer.relation_name)
+            return []
 
     def _collect_record_requests(
         self, relations: list[ops.Relation], ddns_domain: str

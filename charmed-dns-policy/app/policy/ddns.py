@@ -15,7 +15,7 @@ from .models import DdnsAllocation
 # and reduces the chance of a human mistyping an allocated domain.
 OPEN_LOCATION_CODE_ALPHABET = "23456789CFGHJMPQRVWX"
 
-DDNS_LABEL_LENGTH = 8
+DDNS_LABEL_LENGTH = 12
 ALLOCATION_ATTEMPTS = 50
 
 DOMAIN_MAX_LENGTH = 253

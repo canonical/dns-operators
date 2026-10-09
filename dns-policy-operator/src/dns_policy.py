@@ -7,11 +7,12 @@ import itertools
 import json
 import logging
 import subprocess  # nosec
+import uuid
 
 import ops
 import pydantic
 import requests
-from charms.bind.v0.dns_record import RequirerEntry
+from charms.dns_record.v0.dns_record import Record, RecordRequest
 from charms.operator_libs_linux.v2 import snap
 
 import constants
@@ -67,6 +68,14 @@ class GetApprovedRecordRequestsError(DnsPolicyCharmError):
     """Exception raised when unable to get approved record requests."""
 
 
+class GetRequestStatusesError(DnsPolicyCharmError):
+    """Exception raised when unable to get the status of the record requests."""
+
+
+class DdnsAllocationError(DnsPolicyCharmError):
+    """Exception raised when unable to allocate automatically allocated domain labels."""
+
+
 class DnsPolicyConfig(pydantic.BaseModel):
     """Configuration for the DnsPolicy workload.
 
@@ -90,6 +99,27 @@ class DnsPolicyConfig(pydantic.BaseModel):
     database_name: str = ""
     database_password: str = ""
     database_user: str = ""
+
+    @pydantic.field_validator("allowed_hosts")
+    @classmethod
+    def always_allow_the_local_hosts(cls, value: list[str]) -> list[str]:
+        """Make sure the workload always answers on the local hosts.
+
+        The charm drives the workload through its API on the loopback interface, so
+        Django has to accept the local host names whatever the operator configured,
+        otherwise every API call is rejected with a "400 Bad Request".
+
+        Args:
+            value: the configured allowed hosts.
+
+        Returns:
+            the allowed hosts, with the missing local hosts added.
+        """
+        hosts = [host for host in value if host]
+        for host in constants.DNS_POLICY_DEFAULT_ALLOWED_HOSTS:
+            if host not in hosts:
+                hosts.append(host)
+        return hosts
 
     @pydantic.model_serializer
     def ser_model(self) -> dict[str, str]:
@@ -275,12 +305,15 @@ class DnsPolicyService:
             raise RootTokenError("Invalid root token!")
         return tokens["access"]
 
-    def send_requests(self, token: str, record_requests: list[RequirerEntry]) -> None:
+    def send_requests(self, token: str, record_requests: dict[int, list[RecordRequest]]) -> None:
         """Send record requests.
+
+        Each record request is sent along with the id of the relation it comes from, as
+        its requirer id.
 
         Args:
             token: root token for the API
-            record_requests: list of record requests from the relations
+            record_requests: record requests from the relations, by relation id
 
         Raises:
             ApiError: if the request errors
@@ -293,20 +326,120 @@ class DnsPolicyService:
                     "Authorization": f"Bearer {token}",
                 },
                 timeout=10,
-                data=json.dumps([x.model_dump() for x in record_requests]),
+                data=json.dumps(
+                    [
+                        {**record_request.serialize_as_request(), "requirer_id": str(relation_id)}
+                        for relation_id, relation_requests in record_requests.items()
+                        for record_request in relation_requests
+                    ]
+                ),
             )
             req.raise_for_status()
         except requests.RequestException as e:
             raise ApiError(str(e)) from e
 
-    def get_approved_requests(self, token: str) -> list[RequirerEntry]:
+    def allocate_ddns_domains(
+        self, token: str, instance: str, relation_ids: list[int], parent: str
+    ) -> dict[int, str]:
+        """Get the automatically allocated domain of each of the given relations.
+
+        A relation that has no domain under the parent domain yet is allocated a new one.
+        The workload guarantees that a domain is unique and never reused.
+
+        Args:
+            token: root token for the API
+            instance: identifier of this charm installation, which scopes the relation
+                ids as those are only unique within a single charm installation
+            relation_ids: ids of the relations to get a domain for
+            parent: parent domain the domains are allocated under
+
+        Returns:
+            The domain allocated to each relation, by relation id.
+
+        Raises:
+            ApiError: if the request errors
+            DdnsAllocationError: if the workload answered with unusable data
+        """
+        if not relation_ids:
+            return {}
+        try:
+            req = requests.post(
+                f"{constants.DNS_POLICY_DDNS_ALLOCATIONS_ENDPOINT}/",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {token}",
+                },
+                timeout=10,
+                data=json.dumps(
+                    [
+                        {"instance": instance, "requirer_id": str(relation_id), "parent": parent}
+                        for relation_id in relation_ids
+                    ]
+                ),
+            )
+            req.raise_for_status()
+        except requests.RequestException as e:
+            raise ApiError(str(e)) from e
+
+        try:
+            domains = {
+                int(allocation["requirer_id"]): str(allocation["domain"])
+                for allocation in req.json()
+                if str(allocation["instance"]) == instance
+            }
+        except (AttributeError, KeyError, TypeError, ValueError) as e:
+            raise DdnsAllocationError(f"Invalid ddns allocation: {e}") from e
+        for relation_id, domain in domains.items():
+            host_label, _, domain_parent = domain.partition(".")
+            if not host_label or domain_parent != parent:
+                raise DdnsAllocationError(
+                    f"Invalid ddns allocation {domain!r} for relation {relation_id}: "
+                    f"not a domain directly under {parent!r}"
+                )
+        return domains
+
+    def get_request_statuses(self, token: str) -> dict[uuid.UUID, tuple[str, str]]:
+        """Get the status of every record request known to the workload.
+
+        Args:
+            token: root token for the API
+
+        Returns:
+            The workload status and status reason of each record request, by uuid.
+
+        Raises:
+            ApiError: if the request errors
+            GetRequestStatusesError: if the workload answered with unusable data
+        """
+        try:
+            req = requests.get(
+                f"{constants.DNS_POLICY_ENDPOINTS_BASE}/all/",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {token}",
+                },
+                timeout=10,
+            )
+            req.raise_for_status()
+        except requests.RequestException as e:
+            raise ApiError(str(e)) from e
+
+        try:
+            return {
+                uuid.UUID(str(rr["uuid"])): (str(rr["status"]), rr.get("status_reason") or "")
+                for rr in req.json()
+            }
+        except (AttributeError, KeyError, TypeError, ValueError) as e:
+            raise GetRequestStatusesError(str(e)) from e
+
+    def get_approved_requests(self, token: str) -> list[RecordRequest]:
         """Get approved record requests.
 
         Args:
             token: root token for the API
 
         Returns:
-            A list of RequirerEntry to update the relations
+            A list of RecordRequest to update the relations
 
         Raises:
             ApiError: if the request errors
@@ -334,8 +467,15 @@ class DnsPolicyService:
             for rr in data:
                 # The record_class is always "IN"
                 rr["record_class"] = "IN"
-                entry = RequirerEntry.model_validate(rr)
+                entry = RecordRequest.model_validate(
+                    {
+                        "uuid": rr["uuid"],
+                        "status": rr["status"],
+                        "description": rr.get("status_reason") or "",
+                        "record": Record.model_validate(rr),
+                    }
+                )
                 entries.append(entry)
-        except pydantic.ValidationError as e:
+        except (KeyError, TypeError, pydantic.ValidationError) as e:
             raise GetApprovedRecordRequestsError(str(e)) from e
         return entries

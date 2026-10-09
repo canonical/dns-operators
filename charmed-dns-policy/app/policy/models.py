@@ -47,3 +47,35 @@ class RecordRequest(models.Model):
     def __str__(self):
         """Record request model string representation."""
         return f"[{self.status}] {self.host_label} {self.domain} {self.ttl} {self.record_type} {self.record_data}"
+
+
+class DdnsAllocation(models.Model):
+    """Domain automatically allocated to a dns_record relation.
+
+    The domain is a random label under the parent domain requested for the relation.
+    A relation gets one allocation per parent domain it was requested under.
+
+    An allocation is never removed and a domain is never reused, so a domain that was
+    once allocated to a relation can never be handed to a different one.
+
+    A relation is identified by the pair (instance, requirer_id), the requirer id being
+    the id of the relation. The instance is the identifier of the charm the relation
+    belongs to: relation ids are only unique within a single charm deployment, and
+    start over from scratch in a deployment
+    restored from a backup of this database. Keying the allocations on the instance too
+    keeps them from being handed to the unrelated relations of such a deployment.
+    """
+
+    instance = models.UUIDField()
+    requirer_id = models.CharField(max_length=255)
+    domain = models.CharField(max_length=253, unique=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    @property
+    def parent(self):
+        """Parent domain the domain was allocated under."""
+        return self.domain.partition(".")[2]
+
+    def __str__(self):
+        """Ddns allocation model string representation."""
+        return f"{self.domain} (instance {self.instance}, requirer {self.requirer_id})"

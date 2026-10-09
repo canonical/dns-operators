@@ -125,7 +125,8 @@ def test_send_requests_with_the_requirer_id():
     """
     arrange: prepare the record requests of two relations
     act: send them to the workload
-    assert: each record request is sent with the id of its relation as requirer id
+    assert: each record request is sent with the id of its relation as requirer id, and
+        the identifier of the charm installation
     """
     first = RecordRequest(
         uuid=uuid.UUID("497dcba3-ecbf-4587-a2dd-5eb0665e6880"),
@@ -140,14 +141,14 @@ def test_send_requests_with_the_requirer_id():
     )
     second = first.model_copy(update={"uuid": uuid.UUID("0c2a4f8e-9a2b-4b6d-8f7c-1e408ad9f1e2")})
     with patch("requests.post") as post:
-        dns_policy.DnsPolicyService().send_requests("token", {1: [first], 2: [second]})
+        dns_policy.DnsPolicyService().send_requests("token", {1: [first], 2: [second]}, INSTANCE)
 
     post.assert_called_once()
     assert post.call_args[0][0] == f"{constants.DNS_POLICY_ENDPOINTS_BASE}/"
     sent = json.loads(post.call_args[1]["data"])
-    assert [(entry["uuid"], entry["requirer_id"]) for entry in sent] == [
-        (str(first.uuid), "1"),
-        (str(second.uuid), "2"),
+    assert [(entry["uuid"], entry["requirer_id"], entry["instance"]) for entry in sent] == [
+        (str(first.uuid), "1", INSTANCE),
+        (str(second.uuid), "2", INSTANCE),
     ]
     assert sent[0]["host_label"] == "admin"
 

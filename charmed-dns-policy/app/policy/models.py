@@ -7,7 +7,90 @@ import uuid
 
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
+
+from .domains import normalize_domain, validate_domain
+
+
+class Rule(models.Model):
+    """Rule automatically approving or denying the pending record requests.
+
+    A rule only applies to the record requests left pending, i.e. the ones no reviewer
+    has approved or denied, and whose domain name is the domain of the rule or one of its
+    subdomains. The enabled rules are evaluated in ascending priority order
+    and the first rule matching a pending record request decides whether it is
+    automatically approved or denied. A reviewer can always override that decision by
+    manually approving or denying the record request.
+    """
+
+    class Kind(models.TextChoices):
+        """Kinds of rules, each one being a matching logic."""
+
+        ACME_CHALLENGE = 'acme_challenge', (
+            'ACME challenge TXT record of a domain owned by the same requirer'
+        )
+
+    class Action(models.TextChoices):
+        """Actions applied to the record requests matched by a rule.
+
+        The values are the statuses the matched record requests get.
+        """
+
+        APPROVE = 'approved', 'Approve'
+        DENY = 'denied', 'Deny'
+
+    name = models.CharField(max_length=255, unique=True)
+    kind = models.CharField(max_length=50, choices=Kind.choices)
+    domain = models.CharField(
+        max_length=253,
+        validators=[validate_domain],
+        help_text='The rule only applies to the records of this domain and its subdomains.',
+    )
+    action = models.CharField(max_length=50, choices=Action.choices, default=Action.APPROVE)
+    enabled = models.BooleanField(default=True)
+    priority = models.IntegerField(
+        default=0, help_text='Rules with a lower priority are evaluated first.'
+    )
+    description = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(default=timezone.now)
+    last_modified_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        """Define meta of the model."""
+
+        ordering = ['priority', 'id']
+
+    def clean(self):
+        """Normalize the rule."""
+        super().clean()
+        self.domain = normalize_domain(self.domain)
+
+    def save(self, *args, **kwargs):
+        """Save the rule, with a normalized domain."""
+        self.domain = normalize_domain(self.domain)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        """Rule model string representation."""
+        return self.name
+
+
+class RecordRequestQuerySet(models.QuerySet):
+    """Record request queryset."""
+
+    def with_effective_status(self, *statuses):
+        """Filter the record requests by effective status.
+
+        The effective status of a pending record request decided by a rule is the
+        status given by that rule.
+        """
+        pending = RecordRequest.Status.PENDING
+        query = Q(status__in=[s for s in statuses if s != pending])
+        query |= Q(status=pending, rule__action__in=statuses)
+        if pending in statuses:
+            query |= Q(status=pending, rule__isnull=True)
+        return self.filter(query)
 
 
 class RecordRequest(models.Model):
@@ -38,15 +121,29 @@ class RecordRequest(models.Model):
     record_data = models.CharField(max_length=255)
     active = models.BooleanField(default=False)
     requirer_id = models.CharField(max_length=255, null=True)
+    instance = models.UUIDField(null=True, blank=True)
     status = models.CharField(max_length=50, choices=Status.choices)
     status_reason = models.CharField(max_length=255, null=True)
     reviewer = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(default=timezone.now)
     last_modified_at = models.DateTimeField(default=timezone.now)
+    # Rule that automatically decided the record request, only set while it is pending
+    rule = models.ForeignKey(
+        Rule, null=True, blank=True, on_delete=models.SET_NULL, related_name='record_requests'
+    )
+
+    objects = RecordRequestQuerySet.as_manager()
+
+    @property
+    def effective_status(self):
+        """Status of the record request, including the automatic decision of the rules."""
+        if self.status == self.Status.PENDING and self.rule_id is not None:
+            return self.rule.action
+        return self.status
 
     def __str__(self):
         """Record request model string representation."""
-        return f"[{self.status}] {self.host_label} {self.domain} {self.ttl} {self.record_type} {self.record_data}"
+        return f"[{self.effective_status}] {self.host_label} {self.domain} {self.ttl} {self.record_type} {self.record_data}"
 
 
 class DdnsAllocation(models.Model):

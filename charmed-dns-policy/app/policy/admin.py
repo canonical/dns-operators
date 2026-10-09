@@ -9,19 +9,57 @@ from django.db.models.query import QuerySet
 from django.http import HttpRequest
 from django.urls import reverse
 
-from .models import DdnsAllocation, RecordRequest
+from .models import DdnsAllocation, RecordRequest, Rule
+from .rules import evaluate_rules
 
 
 @admin.action(description="Approve")
 def approve(modeladmin: admin.options.ModelAdmin, request: HttpRequest, queryset: QuerySet) -> None:
     """Approve record request."""
-    queryset.update(status=RecordRequest.Status.APPROVED, reviewer=request.user)
+    queryset.update(status=RecordRequest.Status.APPROVED, reviewer=request.user, rule=None)
+    evaluate_rules()
 
 
 @admin.action(description="Deny")
 def deny(modeladmin: admin.options.ModelAdmin, request: HttpRequest, queryset: QuerySet) -> None:
     """Deny record request."""
-    queryset.update(status=RecordRequest.Status.DENIED, reviewer=request.user)
+    queryset.update(status=RecordRequest.Status.DENIED, reviewer=request.user, rule=None)
+    evaluate_rules()
+
+
+@admin.action(description="Reset to pending (let the rules decide)")
+def reset_to_pending(
+    modeladmin: admin.options.ModelAdmin, request: HttpRequest, queryset: QuerySet
+) -> None:
+    """Drop the manual review of record requests, leaving them to the rules."""
+    queryset.update(status=RecordRequest.Status.PENDING, reviewer=None)
+    evaluate_rules()
+
+
+class DecisionListFilter(admin.SimpleListFilter):
+    """Filter the record requests by how their status was decided."""
+
+    title = 'decision'
+    parameter_name = 'decision'
+
+    def lookups(self, request, model_admin):
+        """Get the filter choices."""
+        return [
+            ('automatic', 'Automatic'),
+            ('manual', 'Manual'),
+            ('undecided', 'Undecided'),
+        ]
+
+    def queryset(self, request, queryset):
+        """Filter the record requests."""
+        pending = RecordRequest.Status.PENDING
+        if self.value() == 'automatic':
+            return queryset.filter(status=pending, rule__isnull=False)
+        if self.value() == 'manual':
+            return queryset.exclude(status=pending)
+        if self.value() == 'undecided':
+            return queryset.filter(status=pending, rule__isnull=True)
+        return queryset
 
 
 class RecordRequestAdmin(admin.ModelAdmin):
@@ -47,7 +85,32 @@ class RecordRequestAdmin(admin.ModelAdmin):
         """Delete permission."""
         return request.user.is_superuser
 
-    actions = [approve, deny]
+    def save_model(self, request, obj, form, change):
+        """Save a record request, then evaluate the rules again."""
+        super().save_model(request, obj, form, change)
+        evaluate_rules()
+
+    def delete_model(self, request, obj):
+        """Delete a record request, then evaluate the rules again."""
+        super().delete_model(request, obj)
+        evaluate_rules()
+
+    def delete_queryset(self, request, queryset):
+        """Delete record requests, then evaluate the rules again."""
+        super().delete_queryset(request, queryset)
+        evaluate_rules()
+
+    @admin.display(description='Status', ordering='status')
+    def decision(self, obj: RecordRequest) -> str:
+        """Display the status, telling the automatic decisions apart."""
+        if obj.status == RecordRequest.Status.PENDING and obj.rule is not None:
+            label = RecordRequest.Status(obj.rule.action).label
+            return f"{label} automatically (rule: {obj.rule})"
+        return obj.get_status_display()
+
+    actions = [approve, deny, reset_to_pending]
+    list_select_related = ['rule', 'reviewer']
+    readonly_fields = ['rule']
     list_per_page = 20
     list_max_show_all = 200
     search_fields = ['host_label', 'domain', 'record_type', 'record_data', 'status']
@@ -60,7 +123,7 @@ class RecordRequestAdmin(admin.ModelAdmin):
         'record_type',
         'record_data',
         'active',
-        'status',
+        'decision',
         'status_reason',
         'reviewer',
         'created_at',
@@ -72,6 +135,8 @@ class RecordRequestAdmin(admin.ModelAdmin):
         'record_type',
         'active',
         'status',
+        DecisionListFilter,
+        'rule',
         'reviewer',
     ]
 
@@ -102,6 +167,25 @@ class DdnsAllocationAdmin(admin.ModelAdmin):
 
 
 admin.site.register(DdnsAllocation, DdnsAllocationAdmin)
+
+
+class RuleAdmin(admin.ModelAdmin):
+    """Define Rule configuration in admin website.
+
+    Saving or deleting a rule evaluates the rules again against every pending record
+    request.
+    """
+
+    list_display = [
+        'name', 'kind', 'domain', 'action', 'enabled', 'priority', 'last_modified_at'
+    ]
+    list_editable = ['enabled', 'priority']
+    list_filter = ['kind', 'action', 'enabled']
+    search_fields = ['name', 'domain', 'description']
+    readonly_fields = ['created_at', 'last_modified_at']
+
+
+admin.site.register(Rule, RuleAdmin)
 
 
 class ReadOnlyUserAdmin(admin.ModelAdmin):

@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Each revision is versioned by the date of the revision.
 
+## 2026-09-27
+
+- feat: Add rules to the DNS policy application, managed from its admin website, that automatically approve or deny the pending record requests of a domain and its subdomains. No rule exists by default. The ACME challenge rule approves the `_acme-challenge` TXT records of a domain that the same requirer has an approved A or AAAA record for, or that is automatically allocated to it. A reviewer can override the automatic decisions.
+- feat: Let the `_acme-challenge` TXT requests under the `ddns-domain` of the DNS policy charm through to the policy application.
+- feat: Send the identifier of the DNS policy charm installation along with the record requests, so that the policy application tells apart the requirers of different installations sharing the same relation id.
+
 ## 2026-08-30
 
 - feat: Add the `ddns-domain` configuration to the DNS policy charm. When set, every requirer of the `dns-record-provider` endpoint is allocated a unique domain under that suffix, published back through the `dns_record` relation and resolved upstream by an A/AAAA record and a wildcard record. Requests for the configured suffix or its subdomains are rejected.

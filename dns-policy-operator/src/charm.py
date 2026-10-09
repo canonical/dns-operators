@@ -210,7 +210,7 @@ class DnsPolicyCharm(ops.CharmBase):
         if complete:
             # This also withdraws from the workload the requests that are gone from the
             # relations, including the ones rejected by the ddns domain reservation.
-            self.dns_policy.send_requests(token, requests)
+            self.dns_policy.send_requests(token, requests, self._ddns_instance())
         else:
             logger.warning(
                 "Reconciliation: some relation data could not be read, "
@@ -315,7 +315,9 @@ class DnsPolicyCharm(ops.CharmBase):
         While the automatically allocated domain feature is enabled, the ddns domain is
         reserved: any A, AAAA or CNAME request for it or for one of its subdomains is
         rejected, so that an allocated domain can't be hijacked through a regular record
-        request. The requests of the other record types are left to the review.
+        request. The requests of the other record types are left to the review, which
+        lets the ACME challenge TXT records of an allocated domain through: the workload
+        only lets the requirer the domain is allocated to have them.
 
         Args:
             relation: the relation to read the record requests from.

@@ -174,6 +174,47 @@ def test_reconcile(
 @pytest.mark.usefixtures("base_state")
 @pytest.mark.usefixtures("database_relation")
 @pytest.mark.usefixtures("requirer_relation")
+@pytest.mark.usefixtures("api_root_token")
+@pytest.mark.usefixtures("record_request")
+# pylint: disable=too-many-positional-arguments
+def test_reconcile_withdraws_the_requests_of_an_unreadable_relation(
+    context, base_state, database_relation, requirer_relation, api_root_token, record_request
+):
+    """
+    arrange: prepare a valid requirer and one publishing invalid data
+    act: run reconcile
+    assert: the requests of the valid requirer are submitted, the invalid requirer is
+        submitted no request, withdrawing its previous ones, and its responses are cleared
+    """
+    invalid_relation = ops.testing.Relation(
+        endpoint="dns-record-provider",
+        interface="dns_record",
+        remote_app_name="other-requirer",
+        remote_app_data={"dns_entries": "not json"},
+        local_app_data={"dns_entries": json.dumps([{"uuid": record_request["uuid"]}])},
+    )
+    base_state["relations"].extend([database_relation, requirer_relation, invalid_relation])
+    state = ops.testing.State(**base_state)
+
+    with patch("dns_policy.DnsPolicyService.send_requests") as dns_policy_send_requests:
+        out = context.run(_Event("reconcile"), state)
+
+    dns_policy_send_requests.assert_called_once()
+    assert dns_policy_send_requests.call_args[0] == (
+        api_root_token,
+        {
+            requirer_relation.id: [_record_request(record_request)],
+            invalid_relation.id: [],
+        },
+    )
+    invalid_out = out.get_relation(invalid_relation.id)
+    assert json.loads(invalid_out.local_app_data.get("dns_entries", "[]")) == []
+
+
+@pytest.mark.usefixtures("context")
+@pytest.mark.usefixtures("base_state")
+@pytest.mark.usefixtures("database_relation")
+@pytest.mark.usefixtures("requirer_relation")
 @pytest.mark.usefixtures("ddns_domain")
 @pytest.mark.usefixtures("ddns_label")
 # pylint: disable=too-many-positional-arguments

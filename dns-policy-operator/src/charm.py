@@ -204,18 +204,13 @@ class DnsPolicyCharm(ops.CharmBase):
             self._publish_upstream([])
             return
 
-        requests, complete = self._collect_record_requests(relations, ddns_domain)
+        requests = self._collect_record_requests(relations, ddns_domain)
 
         token = self.dns_policy.get_api_root_token()
-        if complete:
-            # This also withdraws from the workload the requests that are gone from the
-            # relations, including the ones rejected by the ddns domain reservation.
-            self.dns_policy.send_requests(token, requests)
-        else:
-            logger.warning(
-                "Reconciliation: some relation data could not be read, "
-                "not submitting a partial list of requests"
-            )
+        # This also withdraws from the workload the requests that are gone from the
+        # relations, including the ones rejected by the ddns domain reservation and the
+        # ones of the relations whose data can't be read.
+        self.dns_policy.send_requests(token, requests)
         entries: list[dns_record.RecordRequest] = self.dns_policy.get_approved_requests(token)
 
         if ddns_domain:
@@ -241,8 +236,7 @@ class DnsPolicyCharm(ops.CharmBase):
         Args:
             token: root token for the workload API.
             relations: the relations to respond to.
-            accepted: the record requests let through by the policy, by relation id. A
-                relation missing from it could not be read and is left untouched.
+            accepted: the record requests let through by the policy, by relation id.
         """
         workload_statuses = self.dns_policy.get_request_statuses(token)
         upstream_statuses = {
@@ -250,9 +244,7 @@ class DnsPolicyCharm(ops.CharmBase):
         }
 
         for relation in relations:
-            if relation.id not in accepted:
-                continue
-            accepted_uuids = {request.uuid for request in accepted[relation.id]}
+            accepted_uuids = {request.uuid for request in accepted.get(relation.id, [])}
             responses = []
             for request in self.dns_record_provider.get_dns_entries(relation) or []:
                 if request.uuid not in accepted_uuids:
@@ -276,15 +268,11 @@ class DnsPolicyCharm(ops.CharmBase):
         Returns:
             the responses of the upstream DNS provider, empty when there are none.
         """
-        try:
-            return self.dns_record_requirer.get_dns_entries() or []
-        except ops.TooManyRelatedAppsError:
-            logger.error("Got multiple %s integrations !", self.dns_record_requirer.relation_name)
-            return []
+        return self.dns_record_requirer.get_dns_entries() or []
 
     def _collect_record_requests(
         self, relations: list[ops.Relation], ddns_domain: str
-    ) -> tuple[dict[int, list[dns_record.RecordRequest]], bool]:
+    ) -> dict[int, list[dns_record.RecordRequest]]:
         """Collect the record requests of the relations that the policy lets through.
 
         Args:
@@ -293,23 +281,16 @@ class DnsPolicyCharm(ops.CharmBase):
                 the feature is disabled.
 
         Returns:
-            the record requests to submit to the workload by relation id, and whether
-            every relation could be read. An incomplete list must not be submitted, as the
-            workload withdraws every request missing from it.
+            the record requests to submit to the workload by relation id.
         """
-        requests: dict[int, list[dns_record.RecordRequest]] = {}
-        complete = True
-        for relation in relations:
-            accepted = self._accepted_record_requests(relation, ddns_domain)
-            if accepted is None:
-                complete = False
-                continue
-            requests[relation.id] = accepted
-        return requests, complete
+        return {
+            relation.id: self._accepted_record_requests(relation, ddns_domain)
+            for relation in relations
+        }
 
     def _accepted_record_requests(
         self, relation: ops.Relation, ddns_domain: str
-    ) -> list[dns_record.RecordRequest] | None:
+    ) -> list[dns_record.RecordRequest]:
         """Get the record requests of a relation that the policy lets through.
 
         While the automatically allocated domain feature is enabled, the ddns domain is
@@ -317,18 +298,24 @@ class DnsPolicyCharm(ops.CharmBase):
         rejected, so that an allocated domain can't be hijacked through a regular record
         request. The requests of the other record types are left to the review.
 
+        A relation whose data can't be read is considered to request nothing, so that
+        its previous requests are withdrawn instead of holding up the other relations.
+
         Args:
             relation: the relation to read the record requests from.
             ddns_domain: the suffix of the automatically allocated domains, empty when
                 the feature is disabled.
 
         Returns:
-            the record requests to submit to the workload, or None when the relation
-            data could not be read.
+            the record requests to submit to the workload.
         """
         record_requests = self.dns_record_provider.get_dns_entries(relation)
         if record_requests is None:
-            return None
+            logger.warning(
+                "The data of relation %s could not be read, withdrawing its requests",
+                relation.id,
+            )
+            return []
         if not ddns_domain:
             return record_requests
 
@@ -445,21 +432,13 @@ class DnsPolicyCharm(ops.CharmBase):
 
         Args:
             entries: the record requests to publish.
-
-        Raises:
-            TooManyRelatedAppsError: Raised when related to multiple providers
         """
-        try:
-            relation = self.model.get_relation(self.dns_record_requirer.relation_name)
-            if relation is not None:
-                self.dns_record_requirer.update_dns_entries(entries, relation)
-            else:
-                # Logging as error as this should not happen (as we're a subordinate charm)
-                logger.error("%s is not ready !", self.dns_record_requirer.relation_name)
-        except ops.TooManyRelatedAppsError:
-            # Logging as error as this should not happen
-            logger.error("Got multiple %s integrations !", self.dns_record_requirer.relation_name)
-            raise
+        relation = self.model.get_relation(self.dns_record_requirer.relation_name)
+        if relation is not None:
+            self.dns_record_requirer.update_dns_entries(entries, relation)
+        else:
+            # Logging as error as this should not happen (as we're a subordinate charm)
+            logger.error("%s is not ready !", self.dns_record_requirer.relation_name)
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle changed configuration."""

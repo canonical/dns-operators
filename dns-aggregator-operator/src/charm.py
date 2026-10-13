@@ -26,6 +26,23 @@ INGRESS_ADDRESS_FIELD = "ingress-address"
 IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
 
 
+class StatusError(Exception):
+    """Exception carrying the unit status the charm should report.
+
+    Attributes:
+        status: the unit status to report.
+    """
+
+    def __init__(self, status: ops.StatusBase):
+        """Construct.
+
+        Args:
+            status: the unit status to report.
+        """
+        super().__init__(status.message)
+        self.status = status
+
+
 @dataclasses.dataclass(frozen=True)
 class Downstream:
     """A downstream relation and the record requests it published.
@@ -102,10 +119,10 @@ class DnsAggregatorCharm(ops.CharmBase):
         the outcome only depends on the current relation data and never on the event
         that triggered the reconciliation.
         """
-        downstream_relations = self.dns_record_provider.relations
+        main_relations = self.dns_record_provider.relations
         main = (
-            self._read_downstream(self.dns_record_provider, downstream_relations[0])
-            if downstream_relations
+            self._read_downstream(self.dns_record_provider, main_relations[0])
+            if main_relations
             else None
         )
         downstreams = ([main] if main is not None else []) + [
@@ -119,7 +136,7 @@ class DnsAggregatorCharm(ops.CharmBase):
         for downstream in downstreams:
             for request in downstream.requests or ():
                 requests.setdefault(request.uuid, request)
-        aggregated = sorted(requests.values(), key=lambda request: str(request.uuid))
+        request_list = sorted(requests.values(), key=lambda request: str(request.uuid))
 
         responses: list[dns_record.RecordRequest]
         domain: str | None
@@ -130,23 +147,17 @@ class DnsAggregatorCharm(ops.CharmBase):
             domain = self.dns_record_requirer.get_ddns_domain(upstream)
         dispatched = [response for response in responses if response.uuid in requests]
 
-        if self.unit.is_leader():
-            self._publish_upstream(upstream, aggregated, main)
-            self._publish_downstream(downstreams, responses, domain, main)
+        try:
+            self._publish_upstream(upstream, request_list, self._ddns_addresses(main))
+            self._publish_downstream(upstream, downstreams, responses, domain, main)
+        except StatusError as exc:
+            self.unit.status = exc.status
+            return
 
-        if upstream is None:
-            self.unit.status = ops.BlockedStatus(
-                f"Waiting for a {UPSTREAM_RELATION_NAME} integration"
-            )
-        elif not downstream_relations:
-            self.unit.status = ops.BlockedStatus(
-                f"Waiting for a {DOWNSTREAM_RELATION_NAME} integration"
-            )
-        else:
-            self.unit.status = ops.ActiveStatus(
-                f"Forwarding {len(aggregated)} request{'' if len(aggregated) == 1 else 's'} "
-                f"and {len(dispatched)} response{'' if len(dispatched) == 1 else 's'}"
-            )
+        self.unit.status = ops.ActiveStatus(
+            f"Forwarding {len(request_list)} request{'' if len(request_list) == 1 else 's'} "
+            f"and {len(dispatched)} response{'' if len(dispatched) == 1 else 's'}"
+        )
 
     @staticmethod
     def _read_downstream(
@@ -166,34 +177,9 @@ class DnsAggregatorCharm(ops.CharmBase):
             logger.warning("Could not read the relation data of relation %s", relation.id)
         return Downstream(endpoint, relation, requests)
 
-    def _publish_upstream(
-        self,
-        upstream: ops.Relation | None,
-        requests: list[dns_record.RecordRequest],
-        main: Downstream | None,
-    ) -> None:
-        """Publish the aggregated record requests and ddns data to the DNS provider.
-
-        Args:
-            upstream: the relation with the DNS provider, or None when there is none.
-            requests: the aggregated record requests to forward.
-            main: the main downstream relation, or None when there is none.
-        """
-        if upstream is None:
-            return
-
-        self.dns_record_requirer.update_dns_entries(requests, upstream)
-
-        addresses = self._ddns_addresses(main)
-        if not addresses:
-            # here the ddns-addresses will be the address of dns-aggregator
-            # but I think that should be okay
-            logger.warning("No ddns address to publish to the DNS provider")
-            return
-        self.dns_record_requirer.update_ddns_addresses(addresses, upstream)
-
     def _publish_downstream(
         self,
+        upstream: ops.Relation | None,
         downstreams: list[Downstream],
         responses: list[dns_record.RecordRequest],
         domain: str | None,
@@ -201,26 +187,70 @@ class DnsAggregatorCharm(ops.CharmBase):
     ) -> None:
         """Dispatch the responses of the DNS provider to the downstream relations.
 
+        The responses are withdrawn from the downstream relations when there is no DNS
+        provider. Only the leader unit publishes.
+
         Args:
+            upstream: the relation with the DNS provider, or None when there is none.
             downstreams: the downstream relations and their record requests.
             responses: the responses published by the DNS provider.
             domain: the domain allocated by the DNS provider, or None when there is none.
             main: the main downstream relation, or None when there is none.
+
+        Raises:
+            StatusError: when there is no relation with the DNS provider or no main
+                downstream relation.
         """
-        for downstream in downstreams:
-            if downstream.requests is None:
-                continue
-            uuids = downstream.uuids
-            responses_for_downstream = [
-                response for response in responses if response.uuid in uuids
-            ]
-            downstream.endpoint.update_dns_entries(
-                sorted(responses_for_downstream, key=lambda response: str(response.uuid)),
-                downstream.relation,
+        if self.unit.is_leader():
+            for downstream in downstreams:
+                if downstream.requests is None:
+                    continue
+                uuids = downstream.uuids
+                responses_for_downstream = [
+                    response for response in responses if response.uuid in uuids
+                ]
+                downstream.endpoint.update_dns_entries(
+                    sorted(responses_for_downstream, key=lambda response: str(response.uuid)),
+                    downstream.relation,
+                )
+            if main is not None:
+                self.dns_record_provider.update_ddns_domain(domain, main.relation)
+
+        if upstream is None:
+            raise StatusError(
+                ops.BlockedStatus(f"Waiting for a {UPSTREAM_RELATION_NAME} integration")
+            )
+        if main is None:
+            raise StatusError(
+                ops.BlockedStatus(f"Waiting for a {DOWNSTREAM_RELATION_NAME} integration")
             )
 
-        if main is not None:
-            self.dns_record_provider.update_ddns_domain(domain, main.relation)
+    def _publish_upstream(
+        self,
+        upstream: ops.Relation | None,
+        requests: list[dns_record.RecordRequest],
+        ddns_addresses: set[IPAddress],
+    ) -> None:
+        """Publish the aggregated record requests and ddns data to the DNS provider.
+
+        Only the leader unit publishes.
+
+        Args:
+            upstream: the relation with the DNS provider, or None when there is none.
+            requests: the aggregated record requests to forward.
+            ddns_addresses: the addresses the domain allocated to the main downstream
+                should point at.
+        """
+        if not self.unit.is_leader() or upstream is None:
+            return
+
+        self.dns_record_requirer.update_dns_entries(requests, upstream)
+        if not ddns_addresses:
+            # here the ddns-addresses will be the address of dns-aggregator
+            # but I think that should be okay
+            logger.warning("No ddns address to publish to the DNS provider")
+            return
+        self.dns_record_requirer.update_ddns_addresses(ddns_addresses, upstream)
 
     def _ddns_addresses(self, main: Downstream | None) -> set[IPAddress]:
         """Get the addresses the domain allocated to the main downstream should point at.

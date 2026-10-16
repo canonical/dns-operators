@@ -5,17 +5,17 @@ set -e
 LIB_DIR="$(cd "$( dirname "$0" )" && pwd)"
 REPO_ROOT="$(cd "$LIB_DIR/.." && pwd)"
 
+# shellcheck disable=SC2043
 for project in \
-  "bind-operator" \
-  "dns-policy-operator"
+  "bind-operator"
 do
   mkdir -p "$REPO_ROOT/$project/lib/charms"
   cp -fr "$LIB_DIR/charms/bind" "$REPO_ROOT/$project/lib/charms/"
 done
 
-# shellcheck disable=SC2043
 for project in \
-  "dns-integrator-operator"
+  "dns-integrator-operator" \
+  "dns-policy-operator"
 do
   mkdir -p "$REPO_ROOT/$project/lib/charms"
   cp -fr "$LIB_DIR/charms/dns_record" "$REPO_ROOT/$project/lib/charms/"

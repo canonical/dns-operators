@@ -7,6 +7,17 @@
 
 set -xe
 
+# On refresh, snapd carries over SNAP_DATA from the previous revision, where these
+# directories are owned by snap_daemon. The confined hook runs as root without
+# CAP_DAC_OVERRIDE, so reclaim ownership before removing them to start from a clean state.
+for dir in "$SNAP_DATA/nginx" "$SNAP_DATA/app"; do
+  if [ -e "$dir" ]; then
+    chown -R root:root "$dir"
+    chmod -R u+rwX "$dir"
+    rm -rf "$dir"
+  fi
+done
+
 # ----
 # NGINX
 # As nginx is only supplementary to the workload of the charm.

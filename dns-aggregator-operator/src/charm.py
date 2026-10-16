@@ -119,6 +119,12 @@ class DnsAggregatorCharm(ops.CharmBase):
         the outcome only depends on the current relation data and never on the event
         that triggered the reconciliation.
         """
+        if not self.unit.is_leader():
+            self.unit.status = ops.BlockedStatus(
+                "dns-aggregator charm doesn't support multiple units"
+            )
+            return
+
         main_relations = self.dns_record_provider.relations
         main = (
             self._read_downstream(self.dns_record_provider, main_relations[0])
@@ -188,7 +194,7 @@ class DnsAggregatorCharm(ops.CharmBase):
         """Dispatch the responses of the DNS provider to the downstream relations.
 
         The responses are withdrawn from the downstream relations when there is no DNS
-        provider. Only the leader unit publishes.
+        provider.
 
         Args:
             upstream: the relation with the DNS provider, or None when there is none.
@@ -201,20 +207,19 @@ class DnsAggregatorCharm(ops.CharmBase):
             StatusError: when there is no relation with the DNS provider or no main
                 downstream relation.
         """
-        if self.unit.is_leader():
-            for downstream in downstreams:
-                if downstream.requests is None:
-                    continue
-                uuids = downstream.uuids
-                responses_for_downstream = [
-                    response for response in responses if response.uuid in uuids
-                ]
-                downstream.endpoint.update_dns_entries(
-                    sorted(responses_for_downstream, key=lambda response: str(response.uuid)),
-                    downstream.relation,
-                )
-            if main is not None:
-                self.dns_record_provider.update_ddns_domain(domain, main.relation)
+        for downstream in downstreams:
+            if downstream.requests is None:
+                continue
+            uuids = downstream.uuids
+            responses_for_downstream = [
+                response for response in responses if response.uuid in uuids
+            ]
+            downstream.endpoint.update_dns_entries(
+                sorted(responses_for_downstream, key=lambda response: str(response.uuid)),
+                downstream.relation,
+            )
+        if main is not None:
+            self.dns_record_provider.update_ddns_domain(domain, main.relation)
 
         if upstream is None:
             raise StatusError(
@@ -233,15 +238,13 @@ class DnsAggregatorCharm(ops.CharmBase):
     ) -> None:
         """Publish the aggregated record requests and ddns data to the DNS provider.
 
-        Only the leader unit publishes.
-
         Args:
             upstream: the relation with the DNS provider, or None when there is none.
             requests: the aggregated record requests to forward.
             ddns_addresses: the addresses the domain allocated to the main downstream
                 should point at.
         """
-        if not self.unit.is_leader() or upstream is None:
+        if upstream is None:
             return
 
         self.dns_record_requirer.update_dns_entries(requests, upstream)

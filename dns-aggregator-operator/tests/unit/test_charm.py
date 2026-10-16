@@ -451,7 +451,7 @@ def test_non_leader_does_not_publish(context, base_state):
     """
     arrange: a follower unit with both integrations
     act: run an event
-    assert: nothing is published
+    assert: nothing is published and the unit reports that multiple units are not supported
     """
     base_state["leader"] = False
     upstream = upstream_relation([make_response("main")])
@@ -461,6 +461,9 @@ def test_non_leader_does_not_publish(context, base_state):
 
     assert out.get_relation(upstream.id).local_app_data == {}
     assert out.get_relation(downstream.id).local_app_data == {}
+    assert out.unit_status == ops.BlockedStatus(
+        "dns-aggregator charm doesn't support multiple units"
+    )
 
 
 @pytest.mark.usefixtures("context", "base_state")

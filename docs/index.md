@@ -21,11 +21,11 @@ The charms are meant for teams that run their infrastructure with Juju.
 * -
   -
 * - **Get started**
-  - {ref}`Deploy your first DNS charm <tutorial_simple_deployment>` | {ref}`Deploy a secondary DNS server and resolver <tutorial_secondary_and_resolver>`
+  - {ref}`Deploy a DNS server <tutorial_simple_deployment>` | {ref}`Add a secondary server and resolver <tutorial_secondary_and_resolver>`
 * - **Operations**
   - {ref}`Upgrade <how_to_upgrade>` | {ref}`Changelog <changelog>`
 * - **Design**
-  - {ref}`Project overview <explanation_project_overview>` | {ref}`Project architecture <explanation_charm_architecture>` | {ref}`Bind charm architecture <reference_bind_charm_architecture>` | {ref}`DNS policy charm architecture <reference_dns_policy_charm_architecture>` | {ref}`Components <reference_components>`
+  - {ref}`Project overview <explanation_project_overview>` | {ref}`Components <reference_components>` | {ref}`Project architecture <explanation_charm_architecture>` | {ref}`Bind charm architecture <reference_bind_charm_architecture>` | {ref}`DNS policy charm architecture <reference_dns_policy_charm_architecture>`
 * - **Security**
   - {ref}`Overview <explanation_security>`
 ```

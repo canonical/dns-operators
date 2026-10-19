@@ -7,6 +7,7 @@ import contextlib
 import os
 import pathlib
 import subprocess  # nosec B404
+import time
 import typing
 
 import jubilant
@@ -15,6 +16,7 @@ import yaml
 
 # Name of the workload snap, as packed from the charmed-dns-policy directory
 SNAP_NAME = "charmed-dns-policy"
+SIDELOAD_ATTEMPTS = 6
 
 # Suffix the automatically allocated domains are tested with
 DDNS_DOMAIN = "ddns.test"
@@ -100,10 +102,22 @@ def _sideload_snap(juju: jubilant.Juju, unit: str, snap_file: str) -> None:
         juju: the juju client
         unit: the dns-policy unit to install the snap on
         snap_file: the path of the snap to install
+
+    Raises:
+        CLIError: if the snap can't be installed
     """
     remote_path = f"/tmp/{pathlib.Path(snap_file).name}"  # nosec B108
     juju.scp(snap_file, f"{unit}:{remote_path}")
-    juju.ssh(unit, f"sudo snap install --dangerous {remote_path}")
+    app = unit.split("/")[0]
+    for attempt in range(SIDELOAD_ATTEMPTS):
+        juju.wait(lambda status: jubilant.all_agents_idle(status, app), timeout=600)
+        try:
+            juju.ssh(unit, f"sudo snap install --dangerous {remote_path}")
+            break
+        except jubilant.CLIError as e:
+            if "has running apps" not in e.stderr or attempt == SIDELOAD_ATTEMPTS - 1:
+                raise
+            time.sleep(10)
     juju.ssh(unit, f"sudo snap run {SNAP_NAME}.manage migrate")
 
 

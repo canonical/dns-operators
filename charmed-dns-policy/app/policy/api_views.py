@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 
 from . import ddns
 from .models import DdnsAllocation, RecordRequest
+from .rules import evaluate_rules
 from .serializers import (
     DdnsAllocationRequestSerializer,
     DdnsAllocationSerializer,
@@ -22,7 +23,7 @@ class ListAllRequestsView(APIView):
 
     def get(self, request):
         """Get all requests."""
-        record_requests = RecordRequest.objects.all()
+        record_requests = RecordRequest.objects.select_related('rule')
         serializer = RecordRequestSerializer(record_requests, many=True)
         return Response(serializer.data)
 
@@ -33,7 +34,9 @@ class ListPendingRequestsView(APIView):
 
     def get(self, request):
         """Get pending requests."""
-        record_requests = RecordRequest.objects.filter(status='pending')
+        record_requests = RecordRequest.objects.with_effective_status(
+            RecordRequest.Status.PENDING
+        ).select_related('rule')
         serializer = RecordRequestSerializer(record_requests, many=True)
         return Response(serializer.data)
 
@@ -44,13 +47,11 @@ class ListApprovedRequestsView(APIView):
 
     def get(self, request):
         """Get approved requests."""
-        record_requests = RecordRequest.objects.filter(
-            status__in=(
-                RecordRequest.Status.APPROVED,
-                RecordRequest.Status.FAILED,
-                RecordRequest.Status.PUBLISHED,
-            )
-        )
+        record_requests = RecordRequest.objects.with_effective_status(
+            RecordRequest.Status.APPROVED,
+            RecordRequest.Status.FAILED,
+            RecordRequest.Status.PUBLISHED,
+        ).select_related('rule')
         serializer = RecordRequestSerializer(record_requests, many=True)
         return Response(serializer.data)
 
@@ -61,7 +62,9 @@ class ListDeniedRequestsView(APIView):
 
     def get(self, request):
         """Get denied requests."""
-        record_requests = RecordRequest.objects.filter(status=RecordRequest.Status.DENIED)
+        record_requests = RecordRequest.objects.with_effective_status(
+            RecordRequest.Status.DENIED
+        ).select_related('rule')
         serializer = RecordRequestSerializer(record_requests, many=True)
         return Response(serializer.data)
 
@@ -79,6 +82,7 @@ class ApproveRequestView(APIView):
         record_request.status = RecordRequest.Status.APPROVED
         record_request.approver = request.user
         record_request.save()
+        evaluate_rules()
         return Response(status=status.HTTP_200_OK)
 
 
@@ -94,6 +98,7 @@ class DenyRequestView(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
         record_request.status = RecordRequest.Status.DENIED
         record_request.save()
+        evaluate_rules()
         return Response(status=status.HTTP_200_OK)
 
 class RequestsView(generics.ListCreateAPIView):
@@ -116,10 +121,14 @@ class RequestsView(generics.ListCreateAPIView):
             existing_rr = next((r for r in existing_rrs if str(r.uuid) == rr["uuid"]), None)
             if existing_rr is not None:
                 # Only the requirer can change, as the record is left to its review
-                requirer_id = serializer.validated_data.get("requirer_id")
-                if requirer_id is not None and existing_rr.requirer_id != requirer_id:
-                    existing_rr.requirer_id = requirer_id
-                    existing_rr.save(update_fields=["requirer_id"])
+                changed = []
+                for field in ("requirer_id", "instance"):
+                    value = serializer.validated_data.get(field)
+                    if value is not None and getattr(existing_rr, field) != value:
+                        setattr(existing_rr, field, value)
+                        changed.append(field)
+                if changed:
+                    existing_rr.save(update_fields=changed)
                 continue
             serializer.save()
 
@@ -129,6 +138,7 @@ class RequestsView(generics.ListCreateAPIView):
             if not any(r["uuid"] == str(rr.uuid) for r in request.data):
                 rr.delete()
 
+        evaluate_rules()
         return Response({}, status=status.HTTP_200_OK)
 
 

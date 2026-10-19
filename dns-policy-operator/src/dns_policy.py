@@ -305,15 +305,22 @@ class DnsPolicyService:
             raise RootTokenError("Invalid root token!")
         return tokens["access"]
 
-    def send_requests(self, token: str, record_requests: dict[int, list[RecordRequest]]) -> None:
+    def send_requests(
+        self,
+        token: str,
+        record_requests: dict[int, list[RecordRequest]],
+        instance: str | None,
+    ) -> None:
         """Send record requests.
 
         Each record request is sent along with the id of the relation it comes from, as
-        its requirer id.
+        its requirer id, and the identifier of this charm installation, as relation ids
+        are only unique within a single charm installation.
 
         Args:
             token: root token for the API
             record_requests: record requests from the relations, by relation id
+            instance: identifier of this charm installation, None when not available yet
 
         Raises:
             ApiError: if the request errors
@@ -328,7 +335,11 @@ class DnsPolicyService:
                 timeout=10,
                 data=json.dumps(
                     [
-                        {**record_request.serialize_as_request(), "requirer_id": str(relation_id)}
+                        {
+                            **record_request.serialize_as_request(),
+                            "requirer_id": str(relation_id),
+                            "instance": instance,
+                        }
                         for relation_id, relation_requests in record_requests.items()
                         for record_request in relation_requests
                     ]

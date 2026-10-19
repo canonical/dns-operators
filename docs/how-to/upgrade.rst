@@ -1,6 +1,8 @@
 .. meta::
     :description: Learn how to upgrade the DNS charms to the latest revision.
 
+.. _how_to_upgrade:
+
 How to upgrade
 ==============
 

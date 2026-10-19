@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Each revision is versioned by the date of the revision.
 
+## 2026-10-19
+
+- docs: Moved the documentation tooling to the centrally managed `platform-engineering-documentation-files` Copier template and added a scheduled workflow that keeps it in sync. There is no change to the charms.
+
 ## 2026-09-27
 
 - feat: Add rules to the DNS policy application, managed from its admin website, that automatically approve or deny the pending record requests of a domain and its subdomains. No rule exists by default. The ACME challenge rule approves the `_acme-challenge` TXT records of a domain that the same requirer has an approved A or AAAA record for, or that is automatically allocated to it. A reviewer can override the automatic decisions.

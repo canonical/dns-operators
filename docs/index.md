@@ -1,7 +1,7 @@
 ---
 myst:
   html_meta:
-    "description lang=en": "Deploy DNS infrastructure with Juju charms. Automated DNS record management through bind, policy controls, and seamless integration with charmed applications."
+    "description lang=en": "Documentation for the DNS operators, Juju charms that deploy bind and let other charms request DNS records."
 ---
 
 # DNS operators

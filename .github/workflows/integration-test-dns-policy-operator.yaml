@@ -23,7 +23,7 @@ jobs:
     with:
       self-hosted-runner: false
       self-hosted-runner-label: "edge"
-      juju-channel: 3.6/stable
+      juju-channel: 4.0/stable
       provider: lxd
       working-directory: ./dns-policy-operator
       pre-run-script: ./dns-policy-operator/tests/integration/prepare.sh

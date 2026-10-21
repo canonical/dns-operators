@@ -256,6 +256,6 @@ html_js_files = [
 # Intersphinx mappings for cross-referencing external documentation.
 intersphinx_mapping = {
     "juju": ("https://canonical.com/juju/docs/juju-cli/3.6/", None),
-    "postgresql-k8s": ("https://canonical-charmed-postgresql-k8s.readthedocs-hosted.com/14/", None),
-    "postgresql-vm": ("https://canonical-charmed-postgresql.readthedocs-hosted.com/14/", None),
+    "postgresql-k8s": ("https://canonical.com/data/postgresql/docs/14/", None),
+    "postgresql-vm": ("https://canonical.com/data/postgresql/docs/14/", None),
 }

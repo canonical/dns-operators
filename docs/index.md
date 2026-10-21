@@ -25,7 +25,7 @@ The charms are meant for teams that run their infrastructure with Juju.
 * - **Operations**
   - {ref}`Upgrade <how_to_upgrade>` | {ref}`Changelog <changelog>`
 * - **Design**
-  - {ref}`Project overview <explanation_project_overview>` | {ref}`Components <reference_components>` | {ref}`Project architecture <explanation_charm_architecture>` | {ref}`Bind charm architecture <reference_bind_charm_architecture>` | {ref}`DNS policy charm architecture <reference_dns_policy_charm_architecture>`
+  - {ref}`Project overview <explanation_project_overview>` | {ref}`Components <reference_components>` | {ref}`Project architecture <reference_charm_architecture>` | {ref}`Bind charm architecture <reference_bind_charm_architecture>` | {ref}`DNS policy charm architecture <reference_dns_policy_charm_architecture>`
 * - **Security**
   - {ref}`Overview <explanation_security>`
 ```

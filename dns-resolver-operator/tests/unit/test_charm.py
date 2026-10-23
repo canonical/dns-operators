@@ -11,7 +11,6 @@ import ops
 import pytest
 import scenario
 from ops import testing
-from scenario.context import _Event  # needed for custom events for now
 
 import constants
 
@@ -88,9 +87,7 @@ def test_relaton_changed_with_relation_with_some_data(context, base_state, write
     )
     base_state["relations"] = [dns_authority_relation]
     state = testing.State(**base_state)
-    dns_authority_relation_changed_event = _Event(
-        "dns_authority_relation_changed", relation=dns_authority_relation
-    )
+    dns_authority_relation_changed_event = context.on.relation_changed(dns_authority_relation)
     out = context.run(dns_authority_relation_changed_event, state)
     assert out.unit_status == ops.ActiveStatus("1 zone, 1 authority address")
     conf_path = pathlib.Path(constants.DNS_CONFIG_DIR) / "named.conf.local"

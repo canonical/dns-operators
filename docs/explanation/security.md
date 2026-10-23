@@ -35,23 +35,15 @@ Only `dns-policy` is using an external database to store its data, through a `po
 
 ### Back up PostgreSQL
 
-Follow the instructions of the PostgreSQL charm:
-
-- For `postgresql-k8s`: {doc}`Create a backup <postgresql-k8s:how-to/back-up-and-restore/create-a-backup>`
-- For `postgresql`: {doc}`Create a backup <postgresql-vm:how-to/back-up-and-restore/create-a-backup>`
+Follow the instructions of the PostgreSQL charms: {ref}`Create a backup <postgresql:create-a-backup>`
 
 If you plan to restore PostgreSQL in a different model or cluster, you will need
-to also back up the cluster passwords. See:
-
-- For `postgresql-k8s`: {doc}`Migrate a cluster <postgresql-k8s:how-to/back-up-and-restore/migrate-a-cluster>`
-- For `postgresql`: {doc}`Migrate a cluster <postgresql-vm:how-to/back-up-and-restore/migrate-a-cluster>`
+to also back up the cluster passwords. 
+See: {ref}`Migrate a cluster <postgresql:migrate-a-cluster>`
 
 ### Restore PostgreSQL
 
-Follow the instructions given by PostgreSQL:
-
-- For `postgresql-k8s`: {doc}`local restore <postgresql-k8s:how-to/back-up-and-restore/restore-a-backup>`, {doc}`foreign backup <postgresql-k8s:how-to/back-up-and-restore/migrate-a-cluster>`.
-- For `postgresql`: {doc}`local restore <postgresql-vm:how-to/back-up-and-restore/restore-a-backup>`, {doc}`foreign backup <postgresql-vm:how-to/back-up-and-restore/migrate-a-cluster>`.
+Follow the instructions given by the PostgreSQL charms: {ref}`local restore <postgresql:restore-a-backup>`
 
 ## Reviewers
 

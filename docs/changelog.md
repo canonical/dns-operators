@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Each revision is versioned by the date of the revision.
 
+## 2026-10-21
+
+- docs(chore): Moved the "Project architecture" page from Explanation to Reference, and updated the target.
+
 ## 2026-10-19
 
 - docs: Moved the documentation tooling to the centrally managed `platform-engineering-documentation-files` Copier template and added a scheduled workflow that keeps it in sync. There is no change to the charms.

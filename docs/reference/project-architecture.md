@@ -1,4 +1,10 @@
-(explanation_charm_architecture)=
+---
+myst:
+  html_meta:
+    "description lang=en": "Technical details about the project architecture of the DNS charms."
+---
+
+(reference_charm_architecture)=
 
 # Project architecture
 

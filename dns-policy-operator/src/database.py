@@ -4,6 +4,7 @@
 """Provide the DatabaseHandler class to handle database relation and state."""
 
 import logging
+from urllib.parse import urlsplit
 
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from ops.charm import CharmBase
@@ -59,15 +60,19 @@ class DatabaseHandler(Object):
         if len(endpoints) < 1:
             return default
 
-        primary_endpoint = endpoints[0].split(":")
-        if len(primary_endpoint) < 2:
+        try:
+            primary_endpoint = urlsplit(f"//{endpoints[0].strip()}")
+            port = primary_endpoint.port
+        except ValueError:
+            return default
+        if not primary_endpoint.hostname or port is None:
             return default
 
         data = {
             "POSTGRES_USER": relation_data.get("username"),
             "POSTGRES_PASSWORD": relation_data.get("password"),
-            "POSTGRES_HOST": primary_endpoint[0],
-            "POSTGRES_PORT": primary_endpoint[1],
+            "POSTGRES_HOST": primary_endpoint.hostname,
+            "POSTGRES_PORT": str(port),
             "POSTGRES_DB": relation_data.get("database"),
         }
 

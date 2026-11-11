@@ -64,8 +64,10 @@ class DatabaseHandler(Object):
             primary_endpoint = urlsplit(f"//{endpoints[0].strip()}")
             port = primary_endpoint.port
         except ValueError:
+            logger.exception("failed to parse database endpoint: %r", endpoints[0])
             return default
         if not primary_endpoint.hostname or port is None:
+            logger.error("database endpoint missing host or port: %r", endpoints[0])
             return default
 
         data = {

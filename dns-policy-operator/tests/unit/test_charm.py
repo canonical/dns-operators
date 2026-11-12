@@ -80,6 +80,36 @@ def test_start_with_database(context, base_state, database_relation):
     assert out.unit_status == ops.ActiveStatus("")
 
 
+@pytest.mark.parametrize(
+    "endpoints, expected",
+    [
+        pytest.param("1.2.3.4:5432", ("1.2.3.4", "5432"), id="ipv4"),
+        pytest.param("db.example.com:5432", ("db.example.com", "5432"), id="hostname"),
+        pytest.param("[2a06:bc80:0:1015::105]:5432", ("2a06:bc80:0:1015::105", "5432"), id="ipv6"),
+        pytest.param(
+            "[2001:db8::1]:5433,[2001:db8::2]:5433", ("2001:db8::1", "5433"), id="ipv6-multiple"
+        ),
+    ],
+)
+def test_database_relation_endpoints(context, base_state, database_relation, endpoints, expected):
+    """
+    arrange: a database relation with the given endpoints.
+    act: get the database relation data.
+    assert: host and port are correctly parsed.
+    """
+    database_relation = dataclasses.replace(
+        database_relation,
+        remote_app_data={**database_relation.remote_app_data, "endpoints": endpoints},
+    )
+    base_state["relations"].append(database_relation)
+    state = ops.testing.State(**base_state)
+
+    with context(context.on.update_status(), state) as manager:
+        result = manager.charm._database.get_relation_data()  # pylint: disable=protected-access
+
+    assert (result["POSTGRES_HOST"], result["POSTGRES_PORT"]) == expected
+
+
 @pytest.mark.usefixtures("context")
 @pytest.mark.usefixtures("base_state")
 @pytest.mark.usefixtures("database_relation")

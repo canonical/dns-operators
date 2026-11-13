@@ -7,6 +7,10 @@ on:
 jobs:
   auto-update-libs-bind-operator:
     uses: canonical/operator-workflows/.github/workflows/auto_update_charm_libs.yaml@main
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
     secrets: inherit
     with:
       working-directory: ./bind-operator

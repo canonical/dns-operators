@@ -15,6 +15,7 @@ The DNS operators consist of the following DNS charms:
 3. `dns-integrator`: An integrator charm that allows the creation of record request through its configuration. See the [dns-integrator README](https://github.com/canonical/dns-operators/blob/main/dns-integrator-operator/README.md) for more information.
 4. `dns-resolver`: A resolver charm that provides a single point of configuration for all the requirers using the same DNS server. See the [dns-resolver README](https://github.com/canonical/dns-operators/blob/main/dns-resolver-operator/README.md) for more information.
 5. `dns-secondary`: A secondary charm that provides a hidden primary setup by serving the zones without leaking any IP address of the primary deployment. See the [dns-secondary README](https://github.com/canonical/dns-operators/blob/main/dns-secondary-operator/README.md) for more information.
+6. `dns-aggregator`: An aggregator charm that combines the record requests of several requirers into a single set of requests forwarded to one DNS provider. See the [dns-aggregator README](https://github.com/canonical/dns-operators/blob/main/dns-aggregator-operator/README.md) for more information.
 
 The project also contains the snapped workload of some charms:
 

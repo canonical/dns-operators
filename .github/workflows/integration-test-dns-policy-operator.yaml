@@ -3,6 +3,7 @@ name: Dns-policy-operator integration tests
 on:
   pull_request:
     paths:
+      - 'charmed-dns-policy/**'
       - 'dns-policy-operator/charmcraft.yaml'
       - 'dns-policy-operator/lib/**'
       - 'dns-policy-operator/pyproject.toml'
@@ -25,3 +26,4 @@ jobs:
       juju-channel: 3.6/stable
       provider: lxd
       working-directory: ./dns-policy-operator
+      pre-run-script: ./dns-policy-operator/tests/integration/prepare.sh

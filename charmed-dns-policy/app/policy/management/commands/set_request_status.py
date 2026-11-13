@@ -6,6 +6,7 @@
 from django.core.management.base import BaseCommand
 
 from policy.models import RecordRequest
+from policy.rules import evaluate_rules
 
 
 class Command(BaseCommand):
@@ -34,5 +35,6 @@ class Command(BaseCommand):
         if reason:
             request.status_reason = reason
         request.save()
+        evaluate_rules()
 
         self.stdout.write(self.style.SUCCESS(f'Status of request {request_id} set to {status}'))

@@ -1054,3 +1054,29 @@ def test_deprecated_relation_data_methods_still_work():
         out = manager.run()
 
     assert json.loads(out.get_relation(rel.id).local_app_data["dns_entries"]) == RESPONSES
+
+
+def test_requirer_creates_the_namespace_secret_on_the_leader():
+    """
+    arrange: a leader unit of a requirer charm.
+    act: start the charm.
+    assert: the application secret holding the uuid namespace is created.
+    """
+    context = testing.Context(DNSRecordRequirerCharm, meta=REQUIRER_METADATA)
+
+    out = context.run(context.on.start(), testing.State(leader=True))
+
+    assert [secret.label for secret in out.secrets] == ["dns-record"]
+
+
+def test_requirer_does_not_create_the_namespace_secret_on_a_non_leader():
+    """
+    arrange: a non-leader unit of a requirer charm.
+    act: start the charm.
+    assert: no application secret is created, as only the leader unit can create one.
+    """
+    context = testing.Context(DNSRecordRequirerCharm, meta=REQUIRER_METADATA)
+
+    out = context.run(context.on.start(), testing.State(leader=False))
+
+    assert not out.secrets

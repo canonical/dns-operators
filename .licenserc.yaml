@@ -40,5 +40,6 @@ header:
     - '**/lib/**'
     - 'charmed-dns-policy/app/ci/.test-env'
     - '.readthedocs.yaml'
+    - '.copier-answers.yml'
     - 'docs/**'
   comment: on-failure

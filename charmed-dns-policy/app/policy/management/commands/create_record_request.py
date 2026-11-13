@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 
 from policy.models import RecordRequest
+from policy.rules import evaluate_rules
 
 
 class Command(BaseCommand):
@@ -58,5 +59,6 @@ class Command(BaseCommand):
             reviewer=reviewer
         )
         record_request.save()
+        evaluate_rules()
 
         self.stdout.write(self.style.SUCCESS(f'Record request created successfully: {record_request}'))

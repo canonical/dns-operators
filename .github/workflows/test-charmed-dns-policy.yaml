@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
+        image: postgres@sha256:fe9ef8058929c976110d4b75d9b939e61a590ba1e105e609e891c71bb39a8944
         env:
           POSTGRES_PASSWORD: testpassword
         # Set health checks to wait until postgres has started
